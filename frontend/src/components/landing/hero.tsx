@@ -1,41 +1,38 @@
 import Link from "next/link";
-import { ArrowRight, Mic } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Container } from "./section";
+import { CtaButton } from "./cta-button";
+import { PlusDitherPanel } from "./visuals";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      {/* Dotted grid flair (CSS): s2 dots on paper, fades out toward the bottom */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-70 [mask-image:linear-gradient(to_bottom,black_30%,transparent)]"
-        style={{
-          backgroundImage: "radial-gradient(var(--s3) 1px, transparent 1.2px)",
-          backgroundSize: "24px 24px",
-          backgroundPosition: "12px 12px",
-        }}
-      />
-      <Container className="relative pt-20 pb-16 md:pt-28 md:pb-24">
-        <span className="marker marker-dot">[ 01 / 05 ]&nbsp;&nbsp;Voice Router — Halyk Bank · HackAlem AI</span>
-        <h1 className="h-display text-ink mt-6 max-w-4xl text-[2.75rem] leading-[1.02] md:text-[4rem] lg:text-[4.5rem]">
-          Голосовой робот, который понимает с&nbsp;первой фразы
-        </h1>
-        <p className="text-body mt-6 max-w-2xl text-lg leading-relaxed">
-          Bagyt заменяет encoder-классификатор интентов на LLM-слой маршрутизации: держит контекст диалога, переключает тему
-          на лету, разбирает переход с русского на казахский внутри одной фразы и объясняет супервизору, почему выбран
-          именно этот сценарий.
-        </p>
-        <div className="mt-10 flex flex-wrap items-center gap-3">
-          <Button size="lg" render={<Link href="/call" />}>
-            <Mic /> Поговорить с роботом
-          </Button>
-          <Button size="lg" variant="outline" render={<Link href="/admin" />}>
-            Консоль супервизора <ArrowRight />
-          </Button>
-          <span className="marker ml-1">40 сценариев · ru/kk · mock</span>
+    <section className="mx-auto grid w-full max-w-[1200px] items-center gap-12 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:pb-28 lg:pt-24">
+      <div>
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs text-body">
+          <span className="size-1.5 rounded-full bg-brand" />
+          Voice Router для контакт-центра · кейс Halyk Bank
         </div>
-      </Container>
+        <h1 className="max-w-[12ch] text-[44px] font-medium leading-[1.02] tracking-[-0.03em] text-ink sm:text-[64px] lg:text-[76px]">
+          Робот, который понимает с первой фразы.
+        </h1>
+        <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-body">
+          Клиент говорит своими словами, по-русски, по-казахски или вперемешку. Bagyt выбирает нужный сценарий из сорока, держит контекст при смене темы и объясняет супервизору каждое решение.
+        </p>
+        <div className="mt-9 flex flex-wrap items-center gap-5">
+          <CtaButton href="/call">Поговорить с роботом</CtaButton>
+          <Link href="/admin" className="group inline-flex items-center gap-2 text-sm font-medium text-ink">
+            Консоль супервизора
+            <span className="transition-transform group-hover:translate-x-0.5">→</span>
+          </Link>
+        </div>
+        <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-border pt-6 text-sm">
+          <div><dt className="text-body">Сценариев</dt><dd className="mt-1 text-2xl font-medium tabular-nums text-ink">40</dd></div>
+          <div><dt className="text-body">Языки</dt><dd className="mt-1 text-2xl font-medium text-ink">ru · kk</dd></div>
+          <div><dt className="text-body">До ответа</dt><dd className="mt-1 text-2xl font-medium tabular-nums text-ink">≤ 1,5 с</dd></div>
+        </dl>
+      </div>
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-border bg-white sm:aspect-square lg:aspect-[4/5]">
+        <PlusDitherPanel className="!h-full !w-full" />
+        <div className="pointer-events-none absolute bottom-4 left-4 rounded-full bg-white/85 px-3 py-1 text-xs text-body backdrop-blur">Team Plus · проведите курсором</div>
+      </div>
     </section>
   );
 }

@@ -1,23 +1,23 @@
-import { SiteHeader } from "@/components/landing/site-header";
+import { Cta } from "@/components/landing/cta";
+import { Footer } from "@/components/landing/footer";
+import { Header } from "@/components/landing/header";
 import { Hero } from "@/components/landing/hero";
-import { ScenarioStream } from "@/components/landing/scenario-stream";
-import { Pipeline } from "@/components/landing/pipeline";
-import { WhyClassifier } from "@/components/landing/why-classifier";
-import { TraceExample } from "@/components/landing/trace-example";
-import { NumbersStrip } from "@/components/landing/numbers-strip";
-import { SiteFooter } from "@/components/landing/site-footer";
+import { How } from "@/components/landing/how";
+import { Product } from "@/components/landing/product";
+import { Why } from "@/components/landing/why";
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col bg-background text-foreground">
-      <SiteHeader />
-      <Hero />
-      <ScenarioStream />
-      <Pipeline />
-      <WhyClassifier />
-      <TraceExample />
-      <NumbersStrip />
-      <SiteFooter />
-    </main>
+    <div className="flex min-h-screen flex-col bg-paper text-ink">
+      <Header />
+      <main className="flex-1">
+        <Hero />
+        <Product />
+        <How />
+        <Why />
+        <Cta />
+      </main>
+      <Footer />
+    </div>
   );
 }
