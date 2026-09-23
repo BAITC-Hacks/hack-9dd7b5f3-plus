@@ -45,8 +45,8 @@ func SpokenToDigits(text string) string {
 		}
 		// parse one spoken number group
 		val, consumed := parseGroup(words, i)
-		if consumed == 1 && ambiguousAlone[w] {
-			// "он" (kk: ten / ru: he), "раз" (once), "одна" — only digits when part of a number sequence
+		if consumed == 1 && ambiguousAlone[w] && !numberNeighbour(words, out, i) {
+			// "он" (kk: ten / ru: he), "раз" (once), "одна" — digits only next to other numbers
 			out = append(out, words[i])
 			i++
 			continue
@@ -55,6 +55,42 @@ func SpokenToDigits(text string) string {
 		i += consumed
 	}
 	return strings.Join(out, " ")
+}
+
+// numberNeighbour reports whether the previous emitted token or the next
+// word is numeric, i.e. the ambiguous word sits inside a spoken number.
+func numberNeighbour(words, out []string, i int) bool {
+	if len(out) > 0 {
+		prev := strings.Trim(out[len(out)-1], ",.;:!?")
+		if prev == "+" || isDigits(prev) {
+			return true
+		}
+	}
+	if i+1 < len(words) {
+		next := strings.Trim(strings.ToLower(words[i+1]), ",.;:!?")
+		if _, ok := numberWords[next]; ok {
+			return true
+		}
+		if _, ok := multiplierWords[next]; ok {
+			return true
+		}
+		if isDigits(next) {
+			return true
+		}
+	}
+	return false
+}
+
+func isDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // ambiguousAlone are number words that are ordinary words on their own.
