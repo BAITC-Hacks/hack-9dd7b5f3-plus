@@ -15,27 +15,46 @@ Team **Plus** · HackAlem AI 2026 · Track 09 «Communications» · Case **Halyk
 ![frontend](https://img.shields.io/badge/Next.js-16-black)
 ![backend](https://img.shields.io/badge/Go-1.26-00ADD8)
 
-**Live demo:** ⏳ TBD (Railway) · [Docs index](docs/README.md) · [LLM router](core-llm/README.md) · [API contract](docs/API_CONTRACT.md) · [Architecture visual](docs/design/architecture.html) · [Official case](docs/CASE.md)
+**[▶ Try it online](#try-it-online)** — live app, jury access, demo video · [Docs index](docs/README.md) · [LLM router](core-llm/README.md) · [API contract](docs/API_CONTRACT.md) · [Architecture visual](docs/design/architecture.html) · [Official case](docs/CASE.md)
 
 </div>
 
 > [!IMPORTANT]
 > **Status on `main` (2026-09-23).**
-> - **The web app** runs the whole product flow — voice in and out, routing, decision policy, 31 mock backend actions, the supervisor trace and the official quality metrics — in the browser in **keyless mock mode**, where a transparent keyword baseline stands in for the router.
-> - **The LLM router** is on `main` as a standalone core, [`core-llm/`](core-llm/) (Python, OpenRouter, `google/gemini-2.5-flash-lite`). Its author reports 104/104 on the dev set at ~457 ms p50; it runs from the command line with an OpenRouter key.
-> - **In progress 🚧:** wiring the LLM router into the web app's turn pipeline (Go backend) and real speech (ElevenLabs). Every capability below is marked ✅ / 🚧 / 📋.
-<!-- TODO(team): when the LLM router runs inside the web app, rewrite this callout and flip the statuses in §2, §4.6, §5, §8.5. -->
+> - **«LLM» mode — the product.** The web app sends every utterance with its dialog context through a same-origin Next.js proxy to the Python router [`core-llm/`](core-llm/) (OpenRouter, `google/gemini-2.5-flash-lite`; its author reports 104/104 on the dev set at ~457 ms p50). Needs an OpenRouter key: `docker compose --profile llm up --build`.
+> - **«Мок» mode — keyless.** The same UI, dialog executor, 31 mock backend actions, supervisor trace and quality metrics, with a transparent keyword baseline instead of the LLM: `docker compose up --build` and nothing else.
+> - **In progress 🚧:** the Go backend («Бэкенд» mode), real speech (ElevenLabs), persistence and a public deployment. Every capability below is marked ✅ / 🚧 / 📋.
+<!-- TODO(team): when the Go backend / ElevenLabs / deploy land, rewrite this callout and flip the statuses in §2, §4.6, §5, §8.5. -->
 
-> **Кратко по-русски.** Bagyt — веб-симулятор голосового робота контакт-центра страховой компании (вымышленная Saqta Insurance из стартового кита Halyk Bank). Клиент говорит по-русски, по-казахски или вперемешку; робот выбирает один из 40 сценариев с учётом всего диалога, отвечает голосом, переспрашивает, когда не уверен, передаёт разговор оператору с контекстом и не выполняет необратимых действий без явного «да». Супервизор после каждой реплики видит сценарий, уверенность, обоснование, альтернативы и задержку по этапам. Проверка без ключей: `cd frontend && npm ci && npm run dev` → http://localhost:3000/admin (в режиме «Мок» роутер — прозрачный детерминированный baseline в браузере). Продуктовый LLM-роутер — [`core-llm/`](core-llm/) (Gemini 2.5 Flash-Lite через OpenRouter, 104/104 на dev-наборе по отчёту автора, ~457 мс p50) — запускается из командной строки с ключом OpenRouter; подключение к веб-интерфейсу — 🚧.
+> **Кратко по-русски.** Bagyt — веб-симулятор голосового робота контакт-центра страховой компании (вымышленная Saqta Insurance из стартового кита Halyk Bank). Клиент говорит по-русски, по-казахски или вперемешку; робот выбирает один из 40 сценариев с учётом всего диалога, отвечает голосом, переспрашивает, когда не уверен, передаёт разговор оператору с контекстом и не выполняет необратимых действий без явного «да». Супервизор после каждой реплики видит сценарий, уверенность, обоснование, альтернативы и задержку по этапам. Проверка без ключей: `docker compose up --build` → http://localhost:3000/admin, режим «Мок» (прозрачный детерминированный baseline вместо LLM). С ключом OpenRouter в `core-llm/.env`: `docker compose --profile llm up --build` и режим «LLM» — продуктовый роутер [`core-llm/`](core-llm/) (Gemini 2.5 Flash-Lite через OpenRouter, 104/104 на dev-наборе по отчёту автора, ~457 мс p50).
 
 ## Jury quick path
 
 | The organizers ask | Short answer | Details |
 |---|---|---|
 | **What does it solve?** | Voice robots mis-route live speech — topic switches, requests between two scenarios, Russian↔Kazakh switching inside a phrase — because the scenario is picked by an encoder intent classifier. Bagyt picks it with an LLM layer over the dialog context, asks or hands off when unsure, and shows the supervisor why. | [§1](#1-problem-and-users) |
-| **How do I run it?** | `cd frontend && npm ci && npm run dev` → open http://localhost:3000/admin. No backend, no keys (mode «Мок»). The LLM router: `python3 core-llm/router.py "…"` with an OpenRouter key. | [§7](#7-install-and-run) |
+| **How do I run it?** | `docker compose up --build` → open http://localhost:3000/admin — mode «Мок», no keys. With an OpenRouter key in `core-llm/.env`: `docker compose --profile llm up --build` → mode «LLM». Without Docker: `cd frontend && npm ci && npm run dev`. | [§7](#7-install-and-run) |
 | **Which technologies?** | Next.js 16 · React 19 · TypeScript · Tailwind 4 · Python LLM core on OpenRouter (Gemini 2.5 Flash-Lite) · Go 1.26 · browser Web Speech API · OpenAI transcription fallback · ElevenLabs (in progress) | [§5](#5-technologies) |
-| **How do I verify it?** | A 10-step walkthrough in the web app (RU, KZ, mixed, multi-intent, topic return, confirmation, clarify → handoff) + the official `evaluate.py` + the LLM router CLI | [§8](#8-how-to-verify) |
+| **How do I verify it?** | A 10-step walkthrough in the web app (RU, KZ, mixed, multi-intent, topic return, confirmation, clarify → handoff), the same phrases in «LLM» mode, the official `evaluate.py` and the unit tests | [§8](#8-how-to-verify) |
+
+## Try it online
+
+<!-- TODO(team): fill the four ⏳ cells before 18:00. Demo accounts only — never put API keys here; they stay in the server's environment. -->
+
+| | |
+|---|---|
+| 🌐 **Live app** | ⏳ `https://…` (Railway) |
+| 🔑 **Jury access** | Login: ⏳ · Password: ⏳ — or *"no login required"* |
+| 🎬 **Demo video** (3 min) | ⏳ link |
+| 🧪 **Test clients** | Say or type a phone when the robot asks: `+77010000007` Sergey Popov (claim under review) · `+77010000001` Arman Tulegenov (OGPO + CASCO) · `+77010000003` Yerlan Omarov (policy to renew) — all synthetic, [§8.3](#83-test-clients) |
+
+**Test it in 60 seconds:**
+
+1. Open the live app → **«Консоль»** (the conversation on the left, the robot's reasoning on the right). Log in with the jury access above if asked.
+2. In the header pick **«Данные: LLM»** — ⏳ on the deployed version the router key stays on the server, so you need no keys of your own.
+3. Click the mic and say — or type — **«Хочу продлить ОГПО и добавить сына»**, then **«Кеше аварияға түстім, но я не виноват, виновник у вас застрахован»**.
+4. After each phrase, read the right column: the scenarios with confidence, why, the rejected alternatives, what the robot did and how many milliseconds each stage took.
+5. More: the 10-step walkthrough in [§8](#8-how-to-verify) · no internet or key? `docker compose up --build` and «Данные: Мок» ([§7.1](#71-quick-start--keyless-about-two-minutes)).
 
 ## Contents
 
@@ -98,8 +117,9 @@ Legend: ✅ works on `main` · 🚧 in progress, not on `main` yet · 📋 plann
 
 | Capability | Status | Where |
 |---|---|---|
-| **LLM router** — the product: system prompt + a compact index of the catalog (`scenarios.index.txt`) + dialog context → `ID:PERCENT` pairs → decision policy. CLI, dev-set evaluation, dialog replay with context, model benchmark | ✅ standalone | [`core-llm/router.py`](core-llm/router.py), [`core-llm/prompt.md`](core-llm/prompt.md), [`core-llm/scenarios.index.txt`](core-llm/scenarios.index.txt) |
-| LLM router inside the web app's turn pipeline (Go backend → SSE events) | 🚧 | integration notes in [`core-llm/README.md`](core-llm/README.md) |
+| **LLM router** — the product: system prompt + a compact index of the catalog (`scenarios.index.txt`) + dialog context → `ID:PERCENT` pairs → decision policy. CLI, dev-set evaluation, dialog replay with context, model benchmark | ✅ | [`core-llm/router.py`](core-llm/router.py), [`core-llm/prompt.md`](core-llm/prompt.md), [`core-llm/scenarios.index.txt`](core-llm/scenarios.index.txt) |
+| **«LLM» mode in the web app:** browser → same-origin proxy `POST /api/core-route` → `core-llm/server.py` (`POST /api/route`, port 8090, private) → OpenRouter. The core's verdict (`route` / `clarify` / `handoff` / `out_of_scope` / `goodbye`) is authoritative; the browser executor then collects slots and runs the demo actions. The key never reaches the browser, and there is no silent fallback to the mock | ✅ needs `OPENROUTER_API_KEY` | [`api/core-route/route.ts`](frontend/src/app/api/core-route/route.ts), [`lib/core-router.ts`](frontend/src/lib/core-router.ts), [`core-llm/server.py`](core-llm/server.py) |
+| The same routing inside the Go turn API (SSE) | 🚧 | integration notes in [`core-llm/README.md`](core-llm/README.md) |
 | Router output contract used by the UI: ranked `scenarios[]` with confidence + reason, `alternatives[]`, `language`, `slots`, `is_continuation`, `model`, `tier` | ✅ | [`frontend/src/lib/contract.ts`](frontend/src/lib/contract.ts) |
 | Keyless mock router: token overlap with the catalog's ru/kk examples + hand-written cues that mirror `not_this_if`; labelled «Мок» in the UI | ✅ | `mock/router.ts` |
 | Multi-intent: split the utterance; urgent scenarios first (SC11, SC15, SC38), then in spoken order | ✅ | `core-llm/prompt.md`, `mock/router.ts`, `mock/engine.ts` |
@@ -122,7 +142,7 @@ Legend: ✅ works on `main` · 🚧 in progress, not on `main` yet · 📋 plann
 | Dialog state: client, awaited slot or confirmation, known data, actions (read / preview / executed) | ✅ | `components/app/admin/dialog.tsx` |
 | Per-stage latency waterfall against the 1.5 s target | ✅ (mock timings are simulated) | `components/app/admin/speed.tsx` |
 | Session metrics: turns, average confidence, clarifications, handoffs, median response time | ✅ (in memory) | [`lib/api.ts`](frontend/src/lib/api.ts) (`computeStats`) |
-| Routing quality: the official `evaluate.py` metrics on the 104-utterance dev set in one click, by language and type, with the error list | ✅ | [`lib/eval.ts`](frontend/src/lib/eval.ts), `components/app/admin/quality.tsx` |
+| Routing quality: the official `evaluate.py` metrics on the 104-utterance dev set in one click, by language and type, with the error list — for the router of the current mode («LLM»: 104 paid requests to the real core) | ✅ | [`lib/eval.ts`](frontend/src/lib/eval.ts), `components/app/admin/quality.tsx` |
 | Trace JSON of the last turn in the dataset README format | ✅ | `components/app/admin/shared.tsx` (`readmeTrace`) |
 | Turn log | ✅ | `components/app/admin/turn-log.tsx` |
 | History across sessions and error statistics over time (PostgreSQL) | 📋 | — |
@@ -133,12 +153,13 @@ Legend: ✅ works on `main` · 🚧 in progress, not on `main` yet · 📋 plann
 | Capability | Status | Where |
 |---|---|---|
 | Go HTTP service with `GET /health` | ✅ | [`backend/cmd/server/main.go`](backend/cmd/server/main.go) |
-| Turn API: `POST /api/session`, `POST /api/turn` (SSE), trace, supervisor stats, scenarios, `POST /api/eval/run` | 🚧 contract fixed | [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) |
+| Go turn API behind «Бэкенд» mode: `POST /api/session`, `POST /api/turn` (SSE), trace, supervisor stats, scenarios, `POST /api/eval/run` | 🚧 contract fixed | [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) |
 | LLM access: OpenRouter in `core-llm` ✅; OpenAI / NVIDIA / any OpenAI-compatible provider behind one Go interface 🚧 | ✅ · 🚧 | `core-llm/router.py` |
 | ElevenLabs Scribe v2 Realtime STT + TTS (Flash v2.5 for RU, v3 conversational for KZ) | 🚧 | Go `voice/` package — not on `main` yet |
 | geko.sh Seta STT / Tokay TTS (KZ-first) | 📋 | — |
 | PostgreSQL persistence of turns and traces | 📋 | — |
-| One command: `docker compose up` | 🚧 | ⏳ |
+| One command: `docker compose up --build` (web app, keyless); `--profile llm` adds the `core-llm` service | ✅ | [`docker-compose.yml`](docker-compose.yml), [`frontend/Dockerfile`](frontend/Dockerfile), [`core-llm/Dockerfile`](core-llm/Dockerfile) |
+| Tests: the `core-llm` HTTP adapter; the frontend's core adapter and dialog engine | ✅ | [`core-llm/test_server.py`](core-llm/test_server.py), [`frontend/scripts/test-core.cjs`](frontend/scripts/test-core.cjs) (`npm test`) |
 | Deployment (Railway) | ⏳ | ⏳ |
 | Phone channel (Vapi / Twilio / LiveKit SIP) | 📋 stretch | — |
 | Emotion detection and tone adaptation | ❌ cut | — |
@@ -151,7 +172,7 @@ Legend: ✅ works on `main` · 🚧 in progress, not on `main` yet · 📋 plann
 
 1. **Hear.** The client clicks the mic and speaks; listening stops on a pause (or a second click). In the web app the browser's Web Speech API transcribes (`ru-RU` or `kk-KZ`); if the browser can't reach Google's speech service, the recording goes to the server fallback `/api/stt` (OpenAI transcription). In real mode the audio goes to the backend's STT. The moment the client stops speaking is `client_t0` — latency is measured from it.
 2. **Triage.** Language `ru` / `kk` / `mixed`, normalization (spoken numbers → digits), urgency, and the split of a multi-intent utterance into parts.
-3. **Route.** The router ranks scenarios with a confidence and keeps the alternatives it rejected. The LLM core answers with nothing but `ID:PERCENT` pairs (about 6 tokens — which keeps routing near 450 ms), and the explanation shown to the supervisor is assembled deterministically from the catalog, the percentages and the thresholds. The console streams candidate confidences live while the router converges.
+3. **Route.** In «LLM» mode the utterance and its dialog context — previous turns with their scenarios, the active scenario, the bot's last reply — go through the same-origin proxy `/api/core-route` to `core-llm`. The model answers with nothing but `ID:PERCENT` pairs (about 6 tokens, which keeps routing near 450 ms); the core applies its policy, and the explanation shown to the supervisor is assembled deterministically from the scenario names, the percentages and the verdict. In «Мок» mode the keyword baseline returns the same shape. The console shows the candidates and their confidence.
 4. **Decide.** Deterministic policy code — not the model — turns the ranking into an action: `run`, `continue`, `clarify`, `handoff`, `out_of_scope` or `goodbye`. Urgent scenarios go first; the rest wait on the topic stack.
 5. **Act.** A per-scenario state machine driven by `scenarios.json`: identify the client, ask for the next missing slot, call mock actions, read back and wait for an explicit «да» before anything irreversible, close, then resume the interrupted topic.
 6. **Answer.** One or two sentences built from the scenario's response templates and real action results — never invented facts — streamed sentence by sentence.
@@ -212,48 +233,48 @@ flowchart LR
     direction TB
     CALL["Client screen /call<br/>mic (click to talk) + text"]
     ADMIN["Supervisor console /admin<br/>decision · dialog · speed · quality"]
-    STORE["Conversation store<br/>lib/store.ts"]
+    STORE["Conversation store + dialog executor<br/>lib/store.ts · lib/mock/engine.ts"]
     VOICE["Browser speech<br/>Web Speech API · speechSynthesis"]
-    MOCK["Mock engine (keyless)<br/>router · policy · executor · 31 actions"]
+    MOCK["Keyword baseline (keyless)<br/>lib/mock/router.ts"]
   end
 
-  STTR["Next.js route /api/stt<br/>server STT fallback"]
+  subgraph N["Next.js server routes"]
+    direction TB
+    PROXY["Route /api/core-route<br/>same-origin proxy"]
+    STTR["Route /api/stt<br/>server STT fallback"]
+  end
+
+  CORE["core-llm/server.py · Python, port 8090<br/>prompt.md + scenarios.index.txt<br/>→ ID:PERCENT pairs → policy"]
 
   subgraph G["Go backend (backend/) · in progress"]
-    direction TB
-    API["HTTP API<br/>POST /api/turn → SSE events"]
-    PIPE["triage → LLM router → policy<br/>→ executor → response"]
+    API["POST /api/turn → SSE events"]
   end
 
-  CORE["core-llm/router.py · Python<br/>LLM router: prompt + catalog index<br/>CLI · eval · dialogs · benchmark"]
-
-  subgraph X["External providers · keys only in .env files"]
+  subgraph X["External providers · keys only in server-side env files"]
     direction TB
     LLM["OpenRouter<br/>google/gemini-2.5-flash-lite"]
     OAI["OpenAI transcription<br/>gpt-4o-mini-transcribe"]
-    SPEECH["ElevenLabs STT / TTS<br/>(geko.sh as alternative)"]
+    SPEECH["ElevenLabs STT / TTS<br/>in progress"]
   end
 
   KIT[("data/ · official starter kit<br/>40 scenarios · 43 slots · 31 actions<br/>knowledge base · 11 test clients")]
-  DB[("PostgreSQL · traces<br/>planned")]
 
   CALL --> STORE
   ADMIN --> STORE
   STORE <--> VOICE
-  STORE -.->|voice fallback| STTR
-  STTR --> OAI
   STORE -->|mode Мок| MOCK
-  STORE -->|mode Бэкенд| API
-  MOCK --> KIT
-  API --> PIPE
-  PIPE -.->|same prompt + index| LLM
+  STORE -->|mode LLM| PROXY
+  STORE -.->|mode Бэкенд| API
+  STORE -.->|voice fallback| STTR
+  PROXY --> CORE
   CORE --> LLM
-  CORE --> KIT
-  API --> SPEECH
-  API -.-> DB
+  STTR --> OAI
+  API -.-> SPEECH
+  MOCK --> KIT
+  STORE -->|slots, actions, replies| KIT
 ```
 
-One conversation store drives both screens. A switch in the header («Данные: Мок / Бэкенд») decides where a turn is processed — in the browser (no keys) or in the Go backend (real providers). Both emit the **same typed event stream**, so the UI does not know the difference. The LLM router core is self-contained: the Go backend reuses its two text files (`prompt.md`, `scenarios.index.txt`) and its policy, as described in [`core-llm/README.md`](core-llm/README.md).
+One conversation store and one dialog executor drive both screens. The header switch «Данные: Мок / LLM / Бэкенд» picks the router: the keyword baseline in the browser, the Python LLM core behind a same-origin proxy, or the Go backend (in progress). Every mode produces the **same typed event stream**, so the UI does not know the difference. API keys stay on the server side (`core-llm/.env`, `frontend/.env.local`) and never reach the browser. The Go backend will reuse the core's two text files and its policy, as described in [`core-llm/README.md`](core-llm/README.md).
 
 ### 4.2 One turn as an event stream
 
@@ -262,11 +283,11 @@ sequenceDiagram
   autonumber
   actor C as Client
   participant UI as Browser (/call or /admin)
-  participant E as Engine (browser mock or Go backend)
+  participant E as Dialog engine (browser today, Go backend later)
   participant S as STT / TTS
-  participant L as LLM router
+  participant L as LLM router (core-llm via /api/core-route)
   C->>UI: clicks the mic, speaks RU / KK / mixed, pauses
-  UI->>E: POST /api/turn with text or audio_base64 and client_t0
+  UI->>E: turn with text (or audio_base64) and client_t0
   E-->>UI: turn.start
   E->>S: audio (real mode)
   S-->>E: transcript + language
@@ -299,7 +320,7 @@ sequenceDiagram
 | `turn.done` | `Trace`, `latency_ms` | trace JSON, speed waterfall, metrics |
 | `error` | `message` | error banner; ends the turn |
 
-Transport: `POST /api/turn` → `text/event-stream`, one JSON event per `data:` line. Contract: [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md); types: [`frontend/src/lib/contract.ts`](frontend/src/lib/contract.ts).
+In «Мок» and «LLM» modes these events are produced in the browser; the Go backend will stream the same events over `POST /api/turn` → `text/event-stream`, one JSON event per `data:` line. Contract: [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md); types: [`frontend/src/lib/contract.ts`](frontend/src/lib/contract.ts).
 
 ### 4.3 Decision policy
 
@@ -322,7 +343,7 @@ flowchart TD
   Q6 -- yes --> HO["handoff<br/>operator queue + context summary"]
 ```
 
-The web app's thresholds come from the dataset README and live as constants (`CONFIDENCE_RUN = 0.75`, `CONFIDENCE_CLARIFY = 0.45`) in [`contract.ts`](frontend/src/lib/contract.ts). The LLM core applies its own percent thresholds (`ROUTER_THRESHOLD=60` to route, extra intents ≥ 20 %); aligning the two is open decision D5. An explicit request for a human (SC37) goes straight to handoff. **The model proposes, code disposes:** the router never executes anything by itself.
+In «LLM» mode the core's verdict is authoritative (`route_status`: route / clarify / handoff / out_of_scope / goodbye; a scenario counts as requested from `ROUTER_THRESHOLD=60` %, extra intents from 20 %). The thresholds in the diagram (`CONFIDENCE_RUN = 0.75`, `CONFIDENCE_CLARIFY = 0.45` in [`contract.ts`](frontend/src/lib/contract.ts), from the dataset README) apply to the keyword baseline. An explicit request for a human (SC37) goes straight to handoff. **The model proposes, code disposes:** the router never executes anything by itself.
 
 ### 4.4 Scenario executor
 
@@ -364,17 +385,18 @@ Kept per session and sent to the UI after every turn (`state` event):
 
 `awaiting` is `null`, `{ "kind": "slot", "slot": … }` or `{ "kind": "confirmation", "action": … }`.
 
-### 4.6 Two modes, one contract
+### 4.6 Three modes, one contract
 
-| | Mock mode (default) | Real mode |
-|---|---|---|
-| Switch | header «Данные: Мок», or `NEXT_PUBLIC_API_MODE=mock` | header «Данные: Бэкенд», or `NEXT_PUBLIC_API_MODE=real` |
-| Where a turn runs | in the browser — [`frontend/src/lib/mock/`](frontend/src/lib/mock/) | Go backend — `POST /api/turn` (SSE) |
-| STT | Web Speech API (Chrome / Edge), or the `/api/stt` fallback (OpenAI, key in `frontend/.env.local`) | ElevenLabs Scribe v2 Realtime |
-| Router | keyword / cue baseline, `model: "mock-lexical"` | the LLM router — `core-llm` prompt + index via OpenRouter |
-| TTS | browser `speechSynthesis` | ElevenLabs Flash v2.5 (RU) · v3 conversational (KZ) |
-| Keys | none (the STT fallback is optional) | provider keys in `.env` |
-| Status | ✅ | 🚧 |
+| | «Мок» (default) | «LLM» — the product | «Бэкенд» |
+|---|---|---|---|
+| Switch | header «Данные: Мок», or `NEXT_PUBLIC_API_MODE=mock` | «Данные: LLM», or `NEXT_PUBLIC_API_MODE=core` | «Данные: Бэкенд», or `NEXT_PUBLIC_API_MODE=real` |
+| Router | keyword / cue baseline in the browser (`mock-lexical`) | `core-llm` via `/api/core-route` → OpenRouter (`google/gemini-2.5-flash-lite`) | Go backend, `POST /api/turn` (SSE) |
+| Policy, slots, actions, replies | browser dialog executor over the starter kit ([`frontend/src/lib/mock/`](frontend/src/lib/mock/)) | the core's verdict + the same browser executor | Go backend |
+| STT | Web Speech API (Chrome / Edge), or the `/api/stt` fallback (OpenAI) | same as «Мок» | ElevenLabs Scribe v2 Realtime |
+| TTS | browser `speechSynthesis` | browser `speechSynthesis` | ElevenLabs Flash v2.5 (RU) · v3 conversational (KZ) |
+| Keys | none (the STT fallback is optional) | `OPENROUTER_API_KEY` in `core-llm/.env` | provider keys in `.env` |
+| Run | `docker compose up --build` | `docker compose --profile llm up --build` | — |
+| Status | ✅ | ✅ | 🚧 |
 
 ### 4.7 Why this is not an intent classifier — and not hardcoded
 
@@ -389,8 +411,9 @@ Kept per session and sent to the UI after every turn (`state` event):
 ```text
 .
 ├── frontend/                    Next.js 16 app — the product UI; runs end-to-end in mock mode
-│   ├── src/app/                 routes: / (landing) · /call (client) · /admin (supervisor) · api/stt (STT fallback)
+│   ├── src/app/                 routes: / (landing) · /call (client) · /admin (supervisor) · api/core-route (LLM proxy) · api/stt (STT fallback)
 │   ├── src/lib/contract.ts      frontend ⇄ backend event and trace contract (source of truth)
+│   ├── src/lib/core-router.ts   adapter: the core-llm result → the UI's RouterDecision
 │   ├── src/lib/store.ts         conversation store shared by /call and /admin
 │   ├── src/lib/api.ts           mock ⇄ real switch, SSE reader, session stats
 │   ├── src/lib/voice.ts         browser STT / TTS / audio recorder
@@ -398,12 +421,15 @@ Kept per session and sent to the UI after every turn (`state` event):
 │   ├── src/lib/mock/            router.ts · engine.ts (policy + executor) · actions.ts (31 mock actions)
 │   ├── src/components/          app/ (console) · landing/ · ui/ (coss ui) · block/ (ObsidianUI)
 │   ├── src/data/                copies of ../data/*.json used by the browser
-│   └── scripts/                 eval-mock.ts (dev set) · replay-dialogs.ts (sample dialogs)
+│   └── scripts/                 eval-mock.ts (dev set) · replay-dialogs.ts (sample dialogs) · test-core.cjs (npm test)
 ├── core-llm/                    LLM router core (Python, standard library only)
 │   ├── prompt.md                system prompt: output format, multi-intent, system intents, context rules
 │   ├── scenarios.index.txt      compact catalog index: meaning · ru cues · kk cues · ≠ boundaries
-│   └── router.py                CLI · Router class · --eval · --dialogs · --bench
+│   ├── router.py                Router class · CLI · --eval · --dialogs · --bench
+│   ├── server.py                private HTTP adapter: GET /healthz, POST /api/route (port 8090)
+│   └── test_server.py           unit tests for the adapter
 ├── backend/                     Go service (net/http): GET /health today, turn API in progress
+├── docker-compose.yml           web app (keyless) + core-llm (profile "llm")
 ├── data/                        official starter kit (read-only) + our predictions_mock.json
 ├── docs/                        case, analysis, PRD, SPEC, API contract, tasks, pitch, progress, research, design
 ├── DESIGN.md                    design-system reference
@@ -421,7 +447,7 @@ Kept per session and sent to the UI after every turn (`state` event):
 | Frontend | Next.js (App Router), React, TypeScript | 16.3.6 · 19.2.8 · 5 | Landing, client screen, supervisor console, `/api/stt` route | ✅ |
 | UI | Tailwind CSS · coss ui on Base UI (`@base-ui/react`) · ObsidianUI blocks · lucide-react · GSAP | 4 · 1.8 · — · — · 3.15 | Design system, accessible primitives, icons, landing text stream | ✅ |
 | Typography | Geist, Geist Mono via `next/font` (latin + cyrillic) | — | Text; mono only for numbers and IDs | ✅ |
-| LLM router | Python 3 (standard library only) · OpenRouter · `google/gemini-2.5-flash-lite` by default (any model via `ROUTER_MODEL`) | — | Scenario choice: `ID:PERCENT` pairs, `temperature=0`, reasoning off, provider sorted by latency | ✅ standalone · 🚧 in the web app |
+| LLM router | Python 3 (standard library only) · OpenRouter · `google/gemini-2.5-flash-lite` by default (any model via `ROUTER_MODEL`) | — | Scenario choice: `ID:PERCENT` pairs, `temperature=0`, reasoning off, provider sorted by latency; a private HTTP adapter for the web app | ✅ |
 | LLM, Go backend | One OpenAI-compatible client: OpenAI (`gpt-4.1-mini`), NVIDIA Build (`meta/llama-3.3-70b-instruct`), OpenRouter / Groq / Gemini / Ollama via `LLM_BASE_URL`; `mock` | — | The same routing inside the turn API | 🚧 |
 | Browser speech | Web Speech API (`SpeechRecognition`), `speechSynthesis`, `MediaRecorder` | built in | Keyless STT / TTS; audio capture | ✅ |
 | STT fallback | OpenAI `gpt-4o-mini-transcribe` through the Next.js route `/api/stt` | — | Recognition when the browser can't reach Google | ✅ (key) |
@@ -430,7 +456,8 @@ Kept per session and sent to the UI after every turn (`state` event):
 | Backend | Go, standard `net/http` | 1.26.5 | API gateway and the turn pipeline | ✅ health · 🚧 API |
 | Storage | PostgreSQL | — | Turns, traces, statistics | 📋 |
 | Evaluation | Python 3 — official [`data/evaluate.py`](data/evaluate.py); TypeScript scripts run with `tsx` | — | Dev-set accuracy, sample-dialog replay | ✅ |
-| Infrastructure | Docker Compose · Railway | — | One-command run · hosting | 🚧 · ⏳ |
+| Tests | `node:test` + the TypeScript compiler (`npm test`) · Python `unittest` | — | Core adapter, dialog engine, the core's HTTP adapter | ✅ |
+| Infrastructure | Docker Compose (images `node:22-bookworm-slim`, `python:3.13-slim`) · Railway | — | One-command run · hosting | ✅ · ⏳ |
 
 Every third-party component, model, dataset and API with its license: [THIRD_PARTY.md](THIRD_PARTY.md).
 
@@ -440,13 +467,13 @@ Every third-party component, model, dataset and API with its license: [THIRD_PAR
 
 | For | You need |
 |---|---|
-| The web demo (mock mode) | **Node.js ≥ 20.9** (Next.js 16 minimum) with npm. **Chrome or Edge** on desktop for voice input — any modern browser works with text. A microphone; browsers allow it on `localhost` or HTTPS only. |
-| The LLM router | **Python 3** (standard library only) and an **OpenRouter API key** in `core-llm/.env` |
-| Optional STT fallback | An OpenAI API key in `frontend/.env.local` |
+| Recommended — everything | **Docker with Compose v2.** Nothing else for «Мок»; an **OpenRouter API key** for «LLM» |
+| Without Docker | **Node.js 22+** with npm (the version in the Dockerfile; Next.js 16 itself needs ≥ 20.9) and **Python 3.10+** for `core-llm` (standard library only) |
+| Voice | **Chrome or Edge** on desktop for voice input — any modern browser works with text. A microphone; browsers allow it on `localhost` or HTTPS only |
+| Optional STT fallback | An OpenAI API key — `frontend/.env.local`, or the root `.env` with Compose |
 | Evaluation scripts | Python 3 for `data/evaluate.py`; `npx tsx` (npx downloads `tsx` on first run) |
-| Backend | Go ≥ 1.26.5 (see [`backend/go.mod`](backend/go.mod)) |
-| One-command run | Docker with Compose v2 — ⏳ once `docker-compose.yml` lands |
-| API keys | **None for the web demo.** The LLM router CLI needs OpenRouter; real mode needs provider keys ([§7.6](#76-environment-variables)) |
+| Go backend | Go ≥ 1.26.5 (see [`backend/go.mod`](backend/go.mod)) |
+| API keys | **None for «Мок».** «LLM» needs OpenRouter; «Бэкенд» will need provider keys ([§7.6](#76-environment-variables)) |
 
 ---
 
@@ -456,72 +483,94 @@ Every third-party component, model, dataset and API with its license: [THIRD_PAR
 
 ```bash
 git clone https://github.com/BAITC-Hacks/hack-9dd7b5f3-plus.git
+cd hack-9dd7b5f3-plus
+docker compose up --build
+```
+
+Open **http://localhost:3000/admin** (supervisor console, with the conversation on the left) or **http://localhost:3000/call** (the client's view). The header shows «Данные: Мок» — no keys, no accounts, no login. Port 3000 busy? `FRONTEND_PORT=3200 docker compose up --build`.
+
+Without Docker:
+
+```bash
 cd hack-9dd7b5f3-plus/frontend
+npm ci
+npm run dev        # starts in «Мок» when there is no frontend/.env.local
+```
+
+Optional — voice without Google (Arc, Brave, Yandex browsers or a restricted network): put `OPENAI_API_KEY` into `frontend/.env.local` (or into the root `.env` with Compose) and restart. The header toggle «Распознавание: Chrome / Сервер» picks the recognizer; the app switches to «Сервер» by itself on a network error.
+
+### 7.2 LLM mode — the real router in the web app
+
+With Docker:
+
+```bash
+cp core-llm/.env.example core-llm/.env      # put OPENROUTER_API_KEY there
+docker compose --profile llm up --build
+```
+
+Select **«Данные: LLM»** in the header. The Python service is reachable only inside the Docker network, and the key never reaches the browser. To start in «LLM» by default, build with `NEXT_PUBLIC_API_MODE=core`.
+
+Without Docker — two terminals:
+
+```bash
+# terminal 1 — repository root
+cp core-llm/.env.example core-llm/.env      # put OPENROUTER_API_KEY there
+python3 core-llm/server.py                  # 127.0.0.1:8090 · GET /healthz · POST /api/route
+
+# terminal 2
+cd frontend
+cp .env.local.example .env.local            # NEXT_PUBLIC_API_MODE=core, CORE_LLM_URL=http://127.0.0.1:8090
 npm ci
 npm run dev
 ```
 
-Open **http://localhost:3000/admin** (supervisor console, with the conversation on the left) or **http://localhost:3000/call** (the client's view). The header shows «Данные: Мок» — everything runs in the browser: no backend, no keys, no accounts.
+If `core-llm` is down or the key is wrong, «LLM» mode shows an error — there is no silent fallback to the mock.
 
-Optional — voice without Google (Arc, Brave, Yandex browsers or a restricted network):
-
-```bash
-cp .env.local.example .env.local    # in frontend/: put OPENAI_API_KEY there, then restart npm run dev
-```
-
-The header toggle «Распознавание: Chrome / Сервер» picks the recognizer; the app switches to «Сервер» by itself on a network error.
-
-### 7.2 LLM router and backend from the command line
+### 7.3 Router CLI, tests and the Go backend
 
 ```bash
-# the LLM router (Python 3, standard library only)
-cp core-llm/.env.example core-llm/.env     # put OPENROUTER_API_KEY there
+# the LLM router from the command line (needs core-llm/.env)
 python3 core-llm/router.py "Кеше аварияға түстім, но я не виноват, виновник у вас застрахован"
-python3 core-llm/router.py --eval          # dev set → evaluate.py metrics + predictions
-python3 core-llm/router.py --dialogs       # dialogs_sample.json turn by turn, with context
+python3 core-llm/router.py --eval           # dev set → evaluate.py metrics + predictions
+python3 core-llm/router.py --dialogs        # dialogs_sample.json turn by turn, with context
 python3 core-llm/router.py --bench google/gemini-2.5-flash-lite,openai/gpt-4.1-mini   # compare models
 
+# tests — no keys needed
+python3 -m unittest discover -s core-llm -p 'test_*.py'
+(cd frontend && npm test && npm run lint && npm run build)
+
 # the Go backend
-cd backend
-go run ./cmd/server                        # listens on :8080; override with PORT
-curl http://localhost:8080/health          # → {"status":"ok"}
+(cd backend && go run ./cmd/server)         # :8080 (override with PORT); GET /health → {"status":"ok"}
 ```
 
 More router options (dialog context flags, the Python API): [`core-llm/README.md`](core-llm/README.md).
 
-### 7.3 Real mode (frontend → Go backend) 🚧
+### 7.4 Real mode (frontend → Go backend) 🚧
 
-Switch «Данные» → «Бэкенд» in the header, or put `NEXT_PUBLIC_API_MODE=real` and `NEXT_PUBLIC_API_URL=http://localhost:8080` into `frontend/.env.local` before `npm run dev`. The backend has to implement [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md); ⏳ until the turn API is on `main`, real mode cannot create a session.
-
-### 7.4 One command with Docker Compose ⏳
-
-```bash
-cp .env.example .env        # keyless defaults
-docker compose up --build   # frontend :3000 · backend :8080 · postgres
-```
-
-> ⏳ `docker-compose.yml` is not on `main` yet — use [§7.1](#71-quick-start--keyless-about-two-minutes) until it lands.
-<!-- TODO(backend): add docker-compose.yml + Dockerfiles, verify from a clean clone, then delete this note and update the port list above. -->
+Switch «Данные» → «Бэкенд» in the header, or set `NEXT_PUBLIC_API_MODE=real` and `NEXT_PUBLIC_API_URL=http://localhost:8080`. The backend has to implement [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md); ⏳ until the turn API is on `main`, this mode cannot create a session.
 
 ### 7.5 Deployed version
 
-⏳ TBD — Railway URL. <!-- TODO: paste the URL and the date of the last smoke test (§9.5). -->
+⏳ TBD — Railway URL. Until then: local Docker Compose, no login required. <!-- TODO: paste the URL and the date of the last smoke test (§9.5). -->
 
 ### 7.6 Environment variables
 
-Three env files, one per component; every one ships as a keyless example. Secrets live only in your local copies (all gitignored) and in the hosting provider's variables — never in the repo.
+Three env files, one per component; each ships as a keyless example. Secrets live only in your local copies (all gitignored) and in the hosting provider's variables — never in the repo.
 
 | File | Copy from | Read by |
 |---|---|---|
-| `.env` | [`.env.example`](.env.example) | Go backend (process environment) |
-| `core-llm/.env` | [`core-llm/.env.example`](core-llm/.env.example) | `core-llm/router.py` |
-| `frontend/.env.local` | [`frontend/.env.local.example`](frontend/.env.local.example) | Next.js (it reads env files from `frontend/`, not from the repo root) |
+| `.env` | [`.env.example`](.env.example) | Docker Compose variable substitution (`FRONTEND_PORT`, `NEXT_PUBLIC_API_MODE`, `OPENAI_API_KEY`) and the Go backend |
+| `core-llm/.env` | [`core-llm/.env.example`](core-llm/.env.example) | `core-llm/router.py` and `server.py`; in Compose, the `core-llm` service's `env_file` |
+| `frontend/.env.local` | [`frontend/.env.local.example`](frontend/.env.local.example) | `npm run dev` (Next.js reads env files from `frontend/`, not from the repo root); the example starts in «LLM» mode |
 
 | Variable | File | Default | Read on `main` today? | Purpose |
 |---|---|---|---|---|
-| `NEXT_PUBLIC_API_MODE` | `frontend/.env.local` | `mock` | ✅ [`lib/api.ts`](frontend/src/lib/api.ts) | Start mode: `mock` (all in the browser) or `real` (Go backend); also switchable in the header |
-| `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | `http://localhost:8080` | ✅ `lib/api.ts` | Backend base URL for real mode |
-| `OPENAI_API_KEY` / `OPENAI_STT_MODEL` | `frontend/.env.local` | — / `gpt-4o-mini-transcribe` | ✅ `app/api/stt/route.ts` (server only) | Optional server-side STT fallback |
+| `NEXT_PUBLIC_API_MODE` | `.env` (Compose build arg) or `frontend/.env.local` | `mock` (`core` in `.env.local.example`) | ✅ [`lib/api.ts`](frontend/src/lib/api.ts) | Start mode, fixed at build time: `mock` \| `core` («LLM») \| `real` (Go); switchable in the header |
+| `CORE_LLM_URL` | `frontend/.env.local` | `http://127.0.0.1:8090` (Compose: `http://core-llm:8090`) | ✅ `app/api/core-route` (server only) | Where the Next.js proxy finds `core-llm`. Never prefix it — or any key — with `NEXT_PUBLIC_` |
+| `FRONTEND_PORT` | `.env` | `3000` | ✅ Compose | Host port of the web app |
+| `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | `http://localhost:8080` | ✅ `lib/api.ts` | Go backend base URL for «Бэкенд» mode |
+| `OPENAI_API_KEY` / `OPENAI_STT_MODEL` | `frontend/.env.local` (Compose: `.env`) | — / `gpt-4o-mini-transcribe` | ✅ `app/api/stt/route.ts` (server only) | Optional server-side STT fallback |
+| `CORE_LLM_HOST` / `CORE_LLM_PORT` | `core-llm/.env` | `127.0.0.1` / `8090` (Compose: `0.0.0.0`) | ✅ `core-llm/server.py` | Bind address of the router's HTTP adapter |
 | `OPENROUTER_API_KEY` | `core-llm/.env` | — | ✅ `core-llm/router.py` | LLM router via OpenRouter |
 | `ROUTER_MODEL` | `core-llm/.env` | `google/gemini-2.5-flash-lite` | ✅ | Model id on OpenRouter |
 | `ROUTER_PROVIDER_SORT` | `core-llm/.env` | `latency` | ✅ | OpenRouter provider routing: `latency` \| `throughput` \| `price` |
@@ -543,18 +592,21 @@ Three env files, one per component; every one ships as a keyless example. Secret
 | Symptom | Fix |
 |---|---|
 | «Распознавание речи работает в Chrome или Edge…» | Use desktop Chrome or Edge — or just type: text runs the same pipeline |
-| «Нет связи с сервисом распознавания…» | The browser can't reach Google's speech service. Add `OPENAI_API_KEY` to `frontend/.env.local` and restart — the app switches to «Сервер» — or type |
+| «Нет связи с сервисом распознавания…» | The browser can't reach Google's speech service. Add `OPENAI_API_KEY` to `frontend/.env.local` (with Compose: to `.env`) and restart — the app switches to «Сервер» — or type |
 | «Нет доступа к микрофону…» | Allow the microphone in the address bar; the page must be on `localhost` or HTTPS |
 | «Ничего не расслышала…» | Click the mic, start speaking right away, pause to send |
 | Kazakh speech comes out as Russian words | Switch «Язык речи» → KK before speaking. Phrases that mix RU and KZ are better typed in mock mode ([§13](#13-limitations-and-known-issues)) |
 | Kazakh answers are read with a Russian voice | Browsers rarely ship a Kazakh voice, so the mock falls back to a Russian one; real mode uses ElevenLabs v3 for Kazakh 🚧 |
-| `core-llm` fails with an auth error | Put `OPENROUTER_API_KEY` into `core-llm/.env` (copy `core-llm/.env.example`) |
-| Port 3000 is busy | `npm run dev -- -p 3001` |
+| «core-llm не отвечает…» in «LLM» mode | Start the router — `docker compose --profile llm up --build`, or `python3 core-llm/server.py` — and check `CORE_LLM_URL` |
+| «Ошибка core-llm…» / «LLM недоступна…» | Check `OPENROUTER_API_KEY` and `ROUTER_MODEL` in `core-llm/.env` |
+| Port 3000 is busy | `FRONTEND_PORT=3200 docker compose up --build`, or `npm run dev -- -p 3001` |
 | The previous dialog interferes | Click «Новый диалог» — within one dialog the client stays identified and slots are remembered |
 
 ---
 
 ## 8. How to verify
+
+> Prefer to watch? **Demo video:** ⏳ link (3 min). Prefer to click? The live app and jury access are in [Try it online](#try-it-online). Everything below also works locally.
 
 ### 8.1 Setup — 30 seconds
 
@@ -581,7 +633,15 @@ The expected results below were produced by running these exact inputs through t
 
 After any turn: **«JSON последней реплики»** shows the trace in the dataset README format, and **«Скорость»** shows the per-stage waterfall against the 1.5 s line.
 
-**The LLM router itself** (terminal, needs an OpenRouter key — [§7.2](#72-llm-router-and-backend-from-the-command-line)): run the same phrases, e.g. `python3 core-llm/router.py "Хочу продлить ОГПО и заодно добавить в него сына"` → `SC27:95 SC04:95` (expected output per [`core-llm/README.md`](core-llm/README.md)).
+**In «Данные: LLM» mode** — the product router; needs a running `core-llm` with a key ([§7.2](#72-llm-mode--the-real-router-in-the-web-app)) or the deployed version. Expected results as stated by the router's author; ⏳ re-check at freeze:
+
+| # | Say or type | You should see |
+|---|---|---|
+| L1 | «Хочу продлить ОГПО и добавить сына» | Two scenarios, SC27 renewal + SC04 add a driver; the robot acknowledges the second request and asks for identification; «Консоль» shows the model, the percentages, the alternatives, the core's verdict and the timings |
+| L2 | «А какие документы нужны при ДТП?» | A topic switch; the console shows the new scenario |
+| L3 | «Полисімнің мерзімін ұзартқым келеді» | Kazakh, routed by the same core |
+| L4 | «Качество маршрутизации» → «Прогнать dev-набор» | The dev set through the real router — 104 paid requests |
+| CLI | `python3 core-llm/router.py "Хочу продлить ОГПО и заодно добавить в него сына"` | `SC27:95 SC04:95` ([`core-llm/README.md`](core-llm/README.md)) |
 
 ### 8.3 Test clients
 
@@ -616,6 +676,10 @@ npx tsx scripts/replay-dialogs.ts
 cd ..
 python3 core-llm/router.py --eval
 python3 core-llm/router.py --dialogs
+
+# 5) unit tests — no keys needed
+python3 -m unittest discover -s core-llm -p 'test_*.py'
+(cd frontend && npm test)
 ```
 
 Use `python3` where `python` is not on the path.
@@ -625,7 +689,7 @@ Use `python3` where `python` is not on the path.
 | Case requirement | Where you see it | Status |
 |---|---|---|
 | **Must-have:** voice interaction in the web — the jury speaks, the robot answers by voice | `/call` or `/admin`: mic → spoken reply (steps 1, 3) | ✅ browser speech · ✅ OpenAI STT fallback · 🚧 ElevenLabs |
-| **Must-have:** scenario selection on an LLM layer, not an encoder classifier | [`core-llm/`](core-llm/): prompt + catalog index → LLM → policy ([§4.7](#47-why-this-is-not-an-intent-classifier--and-not-hardcoded)) | ✅ CLI · 🚧 inside the web app |
+| **Must-have:** scenario selection on an LLM layer, not an encoder classifier | «Данные: LLM» in the web app → `/api/core-route` → [`core-llm/`](core-llm/): prompt + catalog index → LLM → policy ([§4.7](#47-why-this-is-not-an-intent-classifier--and-not-hardcoded)) | ✅ needs an OpenRouter key — ⏳ open on the deployed version |
 | **Must-have:** correct selection on the jury's 10 utterances | Dev set: 104/104 for the LLM router (reported, in-sample), 97.1% for the mock ([§9.1](#91-routing-accuracy-on-the-dev-set)) | ⏳ the jury's set |
 | **Must-have:** trace panel after every utterance — scenario, reason, alternatives, per-stage timing | `/admin`: decision card, «Скорость», «JSON последней реплики» | ✅ |
 | **Must-have:** Russian and Kazakh, including mixing inside a phrase | Steps 3 and 4 | ✅ (mixed speech by voice is limited in mock mode, [§13](#13-limitations-and-known-issues)) |
@@ -642,7 +706,7 @@ Use `python3` where `python` is not on the path.
 | Constraint: explainability — the supervisor sees the logic, not a bare verdict | Reason, alternatives, policy reason, catalog rules | ✅ |
 | Constraint: no hardcoded test utterances | [§4.7](#47-why-this-is-not-an-intent-classifier--and-not-hardcoded) | ✅ |
 | Constraint: synthetic data only, no real recordings | [§10](#10-data-and-integrations) | ✅ |
-| Constraint: launch with one command | `npm ci && npm run dev` today; `docker compose up` ⏳ | 🚧 |
+| Constraint: launch with one command | `docker compose up --build` (+ `--profile llm` for the LLM router) | ✅ |
 | Minimum: the robot hands the call to an operator where it cannot cope | Step 8; also the SC15, SC30, SC37 handoff rules | ✅ |
 
 ---
@@ -660,7 +724,7 @@ Official [`data/evaluate.py`](data/evaluate.py) on [`data/dev_utterances.json`](
 | **LLM router** `core-llm` · `google/gemini-2.5-flash-lite` via OpenRouter — ⚠️ in-sample | **100%** | **100%** | **100%** | 100 / 100 / 100 | 100 / 100 / 100 / 100 | **457 ms p50 · 617 ms p95** | reported · `a39cbb4` · 2026-09-23 |
 | Mock baseline `mock-lexical` — ⚠️ in-sample | 97.1% | 97.1% | 100% | 98.1 / 95.6 / 100 | 97.6 / 100 / 100 / 66.7 | < 1 ms, in-process | measured · `f02fc21` · 2026-09-23 |
 | LLM router — independent re-run | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
-| LLM router inside the web app (Go backend) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
+| LLM router in the web app — «Прогнать dev-набор» in «LLM» mode | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
 <!-- TODO(ai): core-llm/reports/ is gitignored, so nobody can re-score the LLM row without an OpenRouter key. Commit the predictions file (e.g. core-llm/predictions/predictions-google_gemini-2.5-flash-lite.json) so a reviewer can run `python data/evaluate.py <file> data/dev_utterances.json` keylessly, then fill the "independent re-run" row. -->
 
@@ -780,12 +844,16 @@ Measure the web app on `/admin`: «Скорость» after every turn, «Вре
 | Official scorer on the committed mock predictions | `python data/evaluate.py data/predictions_mock.json data/dev_utterances.json` | ✅ 97.1% primary, 3 errors | `f02fc21` · 2026-09-23 |
 | Sample-dialog replay (mock) | `cd frontend && npx tsx scripts/replay-dialogs.ts` | ✅ 28/40 turns, 38/40 reply language | `f02fc21` · 2026-09-23 |
 | Backend build and vet | `cd backend && go build ./... && go vet ./...` | ✅ (no Go tests yet) | `f02fc21` · 2026-09-23 |
+| `core-llm` unit tests | `python3 -m unittest discover -s core-llm -p 'test_*.py'` | ✅ 4 tests OK | `bfe1eec` · 2026-09-23 |
+| Mock numbers re-checked after the «LLM» integration | eval + replay above | ✅ unchanged: 97.1%, 28/40, 38/40 | `bfe1eec` · 2026-09-23 |
 | LLM router on the dev set and dialogs | `python3 core-llm/router.py --eval` · `--dialogs` | reported 104/104 · 39/40 — ⏳ independent re-run | `a39cbb4` · 2026-09-23 |
+| Frontend tests | `cd frontend && npm test` | ⏳ | ⏳ |
 | Backend tests | `cd backend && go test ./...` | ⏳ | ⏳ |
 | Frontend lint | `cd frontend && npm run lint` | ⏳ | ⏳ |
 | Frontend production build | `cd frontend && npm run build` | ⏳ | ⏳ |
 | Clean clone → §7.1 → §8.2 walkthrough | manual | ⏳ | ⏳ |
 | `docker compose up --build` from a clean clone | manual | ⏳ | ⏳ |
+| `docker compose --profile llm up --build` with a key | manual | ⏳ | ⏳ |
 | Deployed URL smoke test | open the URL, run §8.2 steps 1–3 | ⏳ | ⏳ |
 
 ### 9.6 Jury live check
@@ -900,11 +968,11 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 | # | Decision | Why | Alternatives considered | Status |
 |---|---|---|---|---|
-| D1 | The scenario is chosen by a generative LLM that reads a compact catalog index (meaning, RU/KZ cues, `not_this_if` boundaries) and the dialog context | The case forbids encoder intent classifiers; an LLM handles topic switches, boundary requests and code-switching; the catalog changes without retraining | Encoder classifier (forbidden); nearest-neighbour search over embeddings as the decision (a classifier in disguise) | ✅ `core-llm` · 🚧 in the web app |
+| D1 | The scenario is chosen by a generative LLM that reads a compact catalog index (meaning, RU/KZ cues, `not_this_if` boundaries) and the dialog context | The case forbids encoder intent classifiers; an LLM handles topic switches, boundary requests and code-switching; the catalog changes without retraining | Encoder classifier (forbidden); nearest-neighbour search over embeddings as the decision (a classifier in disguise) | ✅ |
 | D2 | The whole catalog goes into the prompt as a hand-built compact index (~5,800 tokens, ~75 % served from the provider's prompt cache) — no retrieval shortlist | No retrieval misses; one stable, cacheable prefix; only what matters for choosing (no reply templates, slots or actions) | Embedding shortlist of top-K (SPEC draft); the raw 90 KB `scenarios.json` | ✅ |
 | D3 | The model outputs only `ID:PERCENT` pairs (~6 tokens); the supervisor's explanation is built deterministically | Decode time → routing near 450 ms; the explanation can never drift from what the policy did | Strict JSON with a free-text `reason` (SPEC draft) | ✅ |
 | D4 | Default model `google/gemini-2.5-flash-lite` via OpenRouter; `temperature=0`, reasoning off, providers sorted by latency | Fastest model with top accuracy in the team's benchmark (p50 470 ms); Gemini 3.x flash-lite equal in quality but ~200 ms slower | 15+ models benchmarked ([§9.1](#91-routing-accuracy-on-the-dev-set)); swap any time via `ROUTER_MODEL` | ✅ |
-| D5 | A deterministic policy outside the LLM: urgent first, topic stack, clarify, handoff. Web app: ≥ 0.75 run · 0.45–0.75 clarify · < 0.45 twice → handoff. `core-llm`: route ≥ 60 %, extra intents ≥ 20 % | Predictable and explainable; the model proposes, code disposes | Let the LLM choose the action | ✅ · 🟡 align the two threshold sets when integrating |
+| D5 | A deterministic policy outside the LLM: urgent first, topic stack, clarify, handoff. In «LLM» mode the core's verdict is authoritative (route ≥ 60 %, extra intents ≥ 20 %); the keyword baseline uses ≥ 0.75 run · 0.45–0.75 clarify · < 0.45 twice → handoff | Predictable and explainable; the model proposes, code disposes | Let the LLM choose the action | ✅ |
 | D6 | Mock-driven development: a typed event contract (`contract.ts`) plus an in-browser mock engine; the backend replaces the mock without UI changes | Frontend and backend built in parallel in a 5-hour window; UI testable without keys; keyless review for the jury (rules §5.6.6) | Wait for the backend; a recorded demo (forbidden) | ✅ |
 | D7 | One turn = `POST /api/turn` → a Server-Sent Events stream of typed events | Streams live candidates, actions and text deltas to both screens; simpler than a WebSocket for a request–response turn | A WebSocket for everything (SPEC draft) — kept for streaming audio | ✅ contract |
 | D8 | The 9 irreversible actions of `actions.json` run only after a preview and an explicit «да» | A safety constraint of the case | — | ✅ |
@@ -912,12 +980,14 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 | D10 | Server-side STT fallback: a Next.js route (`/api/stt`) → OpenAI transcription, with automatic switching | Web Speech fails in Arc / Brave / Yandex browsers and on restricted venue networks | Text only when the browser's STT fails | ✅ |
 | D11 | Reply in the client's dominant language; keep the session language on code-switched turns | The case requires RU / KZ including mid-phrase switching; greetings and loanwords (ОГПО, КАСКО) must not flip the language | Always Russian; per-turn detection only | ✅ (one bug, [§13](#13-limitations-and-known-issues)) |
 | D12 | Real-mode speech: ElevenLabs Scribe v2 Realtime (auto language) + Flash v2.5 for Russian TTS and v3 conversational for Kazakh TTS | v3 conversational is ElevenLabs' only realtime model that speaks Kazakh; Flash is the fastest for Russian | geko.sh Seta / Tokay (KZ-first, code-switching) — kept as the alternative | 🚧 |
-| D13 | Stack: Next.js 16 frontend, Python LLM core, Go backend, PostgreSQL, Railway, Docker Compose | The LLM core stays dependency-free and easy to benchmark; the backend reuses its prompt and index | One language for everything | ✅ (Go API, PostgreSQL, Compose 🚧) |
+| D13 | Stack: Next.js 16 frontend; the LLM router as a small Python service (standard library) behind a same-origin Next.js proxy; a Go backend next; Docker Compose; Railway | The key stays on the server; the core stays dependency-free and easy to benchmark; one `docker compose` command; the Go backend can reuse the core's prompt and index | One language for everything; calling OpenRouter from the browser (it would expose the key) | ✅ (Go API, PostgreSQL 🚧) |
 | D14 | `dev_utterances.json` is for evaluation only; no router reads it at runtime | Anti-hardcoding (case §10); an honest measurement | Few-shot examples from the dev set | ✅ |
 | D15 | Product name **Bagyt** (Бағыт, "route") | Reads naturally in RU and KZ; a direct routing metaphor | "Saqta Voice Router", "Plus Router" | ✅ |
 | D16 | Speko design tokens: a light "technical paper" landing and a dark operator console; coss ui on Base UI + ObsidianUI; Geist | The trace panel is scored → a data-dense console where numbers are the heroes | 1609SAT design system ([`DESIGN.md`](DESIGN.md)) | ✅ |
 | D17 | Hybrid fast path: templates for the 9 `fast_path_eligible` scenarios **vs.** an LLM cascade | An optional case item, worth points only with a measured latency gain | — | 🟡 open — ⏳ measure |
-| D18 | Keyless flags: `LLM_PROVIDER=mock` (backend) + `NEXT_PUBLIC_API_MODE=mock` (frontend); backend layout `cmd/server` + `/health` vs. `cmd/api` + chi + pgx + `/healthz` (AGENTS.md) | Must match `.env.example` and the deploy config | `MOCK_MODE=1` (SPEC draft) | 🟡 open |
+| D18 | Modes: `NEXT_PUBLIC_API_MODE=mock \| core \| real` at build time, plus a runtime switch in the header; «Мок» needs no keys | Keyless review for the jury; one UI for all three routers | `MOCK_MODE=1` (SPEC draft) | ✅ |
+| D19 | No silent fallback from «LLM» to the mock | The supervisor and the jury must know which router answered; a silent fallback would pass off the mock's answer as the LLM's | Fall back to the mock on errors | ✅ |
+| D20 | Go backend layout: `cmd/server` + `/health` (today) **vs.** `cmd/api` + chi + pgx + `/healthz` (AGENTS.md) | — | — | 🟡 open |
 
 <!-- TODO(team): close 🟡 rows with the decision, owner and date; add new rows when a decision changes. -->
 
@@ -927,10 +997,11 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 **Scope today**
 
-- **The web app still routes with the mock baseline** (keyword / cue scoring, labelled «Мок»). The LLM router is on `main` as a command-line core and needs an OpenRouter key; until it runs inside the web app, a reviewer without a key sees the LLM layer only through its code, prompt and reported results. ⏳
+- **«LLM» mode needs an OpenRouter key** — or the deployed version ⏳. Without a key everything runs in «Мок» with the keyword baseline, and the LLM layer is visible through its code, prompt, tests and reported results.
+- **Only routing calls the LLM.** Slots, actions and replies come from the deterministic demo executor in the browser. The LLM's catalog index is hand-made from `scenarios.json`, so editing the catalog also means editing `scenarios.index.txt`.
+- **No silent fallback:** if `core-llm` is down or the key is wrong, «LLM» mode shows an error instead of quietly switching to the mock.
 - **Both dev-set scores are in-sample** — the mock's cues and the LLM prompt were refined on the dev set ([§9.1](#91-routing-accuracy-on-the-dev-set)). The LLM numbers are reported by its author and cannot yet be re-scored without a key, because `core-llm/reports/` is gitignored ⏳.
-- **The LLM core only picks scenarios** — slots, actions and replies come from the executor side. Its catalog index is hand-made from `scenarios.json`, so editing the catalog also means editing `scenarios.index.txt`.
-- No `docker-compose.yml`, persistence or deployment yet ⏳. The web app keeps dialog state and traces in browser memory: reloading the page clears them.
+- The Go backend («Бэкенд»), persistence, ElevenLabs and a public deployment are not part of the current integration ⏳. Dialog state and traces live in the browser tab: reloading the page clears them.
 - Not production-ready by design: no authentication, rate limits or monitoring; the data and the company are fictional.
 
 **Speech in the web app**
@@ -955,13 +1026,19 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 | Horizon | Items |
 |---|---|
-| **Before 18:00 today** | Wire the `core-llm` prompt + index into the Go turn API and the web app · ElevenLabs STT / TTS in real mode · commit the LLM predictions for keyless re-scoring · `docker compose up` · Railway deploy · fill every ⏳ in [§9](#9-results) |
-| **Next** | Fast path for `fast_path_eligible` scenarios with a measured gain · speculative routing on partial transcripts · generate `scenarios.index.txt` from `scenarios.json` automatically · PostgreSQL history and supervisor error statistics over time · a catalog editor for non-developers · geko.sh for Kazakh · a phone channel (Vapi + Twilio or LiveKit SIP) |
+| **Before 18:00 today** | Railway deploy with jury access · the demo video · ElevenLabs STT / TTS · commit the LLM predictions for keyless re-scoring · run the dev set in «LLM» mode · fill every ⏳ in [§9](#9-results) |
+| **Next** | The same routing inside the Go turn API · fast path for `fast_path_eligible` scenarios with a measured gain · speculative routing on partial transcripts · generate `scenarios.index.txt` from `scenarios.json` automatically · PostgreSQL history and supervisor error statistics over time · a catalog editor for non-developers · geko.sh for Kazakh · a phone channel (Vapi + Twilio or LiveKit SIP) |
 | **Beyond** | Other contact centers — banking, telecom: the catalog is data, so a new domain is a new catalog index plus an evaluation set, not a new model |
 
 ---
 
 ## 15. Team
+
+<p align="center">
+  <img src="docs/assets/hackathon/team.jpg" width="560" alt="Team Plus in front of the HackAlem AI wall">
+  <br/>
+  <sub>Team Plus at HackAlem AI · Astana · 23 September 2026</sub>
+</p>
 
 | Member | Role | Contribution |
 |---|---|---|
@@ -969,9 +1046,26 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 | Alikhan | ⏳ | Mock-driven frontend — landing, `/call`, `/admin`, event contract, mock engine, the `evaluate.py` port, the server STT fallback (`59d5a2c`, `f02fc21`, `ab1a78b`); ⏳ |
 | Ramazan | ⏳ | ⏳ |
 
-<!-- TODO(team): each member — role + 1–2 lines on what you built, with links to your commits. The rules require a personal, visible contribution from everyone. core-llm (a39cbb4) and the backend prototypes on branches were committed by GitHub user heiphin7 — credit the right member. -->
+<!-- TODO(team): each member — role + 1–2 lines on what you built, with links to your commits. The rules require a personal, visible contribution from everyone. core-llm and its web integration (a39cbb4, a9e053b) and the backend prototypes on branches were committed by GitHub user heiphin7 — credit the right member. -->
 
 AI coding assistants used during development (OpenAI Codex, Claude) are disclosed in [THIRD_PARTY.md](THIRD_PARTY.md).
+
+### From the hackathon floor
+
+<table>
+  <tr>
+    <td width="33%" align="center"><img src="docs/assets/hackathon/entrance.jpg" width="100%" alt="The queue at the entrance of the EXPO hall"><br/><sub>The morning queue at the entrance</sub></td>
+    <td width="33%" align="center"><img src="docs/assets/hackathon/hall.jpg" width="100%" alt="The hackathon hall, Purple Zone C"><br/><sub>The hall</sub></td>
+    <td width="33%" align="center"><img src="docs/assets/hackathon/swag.jpg" width="100%" alt="A qairuhub cap and HackAlem stickers"><br/><sub>Swag</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/assets/hackathon/team-at-work.jpg" width="100%" alt="Team Plus at work at the desk"><br/><sub>Building Bagyt</sub></td>
+    <td align="center"><img src="docs/assets/hackathon/cap.jpg" width="100%" alt="A qairuhub cap"><br/><sub>qairuhub</sub></td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center"><img src="docs/assets/hackathon/case-page.jpg" width="100%" alt="The hackathon platform: Track 09 Communications, the Voice Router case"><br/><sub>Picking the case: Track 09 «Коммуникации» → Voice Router</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -1010,9 +1104,9 @@ AI coding assistants used during development (OpenAI Codex, Claude) are disclose
 | 8. How to verify — a scenario the jury can repeat | [§8](#8-how-to-verify) |
 | 9. Data and integrations | [§10](#10-data-and-integrations) |
 | 10. Limitations | [§13](#13-limitations-and-known-issues) |
-| 11. Deployed version | Header, [§7.5](#75-deployed-version) |
+| 11. Deployed version | [Try it online](#try-it-online), [§7.5](#75-deployed-version) |
 | Rules 5.4.15 / 5.6.4 — dependencies, environment variables | [§6](#6-requirements), [§7.6](#76-environment-variables) |
-| Rules 5.6.6 — review without the team's accounts or keys | [§7.1](#71-quick-start--keyless-about-two-minutes), [§8.3](#83-test-clients) |
+| Rules 5.6.6 — review without the team's accounts or keys | [Try it online](#try-it-online) (jury access), [§7.1](#71-quick-start--keyless-about-two-minutes), [§8.3](#83-test-clients) |
 
 </details>
 
@@ -1029,10 +1123,10 @@ AI coding assistants used during development (OpenAI Codex, Claude) are disclose
 
 | Where | What to fill | How |
 |---|---|---|
-| Header, [§7.5](#75-deployed-version) | Deployed URL | Railway → paste the URL and the smoke-test date |
-| Top callout, [§2](#2-what-is-implemented), [§4.6](#46-two-modes-one-contract), [§8.5](#85-case-requirements--where-to-check-them) | LLM router in the web app, ElevenLabs | Flip 🚧 → ✅ once they are on `main`; add file paths |
-| [§7.4](#74-one-command-with-docker-compose-) | `docker compose` | Verify from a clean clone; list the ports |
-| [§9.1](#91-routing-accuracy-on-the-dev-set) | LLM independent re-run; LLM inside the web app | Commit the predictions file, re-score with `evaluate.py`; `/admin` → «Прогнать dev-набор» in «Бэкенд» mode |
+| [Try it online](#try-it-online), [§7.5](#75-deployed-version), [§8](#8-how-to-verify) | Live URL, jury access, demo video | Paste the links and the smoke-test date. Demo accounts only — never API keys |
+| Top callout, [§2](#2-what-is-implemented), [§4.6](#46-three-modes-one-contract), [§8.5](#85-case-requirements--where-to-check-them) | Go backend, ElevenLabs, deployment | Flip 🚧 → ✅ once they are on `main`; add file paths |
+| [§7.1](#71-quick-start--keyless-about-two-minutes), [§7.2](#72-llm-mode--the-real-router-in-the-web-app) | Docker Compose, both profiles | Verify from a clean clone |
+| [§9.1](#91-routing-accuracy-on-the-dev-set) | LLM independent re-run; the LLM in the web app | Commit the predictions file and re-score with `evaluate.py`; `/admin` → «Прогнать dev-набор» in «LLM» mode |
 | [§9.2](#92-multi-turn-dialogs) | LLM per-dialog numbers | `python3 core-llm/router.py --dialogs` |
 | [§9.3](#93-latency) | End-to-end latency | ≥ 10 turns of §8.2 in real mode → median and p95 from «Скорость» |
 | [§9.4](#94-speech-recognition-spot-checks-) | STT spot checks | Say the three phrases; note the transcript and the time |
@@ -1043,6 +1137,7 @@ AI coding assistants used during development (OpenAI Codex, Claude) are disclose
 
 **Before 18:00**
 
+- [ ] [Try it online](#try-it-online): live URL, jury access and demo video filled in and clicked through once
 - [ ] `grep -n "⏳" README.md` — every item filled, or deliberately kept as a stated limitation
 - [ ] Clean clone → [§7.1](#71-quick-start--keyless-about-two-minutes) → the [§8.2](#82-walkthrough--10-scenarios) walkthrough works
 - [ ] Env examples match [§7.6](#76-environment-variables); no secrets in git history
