@@ -35,8 +35,8 @@
 - [TEAM_PLAN.md](hackathon/TEAM_PLAN.md) — pre-start checklist and 5-hour timeline.
 - [`organizer/`](hackathon/organizer/) — official organizer PDFs (RU).
 
-## Open decisions
-- Product name: *Bagyt* (research) vs *Saqta Voice Router / Plus Router* (case analysis).
-- Backend layout: existing `backend/cmd/server` + stdlib `/health` vs AGENTS.md `cmd/api` + chi + pgx + `/healthz` (see end of SPEC.md).
-- Keyless mode flag: `LLM_PROVIDER=mock` (AGENTS.md) vs `MOCK_MODE` (SPEC.md) — pick one and use it everywhere.
-- UI base: see open decisions in [design/README.md](design/README.md).
+## Decisions taken (implementation)
+- Product name in the UI/README: **Voice Router** (Bagyt stays the internal working title).
+- Backend layout: `backend/cmd/server` + chi + `coder/websocket`, no database; `GET /health` and `/healthz` both served (see SPEC.md).
+- Keyless mode flag: `LLM_PROVIDER=mock` (+ `STT_PROVIDER`/`TTS_PROVIDER` auto-select `browser` when no keys). No `MOCK_MODE` variable.
+- UI base: 1609SAT tokens (dark navy canvas, single blue accent, Geist) with hand-rolled components; no shadcn/ObsidianUI.

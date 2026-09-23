@@ -52,4 +52,7 @@ The trace panel is scored by the jury, so it is a data-dense operator console, n
 
 ## Decisions
 
-_Record decisions here with date/time and owner._
+- 2026-09-23 15:30 — Token base: 1609SAT (`/DESIGN.md`) — dark canvas `#0a0d15`, text `#c7d3e0`, accent `#3755ed`, Geist with `ss08`; console component sizing (32px buttons, 10px radius, hairline rows, metric cards) for the trace/supervisor screens.
+- Dark-only for the hackathon build.
+- Component library: none — small hand-rolled components + `lucide-react` icons (keeps the Next.js 16 / Tailwind v4 setup simple).
+- Charts: CSS bars (timing waterfall, scenario frequency); no charting library.
