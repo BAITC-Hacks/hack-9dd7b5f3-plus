@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bagyt — frontend
 
-## Getting Started
+Next.js 16 (App Router, TypeScript, Tailwind v4) · coss ui + ObsidianUI · Speko design system.
 
-First, run the development server:
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd frontend
+npm ci
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+No keys needed: `NEXT_PUBLIC_API_MODE=mock` (default) runs the whole pipeline in the browser — STT via the Web Speech API (Chrome; `ru-RU` / `kk-KZ`), a lexical mock router + dialog engine over the starter kit in `src/data/`, TTS via `speechSynthesis`. Switch to the Go backend with `NEXT_PUBLIC_API_MODE=real` and `NEXT_PUBLIC_API_URL=http://localhost:8080` (contract: [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md), types: `src/lib/contract.ts`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | Surface | What |
+|---|---|---|
+| `/` | landing, light ("technical paper") | product story, pipeline, example trace |
+| `/call` | console, dark | the client's view: push-to-talk, transcript, voice reply |
+| `/admin` | console, dark | supervisor: live candidate confidences, decision + `not_this_if` rules, policy verdict, slots, actions (preview/execute), latency waterfall, turn journal, raw README trace |
 
-## Learn More
+## Layout
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/lib/contract.ts      event + trace contract (frontend ⇄ backend)
+src/lib/store.ts         conversation store (useConversation, sendText, startVoice…)
+src/lib/api.ts           mock ⇄ real switch, SSE reader, stats
+src/lib/voice.ts         browser STT / TTS / recorder
+src/lib/mock/            router.ts (lexical mock), engine.ts (policy + slot FSM), actions.ts (mock backend)
+src/lib/catalog.ts       typed starter kit (scenarios, slots, KB, mock_backend)
+src/data/                copies of ../data/*.json (re-copy if the kit changes)
+src/components/ui/       coss ui primitives (generated, edit freely)
+src/components/block/    ObsidianUI blocks
+src/components/app/      conversation panel, console shell, admin widgets
+src/components/landing/  landing sections
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Mock router accuracy (official script)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npx tsx scripts/eval-mock.ts && python ../data/evaluate.py ../data/predictions_mock.json ../data/dev_utterances.json
+```
+The mock is a keyword/cue router (no LLM) — a floor for the UI demo, not the product's number.

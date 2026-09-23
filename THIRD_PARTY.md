@@ -9,15 +9,21 @@ Every dependency, model, API, dataset, template or UI kit we use must be listed 
 | Voice Router starter kit (`data/`: scenarios, slots, actions, knowledge base, mock backend, dialogs, dev utterances, `evaluate.py`) | Provided by the organizer / Halyk Bank for HackAlem AI | https://drive.google.com/file/d/1sHE56gXnzdscHz5lMcNbwd1VsJIVLFUv | Synthetic scenarios, dialogs, facts; official evaluation script |
 | Next.js | MIT | https://nextjs.org | Frontend framework |
 | Tailwind CSS | MIT | https://tailwindcss.com | Styling |
+| coss ui (53 primitives, `@coss/style` preset) | MIT | https://coss.com/ui | UI components (Button, Badge, Card, Table, Tabs, Switch, Input, …) — installed via shadcn CLI into `frontend/src/components/ui` |
+| Base UI (`@base-ui/react`) | MIT | https://base-ui.com | Accessible primitives under coss ui |
+| ObsidianUI (`dotted-grid`, `text-stream` blocks) | MIT | https://www.obsidianui.dev | Landing page background / text stream — `frontend/src/components/block` |
+| GSAP | Standard "no charge" license (free for use incl. commercial) | https://gsap.com | Dependency of ObsidianUI text-stream |
+| lucide-react | ISC | https://lucide.dev | Icons |
+| class-variance-authority, clsx, tailwind-merge | Apache-2.0 / MIT / MIT | npm | Class utilities used by coss ui |
+| Hanken Grotesk, Geist Mono (Google Fonts via `next/font`) | SIL OFL 1.1 | https://fonts.google.com | Typography (Speko type system) |
+| Speko design system (brand + console PDFs) | Provided by Speko's founder for this project | `docs/design/references/` | Visual design tokens, component sizes |
+| Web Speech API / speechSynthesis (browser) | Browser built-in | — | Keyless STT/TTS in mock mode (Chrome) |
 | Go (stdlib `net/http`) | BSD-3-Clause | https://go.dev | Backend service |
 
 ## Planned (from `docs/SPEC.md` / `docs/research/DEEP_RESEARCH_REPORT.md` — confirm when integrated)
 
 | Component | License / terms | Link | Used for |
 |-----------|-----------------|------|----------|
-| shadcn/ui | MIT | https://ui.shadcn.com | UI primitives |
-| ObsidianUI | MIT | https://www.obsidianui.dev | UI components / blocks |
-| Motion | MIT | https://motion.dev | Animations (ObsidianUI dependency) |
 | chi | MIT | https://github.com/go-chi/chi | Go HTTP router |
 | pgx | MIT | https://github.com/jackc/pgx | Postgres driver |
 | PostgreSQL | PostgreSQL License | https://www.postgresql.org | Database |
