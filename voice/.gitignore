@@ -1,5 +1,5 @@
 # runtime output of the voice gateway
 /logs/
-/cache/
+cache/
 /bin/
 *.exe

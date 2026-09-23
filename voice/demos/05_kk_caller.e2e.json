@@ -1,0 +1,19 @@
+{
+  "name": "05_kk_caller",
+  "brain": "openrouter",
+  "model": "google/gemini-2.5-flash-lite",
+  "transcript": "Сәлеметсіз бе! Тулысымның мерзімін ұзарқым келеді.",
+  "in_lang": "kk",
+  "reply_lang": "kk",
+  "scenario": "SC27",
+  "confidence": 0.95,
+  "reply": "Сәлеметсіз бе! Ұзартайық. Полисіңіздің нөмірін айтыңызшы.",
+  "stt_ms": 1087.4,
+  "brain_ttft_ms": 494.8,
+  "tts_ttfb_ms": 205.9,
+  "end_to_audio_ms": 1500.6,
+  "end_to_reply_ms": 1916.5,
+  "speculative": false,
+  "filler": true,
+  "at": "2026-09-23T16:25:19+05:00"
+}

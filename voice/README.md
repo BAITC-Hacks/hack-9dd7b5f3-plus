@@ -2,8 +2,15 @@
 
 Real-time speech layer for the Halyk Bank **Voice Router** case (Saqta Insurance mock data): streaming **speech-to-text** and **text-to-speech** on ElevenLabs, tuned for Russian, Kazakh and mixed RU/KZ speech with the lowest latency we could get. It is a separate Go module (`hackathon/voice`), so it never conflicts with `backend/` or `frontend/`.
 
-> Status: **phase 1 = STT/TTS core** (this push): `elevenlabs`, `speech`, `audio`, `lang`, `config`, demo CLI, tests.
-> Phase 2 (next push): conversation engine, web voice gateway (`/ws/voice`), phone calls (Asterisk AudioSocket for a KZ number + Twilio), logs and live stats.
+> Status: phase 1 (STT/TTS core) and phase 2 (conversation engine, web voice gateway, phone transports, logs/stats) are in this branch. Integration guide for other agents: [AGENTS.md](AGENTS.md). Phone setup: [deploy/README.md](deploy/README.md).
+
+```
+browser mic ──WS /ws/voice──┐                                  ┌─► backend POST /api/turn (Ramazan: routing + reply, SSE)
+KZ number → Asterisk ──AudioSocket──► voice gateway (agent) ───┤   or built-in OpenRouter brain (Saqta dataset)
+Twilio ──Media Streams──────┘          │   │                   └─► ElevenLabs TTS: Flash v2.5 (ru) / v3 conversational (kk)
+                                       │   └─ Scribe v2 Realtime STT (language_code=kk)
+                                       └─ logs/voice/*.jsonl + /api/voice/events (SSE) + /api/voice/stats
+```
 
 ## Why these models
 
@@ -20,6 +27,7 @@ Full table with audio files: [demos/RESULTS.md](demos/RESULTS.md).
 - **Do not use STT auto-detect for Kazakh.** With no `language_code`, Scribe v2 Realtime transcribed our Kazakh phrase as *Turkish* ("Selam Eczacı Bey…", `lang=tr`). With `language_code=kk` Russian, Kazakh and mixed phrases all come out right, so `kk` is the default (`ELEVENLABS_STT_LANGUAGE`).
 - **Do not add `ru` as a secondary language**: it bends mixed RU/KZ phrases towards Russian spelling ("аварияга түстым").
 - Over WebSockets `eleven_v3_conversational` starts as fast as Flash (~210–250 ms), so Kazakh replies do not cost extra latency.
+- **End to end, measured honestly** from the end of the caller's last word to the first audio of the reply ([demos/RESULTS.md](demos/RESULTS.md), live `TestLiveWebSocketTurn`): **~1.7–1.95 s in phone/VAD mode**. About 0.8–1.1 s of that is Scribe's end-of-turn (0.4 s silence window + commit). A cached filler ("Секунду.") plays at 1.5 s when a reply is late. Push-to-talk on the web removes the VAD wait: the final transcript arrives 263–325 ms after release, which puts the web reply at roughly 1.1 s (estimate from the stage timings, not a measured end-to-end run). LLM first text is 0.5–0.7 s (gemini-2.5-flash-lite via OpenRouter) and TTS first audio is 0.2 s. Scenario routing on the demo calls: SC12 (0.75–0.85), SC30 (0.95), SC27 (0.95), all correct.
 
 All three output formats work on both TTS models: `pcm_16000` (web), `pcm_8000` (Asterisk / KZ SIP number), `ulaw_8000` (Twilio) — no resampling on our side.
 
@@ -48,6 +56,52 @@ Credits: the team key is on the Creator plan (~128k characters/month). `voicedem
 | `lang` | Per-word RU/KZ tagging (Kazakh-only letters ә ғ қ ң ө ұ ү һ і, frequent Kazakh words, suffixes) and the reply-language policy: explicit request → dominant language (≥ 60 % of words) → sticky session language. |
 | `config` | Env + `.env` loading with aliases, defaults for every knob (see `.env.example`). |
 | `cmd/voicedemo` | Demo CLI that records latency measurements into `demos/RESULTS.md`. |
+| `agent` | Real-time conversation engine per call: one STT session, reply-language policy, brain call, streaming TTS, barge-in, speculative replies, filler, per-stage timings. |
+| `brain` | Reply generators behind one interface: `Backend` (team backend `POST /api/turn`, contract events relayed to the UI), `OpenRouter` (built-in Saqta agent: 40-scenario catalog + knowledge base + mock clients in the prompt, one streamed call returns `[[SC12\|0.88]]` + the spoken reply), `Echo` (keyless). |
+| `transport` | Channel adapters: browser WebSocket (`web.go`), Asterisk AudioSocket (KZ SIP number), Twilio Media Streams. |
+| `voicelog` | JSONL log per call (every stage with `t_ms`), optional WAV recording, live SSE hub, p50/p95 latency stats. |
+| `server`, `cmd/voice` | The gateway process: HTTP routes + AudioSocket listener, warm-up, cached greeting/fillers. |
+| `web` | Voice test page served at `/` (reference client for the frontend). |
+| `deploy` | Dockerfile, docker-compose (+ Asterisk profile), Asterisk templates, phone guide. |
+
+## Run the gateway
+
+```bash
+cd voice
+go run ./cmd/voice                         # http://localhost:8090 -> voice test page (mic, push-to-talk, latency table)
+BACKEND_URL=http://localhost:8080 go run ./cmd/voice   # use Ramazan's backend as the brain
+docker compose -f deploy/docker-compose.yml up --build # container (context = repo root)
+```
+
+| Route | What |
+|---|---|
+| `GET /` | voice test page |
+| `GET /ws/voice` | browser voice WebSocket (protocol below) |
+| `POST /twilio/voice`, `GET /twilio/stream` | Twilio TwiML webhook + Media Streams WebSocket |
+| `GET /asterisk/call?uuid=&caller=` | caller-ID registration from the Asterisk dialplan (AudioSocket on `VOICE_AUDIOSOCKET_ADDR`, e.g. `:9092`) |
+| `GET /api/voice/events` | live server-sent events of every stage (admin console) |
+| `GET /api/voice/stats` | p50/p95 of end-of-speech → first audio, STT, LLM first text, TTS first audio |
+| `GET /api/voice/sessions` | recent calls with log file paths |
+| `POST /api/voice/tts` | `{"text","lang","format"}` → streamed audio (`pcm_16000`, `ulaw_8000`, `mp3_22050_32`, `wav`) |
+| `POST /api/voice/stt` | whole recording as the body (webm/opus, wav, mp3) → `{"text","language"}` |
+| `GET /healthz` | brain, models, config warnings |
+
+### `/ws/voice` protocol
+
+Client → server: `{"type":"start","mode":"ptt"|"vad","greeting":true,"lang":""|"ru"|"kk"}` first, then binary PCM16 LE 16 kHz mono frames (20–100 ms), `{"type":"commit"}` on push-to-talk release, `{"type":"text","text":"…"}`, `{"type":"interrupt"}`, `{"type":"stop"}`.
+
+Server → client (names follow `frontend/src/lib/contract.ts`):
+
+| Event | Meaning |
+|---|---|
+| `session.ready` | `output_format`, `sample_rate`, `brain` |
+| `stt.partial` / `stt.final` | live caption / final utterance with `language` (ru, kk, mixed) and `ms` (end of speech → final) |
+| `router.decision` | `{"decision":{"scenarios":[{"scenario_id","confidence"}],…},"ms"}` |
+| `response.delta` / `response.final` | reply text as it streams |
+| `tts.start` + binary frames | audio for the reply (PCM16 at `sample_rate`), with `end_to_audio_ms` |
+| `tts.clear` | barge-in: stop playback now |
+| `voice.metrics` | per-turn `latency_ms` {stt, response, tts_first_audio, total} + full metrics |
+| `turn.done`, `error` | as in the contract (backend events are relayed unchanged) |
 
 ## Using it from Go (backend integration)
 

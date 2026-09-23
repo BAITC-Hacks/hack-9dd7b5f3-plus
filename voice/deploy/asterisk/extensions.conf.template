@@ -1,0 +1,22 @@
+; Every inbound call goes to the voice gateway over AudioSocket.
+; 1) register the caller number under a fresh UUID (AudioSocket itself only carries the UUID)
+; 2) stream audio both ways: slin 8 kHz, 20 ms frames (Asterisk transcodes from the trunk's alaw/ulaw)
+
+[general]
+static=yes
+writeprotect=yes
+
+[from-trunk]
+exten => _X.,1,Goto(voice-agent,s,1)
+exten => s,1,Goto(voice-agent,s,1)
+exten => _+X.,1,Goto(voice-agent,s,1)
+
+[voice-agent]
+exten => s,1,NoOp(Saqta voice agent: ${CALLERID(num)} -> ${EXTEN})
+ same => n,Answer()
+ same => n,Set(VOICE_UUID=${SHELL(cat /proc/sys/kernel/random/uuid | tr -d '\n')})
+ same => n,Set(CURLOPT(conntimeout)=1)
+ same => n,Set(CURLOPT(httptimeout)=2)
+ same => n,Set(REG=${CURL(http://${VOICE_HOST}:8090/asterisk/call?uuid=${VOICE_UUID}&caller=${URIENCODE(${CALLERID(num)})}&called=${URIENCODE(${CALLERID(dnid)})})})
+ same => n,AudioSocket(${VOICE_UUID},${VOICE_HOST}:9092)
+ same => n,Hangup()

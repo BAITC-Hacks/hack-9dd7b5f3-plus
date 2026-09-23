@@ -1,0 +1,19 @@
+{
+  "name": "03_mixed_caller",
+  "brain": "openrouter",
+  "model": "google/gemini-2.5-flash-lite",
+  "transcript": "Сәлеметсіз бе? Іші аварияға түстім, но я не виноват.",
+  "in_lang": "mixed",
+  "reply_lang": "kk",
+  "scenario": "SC12",
+  "confidence": 0.75,
+  "reply": "Өкінішке орай, аварияға ұшырағаныңызды естігеніме өкініштімін. Сіздің полисіңіз бойынша өтемақы рәсімдеуге көмектесейін. Кінәлі көліктің мемлекеттік нөмірін және оқиға болған күнді айтыңызшы.",
+  "stt_ms": 836.9,
+  "brain_ttft_ms": 731.8,
+  "tts_ttfb_ms": 179.5,
+  "end_to_audio_ms": 1500.8,
+  "end_to_reply_ms": 1950.3,
+  "speculative": false,
+  "filler": true,
+  "at": "2026-09-23T16:25:07+05:00"
+}

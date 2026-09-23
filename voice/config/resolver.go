@@ -13,6 +13,21 @@ import (
 // overrides the same key coming from a file.
 type resolver struct {
 	file map[string]string
+	env  map[string]string // process environment with normalized keys ("eleven-labs" -> ELEVEN_LABS)
+}
+
+// environ snapshots the process environment with normalized keys, so
+// hand-written names such as "eleven-labs" injected by docker env_file work.
+func environ() map[string]string {
+	m := make(map[string]string)
+	for _, kv := range os.Environ() {
+		k, v, ok := strings.Cut(kv, "=")
+		if !ok || k == "" {
+			continue
+		}
+		m[normalizeKey(k)] = v
+	}
+	return m
 }
 
 // get returns the first non-empty value found for names, checking the
@@ -21,6 +36,9 @@ type resolver struct {
 func (r resolver) get(names ...string) string {
 	for _, n := range names {
 		if v, ok := os.LookupEnv(n); ok && v != "" {
+			return v
+		}
+		if v := r.env[normalizeKey(n)]; v != "" {
 			return v
 		}
 	}

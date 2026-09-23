@@ -28,7 +28,7 @@ type Config struct {
 	STTSecondary []string // ELEVENLABS_STT_SECONDARY_LANGUAGES, comma list, default empty
 	STTKeyterms  []string // ELEVENLABS_STT_KEYTERMS, comma list, default "Saqta,ОГПО,КАСКО,ДМС,полис,сақтандыру"
 
-	VADSilenceSecs float64 // VOICE_VAD_SILENCE_SECS, default 0.5
+	VADSilenceSecs float64 // VOICE_VAD_SILENCE_SECS, default 0.4 (split utterances are merged by the engine)
 	VADThreshold   float64 // VOICE_VAD_THRESHOLD, default 0 (server default)
 	MinSpeechMS    int     // VOICE_MIN_SPEECH_MS, default 0
 	MinSilenceMS   int     // VOICE_MIN_SILENCE_MS, default 0
@@ -36,7 +36,7 @@ type Config struct {
 	OpenRouterKey       string   // OPENROUTER_API_KEY | OPENROUTER_API | OPENROUTER | OPENROUTER_KEY
 	OpenRouterBase      string   // OPENROUTER_BASE_URL, default "https://openrouter.ai/api/v1"
 	OpenRouterModel     string   // OPENROUTER_MODEL, default "google/gemini-2.5-flash-lite"
-	OpenRouterFallbacks []string // OPENROUTER_FALLBACK_MODELS, default "google/gemini-2.5-flash,openai/gpt-4o-mini"
+	OpenRouterFallbacks []string // OPENROUTER_FALLBACK_MODELS, default "openai/gpt-4o-mini,openai/gpt-4.1-nano" (no "thinking" models: they delay the first word)
 
 	Brain      string // VOICE_BRAIN: auto | backend | openrouter | echo, default "auto"
 	BackendURL string // BACKEND_URL, default "" (team backend, e.g. http://backend:8080)
@@ -53,7 +53,7 @@ type Config struct {
 	Speculative    bool          // VOICE_SPECULATIVE, default true
 	SpeculativeTTS bool          // VOICE_SPECULATIVE_TTS, default false
 	SpeculateAfter time.Duration // VOICE_SPECULATE_AFTER_MS, default 250ms
-	FillerAfter    time.Duration // VOICE_FILLER_AFTER_MS, default 1100ms (0 disables)
+	FillerAfter    time.Duration // VOICE_FILLER_AFTER_MS, default 1500ms (0 disables)
 	BargeIn        bool          // VOICE_BARGE_IN, default true
 	BargeInVAD     bool          // VOICE_BARGE_IN_VAD, default false
 	Greeting       bool          // VOICE_GREETING, default true
@@ -63,7 +63,7 @@ type Config struct {
 // towards; they show up constantly in the scenario catalog.
 var defaultSTTKeyterms = []string{"Saqta", "ОГПО", "КАСКО", "ДМС", "полис", "сақтандыру"}
 
-var defaultOpenRouterFallbacks = []string{"google/gemini-2.5-flash", "openai/gpt-4o-mini"}
+var defaultOpenRouterFallbacks = []string{"openai/gpt-4o-mini", "openai/gpt-4.1-nano"}
 
 var defaultAllowedOrigins = []string{"*"}
 
@@ -93,7 +93,7 @@ func LoadFrom(envFile string) Config {
 			f.Close()
 		}
 	}
-	r := resolver{file: fileVals}
+	r := resolver{file: fileVals, env: environ()}
 
 	var c Config
 
@@ -109,7 +109,7 @@ func LoadFrom(envFile string) Config {
 	c.STTSecondary = r.getList(nil, "ELEVENLABS_STT_SECONDARY_LANGUAGES")
 	c.STTKeyterms = r.getList(defaultSTTKeyterms, "ELEVENLABS_STT_KEYTERMS")
 
-	c.VADSilenceSecs = r.getFloat(0.5, "VOICE_VAD_SILENCE_SECS")
+	c.VADSilenceSecs = r.getFloat(0.4, "VOICE_VAD_SILENCE_SECS")
 	c.VADThreshold = r.getFloat(0, "VOICE_VAD_THRESHOLD")
 	c.MinSpeechMS = r.getInt(0, "VOICE_MIN_SPEECH_MS")
 	c.MinSilenceMS = r.getInt(0, "VOICE_MIN_SILENCE_MS")
@@ -144,7 +144,7 @@ func LoadFrom(envFile string) Config {
 	c.Speculative = r.getBool(true, "VOICE_SPECULATIVE")
 	c.SpeculativeTTS = r.getBool(false, "VOICE_SPECULATIVE_TTS")
 	c.SpeculateAfter = r.getDurationMS(250*time.Millisecond, "VOICE_SPECULATE_AFTER_MS")
-	c.FillerAfter = r.getDurationMS(1100*time.Millisecond, "VOICE_FILLER_AFTER_MS")
+	c.FillerAfter = r.getDurationMS(1500*time.Millisecond, "VOICE_FILLER_AFTER_MS")
 	c.BargeIn = r.getBool(true, "VOICE_BARGE_IN")
 	c.BargeInVAD = r.getBool(false, "VOICE_BARGE_IN_VAD")
 	c.Greeting = r.getBool(true, "VOICE_GREETING")

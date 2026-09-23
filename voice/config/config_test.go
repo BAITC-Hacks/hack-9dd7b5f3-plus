@@ -272,7 +272,7 @@ func TestLoadFrom_Defaults(t *testing.T) {
 		{"TTSSpeed", c.TTSSpeed, 1.0},
 		{"STTModel", c.STTModel, "scribe_v2_realtime"},
 		{"STTLanguage", c.STTLanguage, "kk"},
-		{"VADSilenceSecs", c.VADSilenceSecs, 0.5},
+		{"VADSilenceSecs", c.VADSilenceSecs, 0.4},
 		{"VADThreshold", c.VADThreshold, 0.0},
 		{"MinSpeechMS", c.MinSpeechMS, 0},
 		{"MinSilenceMS", c.MinSilenceMS, 0},
@@ -290,7 +290,7 @@ func TestLoadFrom_Defaults(t *testing.T) {
 		{"Speculative", c.Speculative, true},
 		{"SpeculativeTTS", c.SpeculativeTTS, false},
 		{"SpeculateAfter", c.SpeculateAfter, 250 * time.Millisecond},
-		{"FillerAfter", c.FillerAfter, 1100 * time.Millisecond},
+		{"FillerAfter", c.FillerAfter, 1500 * time.Millisecond},
 		{"BargeIn", c.BargeIn, true},
 		{"BargeInVAD", c.BargeInVAD, false},
 		{"Greeting", c.Greeting, true},
@@ -308,7 +308,7 @@ func TestLoadFrom_Defaults(t *testing.T) {
 	if !reflect.DeepEqual(c.STTKeyterms, wantKeyterms) {
 		t.Errorf("STTKeyterms = %#v, want %#v", c.STTKeyterms, wantKeyterms)
 	}
-	wantFallbacks := []string{"google/gemini-2.5-flash", "openai/gpt-4o-mini"}
+	wantFallbacks := []string{"openai/gpt-4o-mini", "openai/gpt-4.1-nano"}
 	if !reflect.DeepEqual(c.OpenRouterFallbacks, wantFallbacks) {
 		t.Errorf("OpenRouterFallbacks = %#v, want %#v", c.OpenRouterFallbacks, wantFallbacks)
 	}

@@ -1,0 +1,19 @@
+{
+  "name": "04_ru_caller",
+  "brain": "openrouter",
+  "model": "google/gemini-2.5-flash-lite",
+  "transcript": "Здравствуйте! Я вчера оплатил полис, деньги списались, а полис не пришел.",
+  "in_lang": "ru",
+  "reply_lang": "ru",
+  "scenario": "SC30",
+  "confidence": 0.95,
+  "reply": "Здравствуйте! Разберёмся. Когда был платёж и на какую сумму?",
+  "stt_ms": 1075.9,
+  "brain_ttft_ms": 530.8,
+  "tts_ttfb_ms": 234.5,
+  "end_to_audio_ms": 1702.7,
+  "end_to_reply_ms": 1702.7,
+  "speculative": true,
+  "filler": false,
+  "at": "2026-09-23T16:25:13+05:00"
+}

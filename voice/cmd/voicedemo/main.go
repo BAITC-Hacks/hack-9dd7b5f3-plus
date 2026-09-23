@@ -5,6 +5,7 @@
 //	go run ./cmd/voicedemo voices              voices available to the key
 //	go run ./cmd/voicedemo tts [-force]        synthesize demo phrases (RU / KZ / mixed) over WebSockets
 //	go run ./cmd/voicedemo stt [file.wav ...]  stream WAVs to Scribe v2 Realtime at real-time pace
+//	go run ./cmd/voicedemo e2e [file.wav ...]  full turn per file: audio -> STT -> brain -> TTS, reply saved as WAV
 //	go run ./cmd/voicedemo report              rebuild demos/RESULTS.md from the saved measurements
 //
 // TTS output is cached as WAV: re-running tts without -force costs no credits.
@@ -41,6 +42,8 @@ var demoPhrases = []phrase{
 	{"01_ru_greeting", lang.RU, "Здравствуйте! Я голосовой помощник Saqta. Чем могу помочь?"},
 	{"02_kk_greeting", lang.KK, "Сәлеметсіз бе! Мен Saqta дауыстық көмекшісімін. Қалай көмектесе аламын?"},
 	{"03_mixed_caller", lang.Mixed, "Сәлеметсіз бе, кеше аварияға түстім, но я не виноват."},
+	{"04_ru_caller", lang.RU, "Здравствуйте, я вчера оплатил полис, деньги списались, а полис не пришёл."},
+	{"05_kk_caller", lang.KK, "Сәлеметсіз бе, полисімнің мерзімін ұзартқым келеді."},
 }
 
 // ttsResult is saved next to each WAV as <name>.tts.json.
@@ -105,6 +108,8 @@ func main() {
 		err = runTTS(ctx, el, cfg, *out, *format, *force)
 	case "stt":
 		err = runSTT(ctx, el, cfg, *out, fs.Args())
+	case "e2e":
+		err = runE2E(ctx, el, cfg, *out, fs.Args())
 	case "report":
 		err = writeReport(*out)
 	default:
@@ -117,7 +122,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: voicedemo quota|voices|tts|stt|report [flags]")
+	fmt.Fprintln(os.Stderr, "usage: voicedemo quota|voices|tts|stt|e2e|report [flags]")
 }
 
 func runQuota(ctx context.Context, el *elevenlabs.Client) error {
@@ -343,6 +348,7 @@ func expectedText(out, name string) string {
 func writeReport(out string) error {
 	var tts []ttsResult
 	var stt []sttResult
+	var e2e []e2eResult
 	files, _ := filepath.Glob(filepath.Join(out, "*.json"))
 	sort.Strings(files)
 	for _, f := range files {
@@ -361,11 +367,25 @@ func writeReport(out string) error {
 			if json.Unmarshal(b, &r) == nil {
 				stt = append(stt, r)
 			}
+		case strings.HasSuffix(f, ".e2e.json"):
+			var r e2eResult
+			if json.Unmarshal(b, &r) == nil {
+				e2e = append(e2e, r)
+			}
 		}
 	}
 	var sb strings.Builder
 	sb.WriteString("# Voice demo results\n\n")
-	sb.WriteString("Measured with `go run ./cmd/voicedemo` on the team ElevenLabs key. Regenerate: `go run ./cmd/voicedemo tts -force && go run ./cmd/voicedemo stt`.\n\n")
+	sb.WriteString("Measured with `go run ./cmd/voicedemo` on the team ElevenLabs key. Regenerate: `go run ./cmd/voicedemo tts -force && go run ./cmd/voicedemo stt && go run ./cmd/voicedemo e2e`.\n\n")
+	if len(e2e) > 0 {
+		sb.WriteString("## End to end: caller audio -> STT -> brain -> TTS (phone-like VAD mode)\n\n")
+		sb.WriteString("| Input | Transcript | Lang in/out | Scenario | Reply (audio) | STT final ms | LLM first text ms | TTS first audio ms | **End of speech -> reply audio ms** | First sound ms (incl. filler) | Speculative |\n|---|---|---|---|---|---:|---:|---:|---:|---:|---|\n")
+		for _, r := range e2e {
+			fmt.Fprintf(&sb, "| [%s](%s.wav) | %s | %s/%s | %s %.2f | [%s](%s_reply.wav) | %.0f | %.0f | %.0f | **%.0f** | %.0f | %v |\n",
+				r.Name, r.Name, r.Transcript, r.InLang, r.ReplyLang, r.Scenario, r.Confidence, r.Reply, r.Name, r.STTms, r.BrainTTFTms, r.TTSTTFBms, r.EndToReplyms, r.EndToAudioms, r.Speculative)
+		}
+		sb.WriteString("\nBrain: built-in OpenRouter agent (`" + e2e[0].Model + "`) with the Saqta catalog. *End of speech* = end of the caller's last word (Scribe word timestamps), so the STT column includes the server VAD silence window (phone mode); push-to-talk on the web removes that window (see the STT table). *First sound* includes the cached filler (\"Секунду.\") that covers slow turns. *Speculative* = the reply was generated from a stable partial transcript during the VAD window and released when the final transcript matched.\n\n")
+	}
 	if len(tts) > 0 {
 		sb.WriteString("## Text-to-speech (WebSocket streaming)\n\n")
 		sb.WriteString("| Demo | Lang | Model | Connect ms | First audio ms | Total ms | Audio ms | Text |\n|---|---|---|---:|---:|---:|---:|---|\n")
