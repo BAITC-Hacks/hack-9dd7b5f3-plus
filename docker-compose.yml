@@ -1,0 +1,37 @@
+# One command for the whole product:  docker compose up --build
+# Works with no API keys (keyless mock mode); add keys to .env for real LLM/STT/TTS.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "8080"
+      DATA_DIR: /app/data
+      VAR_DIR: /app/var
+      LEXICON_PATH: /app/config/lexicon.json
+      CORS_ORIGINS: "*"
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - ./var:/app/var
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty = the browser talks to <current host>:8080 (works on localhost and on a LAN demo).
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy

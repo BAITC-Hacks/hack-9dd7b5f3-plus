@@ -1,133 +1,97 @@
-# Technical spec — Voice Router (Bagyt)
+# Technical spec — Voice Router
 
-> Status: living draft — not final; update as decisions change. The API contract here is the source of truth for frontend/backend; change the contract → update this file in the same commit. Source (RU): docs/research/raw/deep-research-output.ru.md
+> Status: describes the implemented system (source of truth for the API contract). Product scope: [PRD.md](PRD.md). Official task: [CASE.md](CASE.md).
 
-## ASCII architecture
+## Architecture
+
 ```
-[Browser: mic PCM16 16k / text]  ──WS──┐
-        ▲  TTS audio (stream)          │
-        │                              ▼
-   Next.js (TS/Tailwind/shadcn)     Go (chi) gateway ── pgx ──> Postgres
-   TracePanel / Supervisor          │  │  │  │
-                                    │  │  │  └─ stage_timings (measurements)
-                                    │  │  └─ STT: ElevenLabs Scribe v2 RT (primary)
-                                    │  │         / geko Seta (KZ/RU code-switch, fallback)
-                                    │  └─ Router: embeddings (shortlist from scenarios.json)
-                                    │        → LLM JSON (gpt-4.1-nano) → [escalate gpt-4o]
-                                    └─ TTS: geko Tokay (KZ) / ElevenLabs Flash v2.5 (RU)
-   VAD: Silero (endpoint + barge-in)      MOCK_MODE=1 → deterministic responses (no keys)
-```
-
-## Components and fallbacks
-| Layer | Primary | Fallback | Rationale |
-|---|---|---|---|
-| STT | ElevenLabs Scribe v2 Realtime (~150ms, KZ/RU High Accuracy) | geko Seta seta-kk-ru-v2 (code-switch, 8.71% WER) | latency vs. code-switch quality |
-| VAD/endpoint/barge-in | Silero VAD (~32ms frames) | WebRTC VAD | industry standard |
-| Shortlist | OpenAI text-embedding-3-small over scenarios.json | lexical match | retrieval, not classification |
-| Router LLM | gpt-4.1-nano (JSON schema) | gpt-4o / Gemini 2.5 Flash-Lite; "fast tier" Groq/Cerebras | RU/KZ quality + valid JSON |
-| TTS | geko Tokay tokay-kk-v1 (KZ) | ElevenLabs Flash v2.5 (RU) | KZ-first voices, numbers spoken as words |
-| (opt.) Voice router | — | Speko (non-KZ/RU languages only) | KZ/RU not covered |
-
-## Router algorithm (step by step)
-1. Get the final (or stable partial) transcript + language.
-2. Embed the utterance → cosine similarity to precomputed example vectors from scenarios.json → top-K (K=5–8) candidates. This is a SHORTLIST, not a decision.
-3. Assemble the prompt: system role + dialogue context (last N turns + topic stack) + K candidates (id, purpose, boundaries) + instruction to return strict JSON.
-4. LLM (gpt-4.1-nano) returns a JSON-schema output. If confidence < 0.6 → escalate to gpt-4o (or ask a clarifying question).
-5. Update the topic stack (topic_switch/return_to_topic), log route_decisions + stage_timings.
-6. Response: action=proceed → generate a reply from knowledge_base/mock_backend + TTS; clarify → clarifying question; handoff → hand off to an operator with context.
-7. (P2) Fast-path: if top-1 cosine > 0.85 AND there are no topic-switch markers → a short path without the large LLM, measure Δ; correctness is still validated via the LLM path.
-8. (P2) Speculative: run steps 2–4 on a stable partial (>0.85 conf STT), cancel stale calls (−200…400ms P95).
-
-## Router prompt draft
-```
-You are the routing layer of an insurance company's contact center. You are given:
-- dialogue context (turns + active topic stack),
-- scenario CANDIDATES (id, purpose, boundaries with neighbors),
-- the client's latest utterance (may mix RU/KZ).
-Do not guess. Choose a scenario ONLY from the candidates. If the utterance contains
-multiple intents — return the primary one + flag the rest in topic_switch.
-If confidence is low or the utterance is borderline — action="clarify".
-Return JSON STRICTLY per the schema. Reasoning — in the client's language, brief.
+[Browser]  mic PCM16 16k ──WS binary──►  [Go backend]                      [Providers]
+           JSON control  ──WS text───►   httpapi/ws.go                     STT: elevenlabs_realtime | elevenlabs | openai(-compatible) | mock
+           ◄── events JSON / PCM24k ──   │                                 TTS: elevenlabs | openai(-compatible) | browser
+           REST /api/*  ◄──────────────  │                                 LLM: openai(-compatible) | mock
+                                         ▼
+                        dialog.Engine.RunTurn  (one turn = one utterance)
+                        ├─ triage.Analyze        language, entities, signals               (~µs)
+                        ├─ retrieval.Search      BM25 shortlist + lexicon                  (~1 ms)
+                        ├─ prefetch facts        confirmation gate, find_client, get_policy/claim
+                        ├─ policy.FastPath ? mock.Route : llm.Route (streaming JSON, decision before reply)
+                        ├─ policy.Apply          validate, urgent-first, thresholds
+                        ├─ execute               topic stack, slots, actions (read-only now / irreversible → preview), handoff
+                        ├─ follow-up llm call    only if the model asked for data it needs for the reply
+                        ├─ speaker               sentence → TTS stream → WS binary frames (or `speak` events for browser TTS)
+                        └─ trace                 events bus → WS/SSE; store (JSONL) → supervisor stats
 ```
 
-## JSON decision schema
+No database: `internal/store` keeps sessions in memory and appends every trace to `var/traces.jsonl` (reloaded on start). Swapping in Postgres means implementing `Append/Sessions/Session/Stats`.
+
+## Router contract (LLM output)
+
 ```json
-{
-  "scenario_id": "string",
-  "confidence": 0.0,
-  "reasoning": "string",
-  "alternatives": [{"scenario_id":"string","confidence":0.0}],
-  "extracted_params": {"key":"value"},
-  "topic_switch": true,
-  "return_to_topic": "string|null",
-  "language": "ru|kk|mixed",
-  "action": "proceed|clarify|handoff"
-}
+{"language":"ru|kk",
+ "scenarios":[{"id":"SC30","confidence":0.9,"reason":"деньги списаны, полис не оформлен"},{"id":"SC29","confidence":0.85,"reason":"…"}],
+ "alternatives":[{"id":"SC26","confidence":0.25}],
+ "is_continuation":false,
+ "slots":{"payment_date":"2026-09-30"},
+ "actions":[{"name":"find_client","args":{"phone":"+77010000003"},"mode":"execute|preview"}],
+ "handoff":null,
+ "reply":"Понимаю, сначала разберёмся с оплатой…"}
 ```
 
-## Latency budget (target, real numbers to be filled in from measurements)
-| Stage | Target | Note |
+Keys are generated in this order; `internal/router/parser.go` parses the object as soon as `"reply":"` appears, so the routing latency (`timings.route`) is measured before the reply is generated. Truncated / fenced / slightly broken JSON is repaired (`closeJSON`), and a routing failure falls back to the lexical router (`path=fallback`).
+
+Prompt = static system part (role, rules, the full catalog rendered from `scenarios.json`, slots, actions, output contract, 10 worked examples — `GET /api/prompt`) + dynamic user part (TODAY, dialogue state, FACTS, SIGNALS, retrieval hints, the utterance). The static part is identical across turns so provider prompt caching applies.
+
+## Decision policy (`internal/router/policy.go`)
+
+- unknown IDs dropped; urgent scenarios (SC11, SC15, SC38) moved first; duplicates removed
+- `confidence < POLICY_CLARIFY_MIN (0.30)` → `SYS_UNCLEAR` (the model's reply is replaced by the clarifying template with the top-2 options)
+- `POLICY_CLARIFY_MIN ≤ confidence < POLICY_PROCEED_MIN (0.55)` → keep the scenario, verdict `clarify`
+- third `SYS_UNCLEAR` in a row → `handoff` to `operator_general`
+- `handoff.queue` set (by the model, by `transfer_to_operator`, or by the scenario's handoff rule) → `handoff`
+
+Fast path (`FAST_PATH=on`): top lexical candidate is `fast_path_eligible`, score ≥ 0.75 and margin ≥ 0.35 over the runner-up, no multi-intent / urgency / out-of-scope markers, no pending confirmation, no open slots, ≤ 14 tokens → templated answer without the LLM; the LLM then verifies in the background (`shadow` event, `fast_path_agree` in stats). `shadow` = always LLM, log what the fast path would have done; `off` = disabled.
+
+## Safety
+
+Irreversible actions (`actions.json: irreversible=true`) requested by the model are turned into a **preview** (`dialog.Engine.execute`) and stored as `pending_confirmation`. On the next turn the deterministic triage detects an explicit yes/no; only a yes executes the action (`prefetch`), and the result is fed to the model as `FACTS … EXECUTED` so the reply reports it. The model cannot execute them directly.
+
+## REST API
+
+| Method & path | Body / query | Returns |
 |---|---|---|
-| VAD end → STT final | ~150–300ms | Scribe v2 RT ~150ms finalize |
-| Shortlist (embedding+cosine) | ~10–50ms | in memory |
-| LLM route (TTFT) | ~300–600ms | gpt-4.1-nano; OpenAI-class TTFT ~450ms; fast tier <150ms warm |
-| → scenario selection (sum) | target 500ms | realistically ~500–900ms; speculative hides it |
-| LLM answer + first TTS byte | ~400–800ms | streamed by sentence |
-| **End of utterance → start of response** | **target 1.5s** | realistically 1.5–2.5s, measured |
+| `GET /health`, `/healthz`, `/api/health` | — | `{ok, mock_mode, router, stt, tts, uptime_s}` |
+| `GET /api/config` | — | redacted providers, policy thresholds, `router`, `tts_sample_rate`, `as_of_date` |
+| `GET /api/prompt` | — | text/plain system prompt |
+| `POST /api/sessions` | `{channel}` | `{session_id, session}` |
+| `GET /api/sessions?limit=` | — | `{sessions:[…]}` (store view) |
+| `GET /api/sessions/{id}` | — | `{session, turns:[Record], state?}` |
+| `POST /api/sessions/{id}/turn` | `{text, voice?, collect_audio?, source?}` | `{session_id, turn, reply, language, scenarios[], confidence, path, timings, trace, audio_wav_base64?}` |
+| `POST /api/sessions/{id}/turn/audio` | multipart `file` (WAV PCM16), `transcript_hint?`, `voice?`, `collect_audio?` | same as above (STT first) |
+| `POST /api/turn` | `{text, session_id?}` | same; creates a session when absent |
+| `POST /api/route` | `{text}` | stateless routing: `{scenarios[], confidence, path, route_ms, decision, verdict, candidates, signals, fast_path, llm?}` — used by `scripts/eval.py` |
+| `POST /api/eval/run` | `{concurrency?, limit?}` | evaluation report (same metrics as `data/evaluate.py` + latency) |
+| `GET /api/eval/last` | — | `{running, progress, report}` |
+| `GET /api/supervisor/stats` | — | aggregates: by scenario/language/path/policy, low confidence, handoffs, fast-path agreement, timing percentiles |
+| `GET /api/supervisor/actions` | — | mock backend action log |
+| `GET /api/catalog` · `POST /api/catalog/reload` | — | catalog JSON · reload from `DATA_DIR` |
+| `GET /api/debug/events?session=&replay=1` | SSE | every pipeline event of every session |
+| `POST /api/tts` | `{text, lang}` | WAV |
 
-## Data model (Postgres)
-- `sessions(id, created_at, lang_pref, channel)`
-- `turns(id, session_id, idx, role, transcript, lang, created_at)`
-- `route_decisions(id, turn_id, scenario_id, confidence, reasoning, alternatives jsonb, extracted_params jsonb, topic_switch, return_to_topic, action, model, escalated bool)`
-- `stage_timings(id, turn_id, stage, ms)` — stage ∈ {vad_end, stt_final, shortlist, llm_route, llm_answer, first_tts_byte}
+## WebSocket `/ws?session_id=`
 
-## WebSocket + REST (≤10)
-1. `POST /api/session` → `{session_id}`.
-2. `WS /ws/voice?session_id=` — in: binary PCM16 frames + `{type:"end"}`; out: `{type:"partial|final",text}`, `{type:"route",decision}`, `{type:"tts",audio_b64|url}`, `{type:"timing",stage,ms}`.
-3. `POST /api/route` — `{session_id, text, lang?}` → full decision JSON. **This endpoint calls evaluate.py.** Deterministic when MOCK_MODE=1.
-4. `GET /api/session/{id}/trace` → array of turns+route_decisions+timings.
-5. `GET /api/supervisor/stats` → `{accuracy, by_scenario, low_confidence_count, avg_timings}`.
-6. `POST /api/eval/run` → runs dev_utterances.json through the router → `{accuracy, per_utterance[], latency_p50, latency_p95}` (shown in UI and README).
-7. `GET /api/scenarios` → catalog (for UI and the P2 editor).
-8. `POST /api/tts` — `{text, lang}` → audio (MOCK: canonical wav).
-9. `GET /api/health` → `{ok, mock_mode}`.
-10. `GET /api/config` → flags.
+Client → server: binary frames = PCM16 LE mono 16 kHz; JSON `{type:"speech_start"|"speech_end"|"text"|"config"|"cancel"|"ping", text?, source?, voice?, t?, transcript_hint?}`.
+Server → client: JSON `Event {type, session_id, turn, t, data}` for `session, stt_partial, stt_start, stt_final, stt_error, stt_realtime, turn_start, triage, retrieval, facts, fast_path, llm_start, llm_delta, llm_error, route, reply_delta, action, handoff, reply_done, speak, tts_first_byte, tts_sentence, tts_error, audio_end, shadow, turn_done (data = full Trace), turn_error, error`; binary frames = PCM16 mono reply audio at `audio_out.sample_rate` (24 kHz).
 
-Example `/api/route` response:
-```json
-{ "scenario_id":"payment_not_confirmed", "confidence":0.82,
-  "reasoning":"клиент оплатил, заказ не подтверждён — сценарий по статусу оплаты",
-  "alternatives":[{"scenario_id":"change_delivery_address","confidence":0.41}],
-  "extracted_params":{"topic2":"change_address"}, "topic_switch":true,
-  "return_to_topic":"change_delivery_address","language":"ru","action":"proceed" }
-```
+## Trace (`turn_done` payload / stored record)
 
-## evaluate.py / dev_utterances.json integration
-- evaluate.py sends `POST /api/route` for each labeled utterance, compares `scenario_id` to the label, computes accuracy. We add `/api/eval/run` as a wrapper — the jury sees accuracy+latency in the UI and README with one click.
-- The jury's test utterances are NOT stored in code; the router decides dynamically from scenarios.json.
+`input{source, transcript, stt_provider, audio_ms}`, `language{detected, kk_share, reply}`, `triage`, `retrieval[]`, `path` (`llm|fast|mock|fallback`), `fast_path{eligible, reason}`, `decision`, `policy{action, confidence, notes}`, `facts[]`, `actions[{name, args, mode, result, error, ms}]`, `state{client, active_scenario, stack, slots, pending_confirmation, handoff, closed}`, `reply{text, lang, sentences, follow_up}`, `timings{stt, triage, retrieval, facts, route, llm_route, llm_ttft, llm_total, followup_llm, tts_first_byte, first_audio, total}` (ms), `llm{provider, model, usage{prompt, completion, cached}, raw, messages}` (with `DEBUG=true`), `shadow`, `errors[]`.
 
-## Trace panel and supervisor (UI)
-- **TracePanel (after each turn):** transcript, chosen scenario + reasoning, alternatives with confidence, a stage_timings table (ms per stage), badges for topic_switch/return_to_topic/language/action.
-- **Supervisor:** a table of sessions, accuracy over dev_utterances, top errors and "uncertain" cases (confidence<0.6), average latencies, filters by scenario.
+Targets shown in the UI: `route ≤ 500 ms`, `first_audio ≤ 1500 ms` (both from end of speech). Keyless routing is ~1 ms; with an LLM `route ≈ TTFT + ~40 output tokens`.
 
-## MOCK_MODE
-- `MOCK_MODE=1`: STT/TTS/LLM are replaced by deterministic stubs (STT returns the request text; the router uses rule+embedding matching with no external keys; TTS returns a pre-recorded wav). The jury can test /api/route, /api/eval/run, and the UI without the team's keys.
+## Evaluation
 
-## Environment variables
-`OPENAI_API_KEY, ELEVENLABS_API_KEY, GEKO_API_KEY, SPEKO_API_KEY(opt.), DATABASE_URL, MOCK_MODE, ROUTE_MODEL(gpt-4.1-nano), EMBED_MODEL(text-embedding-3-small), PORT`.
+`scripts/eval.py` → `POST /api/route` for each of the 104 dev utterances → `var/predictions.json` → `data/evaluate.py`. The jury's hidden utterances are not in the code; the dev set is used only for measurement (it is not in the prompt).
 
-## docker compose
-Services: `db` (postgres), `backend` (Go chi), `frontend` (Next.js). `docker compose up` brings everything up; with MOCK_MODE=1 no external keys are needed.
+## Environment
 
-## How we avoid the prohibitions (for README)
-- "Not an encoder-only classifier": embeddings only produce a LIST of candidates; the final choice and reasoning are generated by the LLM (Rasa CALM-style command generation) — we show the prompt and the JSON.
-- "No hardcoding": there are no test utterances in the code; scenarios.json is read dynamically; embeddings are built from it at startup; changing the catalog requires no code changes.
-
-## Current repo state vs. spec
-This spec describes the target architecture. The repo's actual state right now is simpler and not yet aligned with it:
-
-- **Backend:** `backend/cmd/server/main.go`, Go module `hackathon/backend`, go 1.26.5, stdlib `net/http` only, exposing a single `GET /health`. No chi, no pgx, no Postgres wiring yet.
-- **Frontend:** a fresh, unmodified Next.js app under `frontend/`.
-- **AGENTS.md** proposes a different layout: `backend/cmd/api` + `chi` router + `pgx` for Postgres, with a `GET /healthz` health endpoint.
-
-There is an open decision to align: whether to move/rename `cmd/server` → `cmd/api` (and `/health` → `/healthz`) to match AGENTS.md, or update AGENTS.md to match the existing skeleton. This spec does not pick a side — flag it for Tair/Alikhan to resolve before backend work goes further.
+See `.env.example`. Precedence: specific `LLM_/STT_/TTS_API_KEY` → `OPENAI_API_KEY` / `ELEVENLABS_API_KEY`. Provider auto-selection when `STT_PROVIDER`/`TTS_PROVIDER` are empty: ElevenLabs if its key is set, else OpenAI if its key is set, else browser.

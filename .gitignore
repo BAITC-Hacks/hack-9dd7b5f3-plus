@@ -19,3 +19,9 @@ dist/
 # OS
 Thumbs.db
 __MACOSX/
+
+# runtime data (traces, predictions, eval results)
+/var/
+/backend/var/
+/tests/audio/out/
+/backend/bin/

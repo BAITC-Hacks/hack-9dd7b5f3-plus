@@ -1,0 +1,29 @@
+{
+  "_comment": "Test recordings for the voice pipeline. `text` is what the recording says (also stored next to the wav as .txt for keyless mode). `expected` are the scenario IDs the router must return, in order. Regenerate the wavs with scripts/make_audio.py.",
+  "samples": [
+    {
+      "file": "01_ru_claim_status.wav",
+      "text": "Здравствуйте, подскажите, пожалуйста, что с моим заявлением по каско, когда будет решение?",
+      "lang": "ru",
+      "tts_lang": "ru",
+      "expected": ["SC17"],
+      "follow_ups": [
+        {"text": "Номер не помню, телефон плюс семь семьсот один ноль ноль ноль ноль ноль ноль семь.", "expected": ["SC17"]}
+      ]
+    },
+    {
+      "file": "02_ru_topic_switch.wav",
+      "text": "Здравствуйте, я вчера оплатил полис, деньги с карты списались, а полис так и не оформился. А, и ещё, мне надо поменять адрес, я переехал.",
+      "lang": "ru",
+      "tts_lang": "ru",
+      "expected": ["SC30", "SC29"]
+    },
+    {
+      "file": "03_mixed_kk_ru.wav",
+      "text": "Сәлеметсіз бе, кеше аулада көлігімді біреу соғып кетіпті, КАСКО бар, и ещё подскажите, где у вас осмотр делают.",
+      "lang": "mixed",
+      "tts_lang": "kk",
+      "expected": ["SC13", "SC20"]
+    }
+  ]
+}
