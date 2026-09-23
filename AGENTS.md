@@ -4,9 +4,10 @@ Instructions for every AI coding agent (Codex, Claude Code, Cursor, etc.) workin
 
 ## 0. Context in 30 seconds
 - Event: HackAlem AI (Astana, 23.09.2026). Build window **13:00–18:00 GMT+5 (5 hours)**. Repo state at **18:00 is final**.
-- Team **Plus**: Tair, Alikhan, Ramazan. Track: **07 Education** (confirm against `docs/CASE.md`).
-- The case/ТЗ is published at 13:00 → `docs/CASE.md`. Product scope → `docs/PRD.md`. Technical design → `docs/SPEC.md`. Full rules → `docs/HACKATHON_RULES.md`.
-- **Read `docs/CASE.md`, `docs/PRD.md`, `docs/SPEC.md` before implementing anything.** If they conflict, CASE (official ТЗ) wins, then SPEC, then PRD.
+- Team **Plus**: Tair, Alikhan, Ramazan. Track: **09 Communications** — Halyk Bank case **Voice Router**: a web voice robot for an insurance contact center where an **LLM layer** (not an encoder intent classifier) picks one of 40 scenarios from dialog context, answers by voice in RU/KZ (incl. mid-phrase switching), and shows a supervisor trace panel.
+- Official task → `docs/CASE.md`. Our interpretation → `docs/CASE_ANALYSIS.md`. Checklist → `docs/REQUIREMENTS.md`. Product scope → `docs/PRD.md`. Technical design + API contract → `docs/SPEC.md`. Build plan → `docs/TASKS.md`. Full rules → `docs/hackathon/RULES.md`. Map of all docs → `docs/README.md`.
+- Starter dataset (official, do not edit) → `data/` (`scenarios.json`, `dev_utterances.json`, `evaluate.py`, …; see `data/README.md`).
+- **Read `docs/CASE.md`, `docs/PRD.md`, `docs/SPEC.md` before implementing anything.** If they conflict, CASE (official ТЗ) wins, then SPEC, then PRD. PRD/SPEC are living drafts — update them when a decision changes.
 
 ## 1. Hard rules (violations = disqualification or non-admission)
 1. All code lives in this repo (`BAITC-Hacks/hack-9dd7b5f3-plus`). No other repos for main development.
@@ -20,7 +21,7 @@ Instructions for every AI coding agent (Codex, Claude Code, Cursor, etc.) workin
 9. **Every team member must have a personal, visible contribution** (own commits from own GitHub account) — otherwise their participation doesn't count.
 10. We solve **exactly one case** of the track. Implement the case's **mandatory requirements first**; nice-to-haves only after the main scenario works end-to-end.
 11. Secrets never go into code, repo, presentations or chat messages. Repo stays private (team + organizers only). Use only synthetic / organizer-provided data — no real personal or production data.
-12. README must follow `docs/README_PROMPT.md` (organizers' structure: what's implemented, data & integrations, limitations, deployed link) **plus** env vars and dependencies. If the case document has its own README prompt — it wins.
+12. README must follow `docs/hackathon/README_PROMPT.md` (organizers' structure: what's implemented, data & integrations, limitations, deployed link) **plus** env vars and dependencies. If the case document has its own README prompt — it wins.
 13. Pushing to the repo is not submission: the captain also presses **«Сдать решение»** on the platform (Tracks → our case) with title + description, before 18:00.
 
 ## 2. Stack
@@ -28,12 +29,14 @@ Instructions for every AI coding agent (Codex, Claude Code, Cursor, etc.) workin
 |-------|--------|
 | Backend | **Go** (latest stable), `net/http` + `chi` router, `pgx` for Postgres, `sqlc` optional, JSON REST |
 | AI | OpenAI-compatible client behind one interface. Providers: `openai` (OpenAI API), `nvidia` (NVIDIA Build, base URL `https://integrate.api.nvidia.com/v1`), `openai_compatible` (any OpenAI-compatible API via `LLM_BASE_URL` — OpenRouter, Groq, Gemini's OpenAI endpoint, Anthropic's OpenAI-compat endpoint, local Ollama), `mock`. Selected by `LLM_PROVIDER`. Any model is allowed by the rules — just list it in THIRD_PARTY.md. Free credits: OpenAI API $50, NVIDIA (Brev GPU credits; Build API keys at build.nvidia.com/settings/api-keys) |
+| Voice | STT/TTS behind one interface: **geko.sh** (Seta STT `seta-kk-ru-v2`, Tokay TTS `tokay-kk-v1`, KZ/RU code-switching) primary, **ElevenLabs** (Scribe v2 Realtime / Flash v2.5) fallback, mock for keyless mode. See `docs/SPEC.md` |
 | DB | PostgreSQL (Railway plugin in prod, docker-compose locally). SQLite acceptable only if SPEC says so |
 | Frontend | **Next.js** (App Router, TypeScript, Tailwind), `shadcn/ui` + **ObsidianUI** registry (`@obsidian` → `https://www.obsidianui.dev/r/{name}.json`) |
 | Deploy | **Railway**: services `backend` (root `/backend`) and `frontend` (root `/frontend`) + Postgres. Each has a Dockerfile |
 | Local run | `docker compose up --build` must bring everything up |
 
 ## 3. Repo layout
+> Target layout. Current skeleton uses `backend/cmd/server` + stdlib `GET /health` — aligning with the layout below is an open decision (see end of `docs/SPEC.md`).
 ```
 /backend          Go service
   cmd/api/main.go entrypoint
@@ -47,7 +50,9 @@ Instructions for every AI coding agent (Codex, Claude Code, Cursor, etc.) workin
   src/components   ui (shadcn/obsidian) + feature components
   src/lib/api.ts   typed API client (base URL from NEXT_PUBLIC_API_URL)
   Dockerfile
-/docs             CASE, PRD, SPEC, rules, plan, progress log, research prompt
+/data             official starter kit (scenarios, slots, actions, KB, mock backend, dev utterances, evaluate.py) — read-only
+/docs             CASE, CASE_ANALYSIS, REQUIREMENTS, PRD, SPEC, TASKS, PITCH, PROGRESS (+ research/, design/, hackathon/) — index in docs/README.md
+DESIGN.md         UI design system reference (see docs/design/README.md)
 docker-compose.yml
 .env.example
 README.md
@@ -83,6 +88,8 @@ OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 NVIDIA_API_KEY=
 NVIDIA_MODEL=meta/llama-3.3-70b-instruct
+GEKO_API_KEY=                # STT/TTS (KZ/RU)
+ELEVENLABS_API_KEY=          # STT/TTS fallback
 LLM_BASE_URL=                # openai_compatible only, e.g. https://openrouter.ai/api/v1
 LLM_API_KEY=
 LLM_MODEL=
