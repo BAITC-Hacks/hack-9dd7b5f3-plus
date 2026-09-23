@@ -154,3 +154,16 @@ This spec describes the target architecture. The repo's actual state right now i
 - **AGENTS.md** proposes a different layout: `backend/cmd/api` + `chi` router + `pgx` for Postgres, with a `GET /healthz` health endpoint.
 
 There is an open decision to align: whether to move/rename `cmd/server` → `cmd/api` (and `/health` → `/healthz`) to match AGENTS.md, or update AGENTS.md to match the existing skeleton. This spec does not pick a side — flag it for Tair/Alikhan to resolve before backend work goes further.
+
+## ElevenLabs TTS integration
+
+The `voice/` service is imported unchanged from `feat/voice-elevenlabs` (`fb7d16c`).
+Only TTS is connected: completed frontend response → `POST /api/tts {text, lang: ru|kk}` →
+`VOICE_TTS_URL/api/voice/tts {text, lang, format: mp3_22050_32}` → MP3 → browser Audio playback.
+The proxy streams bytes; the client buffers the MP3 before playback. `tts_first_audio` includes
+synthesis, download and playback startup, measured until `playing`. Muting cancels synthesis/audio.
+Text stays in the transcript. Mock uses browser TTS; errors show a notice and use browser TTS.
+Limits: 6000 text characters, 30-second upstream deadline; provider errors are sanitized.
+Voice/model selection stays in the imported Go module. No changes to browser STT or `/api/stt`.
+Compose `--profile voice` starts the service without exposing a host port, alongside profile `llm`.
+`ELEVENLABS_API_KEY` is read from local root `.env`; `VOICE_TTS_URL` is server-only.

@@ -1,0 +1,45 @@
+# Voice gateway (+ optional Asterisk for a Kazakhstan phone number).
+#
+#   cd voice/deploy
+#   docker compose up --build                      # web voice only: http://localhost:8090
+#   docker compose --profile phone up --build      # + Asterisk: KZ SIP trunk -> AudioSocket -> voice
+#
+# Secrets come from the repository-root .env (ELEVENLABS_API_KEY, OPENROUTER_API_KEY,
+# SIP_* for the trunk). See voice/deploy/README.md.
+services:
+  voice:
+    build:
+      context: ../..
+      dockerfile: voice/Dockerfile
+    env_file:
+      - ../../.env
+    environment:
+      VOICE_HTTP_ADDR: ":8090"
+      VOICE_AUDIOSOCKET_ADDR: ":9092"
+      # team backend (Ramazan): the gateway sends final transcripts to POST /api/turn
+      BACKEND_URL: ${BACKEND_URL:-}
+      VOICE_BRAIN: ${VOICE_BRAIN:-auto}
+    ports:
+      - "8090:8090"
+      - "9092:9092"
+    volumes:
+      - voice-logs:/app/logs
+      - voice-cache:/app/cache
+    restart: unless-stopped
+
+  asterisk:
+    profiles: ["phone"]
+    image: andrius/asterisk:latest
+    network_mode: host # SIP + RTP need the host's public IP and port range
+    env_file:
+      - ../../.env
+    environment:
+      VOICE_HOST: ${VOICE_HOST:-127.0.0.1}
+    volumes:
+      - ./asterisk:/templates:ro
+    entrypoint: ["/bin/sh", "/templates/entrypoint.sh"]
+    restart: unless-stopped
+
+volumes:
+  voice-logs:
+  voice-cache:

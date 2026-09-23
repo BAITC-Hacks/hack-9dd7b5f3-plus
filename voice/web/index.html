@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<title>Saqta Voice Router — voice test</title>
+<style>
+  :root{
+    --bg:#0a0d15;
+    --text:#c7d3e0;
+    --muted:rgba(199,211,224,.55);
+    --card:color-mix(in srgb,#c7d3e0 5%,#0a0d15);
+    --border:color-mix(in srgb,#c7d3e0 14%,#0a0d15);
+    --accent:#3755ed;
+    --ok:#3fb27f;
+    --warn:#d99a3b;
+    --bad:#e0584f;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
+  h1,h2{font-family:inherit}
+  button,input,select{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}}
+
+  .container{max-width:1200px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+
+  /* header */
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+  h1{font-size:16px;margin:0;font-weight:600;white-space:nowrap}
+  h1 .dim{color:var(--muted);font-weight:400}
+  .dim{color:var(--muted)}
+  .statusGroup{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--muted)}
+  .dot.connecting{background:var(--warn);animation:pulse 1s ease-in-out infinite}
+  .dot.live{background:var(--ok)}
+  .dot.bad{background:var(--bad)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .badge{border:1px solid var(--border);border-radius:999px;padding:2px 9px;font-size:11px;color:var(--text)}
+
+  /* controls */
+  .controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+  .segmented{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .modeBtn{background:transparent;border:0;padding:7px 12px;cursor:pointer;color:var(--muted);border-radius:0}
+  .modeBtn+.modeBtn{border-left:1px solid var(--border)}
+  .modeBtn[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .modeBtn:disabled{cursor:not-allowed;opacity:.55}
+  .check,.fieldLabel{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+  select{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 7px}
+  button{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .pttBtn{width:84px;height:84px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;user-select:none;-webkit-user-select:none;touch-action:none}
+  .pttBtn.active{background:color-mix(in srgb,var(--accent) 65%,white);transform:scale(.96)}
+  .pttBtn:disabled{background:var(--card);color:var(--muted)}
+  .textForm{display:flex;gap:6px;flex:1;min-width:220px}
+  .textForm input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+
+  /* main layout */
+  .main{display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:start}
+  .sidebar{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 8px;font-weight:600}
+  .card summary{cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+
+  /* transcript */
+  .transcript{display:flex;flex-direction:column;gap:8px;min-height:320px;max-height:62vh;overflow-y:auto}
+  .msg{display:flex;flex-direction:column;max-width:80%}
+  .msg.user{align-self:flex-end;align-items:flex-end}
+  .msg.bot{align-self:flex-start;align-items:flex-start}
+  .bubble{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px;white-space:pre-wrap;word-break:break-word}
+  .msg.user .bubble{background:color-mix(in srgb,var(--accent) 22%,var(--card))}
+  .meta{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+  .badge.lang{text-transform:uppercase}
+  .caption{color:var(--muted);font-style:italic;align-self:flex-start;padding:2px 4px}
+  .chip{align-self:flex-start;border:1px solid var(--border);border-radius:10px;background:var(--card);font-size:11px;margin-bottom:2px}
+  .chip summary{padding:2px 9px;cursor:pointer;color:var(--muted);border-radius:999px}
+  .chip summary::-webkit-details-marker{display:none}
+  .chip summary::marker{content:''}
+  .chipList{padding:6px 9px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:3px;color:var(--muted)}
+
+  /* latency table */
+  table.latency{width:100%;border-collapse:collapse}
+  table.latency th,table.latency td{padding:4px 6px;text-align:right}
+  table.latency th:first-child,table.latency td:first-child{text-align:left}
+  table.latency thead th{color:var(--muted);font-weight:500;border-bottom:1px solid var(--border)}
+  table.latency tfoot td{border-top:1px solid var(--border);color:var(--muted)}
+  td.ok{color:var(--ok)}
+  td.warn{color:var(--warn)}
+
+  /* event log */
+  .log{max-height:220px;overflow-y:auto;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:2px;margin-top:8px}
+  .logline{white-space:pre-wrap;word-break:break-all;border-bottom:1px solid var(--border);padding:2px 0}
+
+  /* toasts */
+  .toasts{position:fixed;top:14px;right:14px;display:flex;flex-direction:column;gap:8px;z-index:50;max-width:320px}
+  .toast{background:var(--bad);color:#fff;padding:9px 14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+
+  @media (max-width:700px){ .main{grid-template-columns:1fr} .container{padding:12px} .pttBtn{width:72px;height:72px} }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Saqta Voice Router <span class="dim">— voice test</span></h1>
+    <div class="statusGroup">
+      <span class="dot" id="dot" aria-hidden="true"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <span class="badge" id="brain">brain —</span>
+    <span class="badge" id="format">format —</span>
+    <span class="dim" id="sessionId"></span>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="segmented" role="group" aria-label="Mode">
+      <button type="button" class="modeBtn" data-mode="vad" aria-pressed="true">Hands-free (VAD)</button>
+      <button type="button" class="modeBtn" data-mode="ptt" aria-pressed="false">Push-to-talk</button>
+    </div>
+    <label class="check"><input type="checkbox" id="greeting" checked> Greeting</label>
+    <label class="fieldLabel">Language
+      <select id="lang">
+        <option value="">Auto</option>
+        <option value="ru">RU</option>
+        <option value="kk">KK</option>
+      </select>
+    </label>
+    <button type="button" id="connectBtn" class="primary">Connect</button>
+    <button type="button" id="ptt" class="pttBtn" style="display:none" disabled aria-pressed="false">Hold to talk</button>
+    <button type="button" id="stopBtn" disabled>Stop speaking</button>
+    <form id="textForm" class="textForm">
+      <input type="text" id="textInput" placeholder="Type a message…" aria-label="Message" disabled autocomplete="off">
+      <button type="submit" id="sendBtn" disabled>Send</button>
+    </form>
+  </section>
+
+  <main class="main">
+    <section class="card transcriptCard" aria-label="Transcript">
+      <div class="transcript" id="transcript"></div>
+    </section>
+    <aside class="sidebar">
+      <section class="card">
+        <h2>Latency (ms) · last 10 turns</h2>
+        <table class="latency">
+          <thead><tr><th>#</th><th>STT</th><th>LLM</th><th>TTS</th><th>Total</th></tr></thead>
+          <tbody id="latencyBody"></tbody>
+          <tfoot><tr id="latencyP50"><td>p50</td><td>—</td><td>—</td><td>—</td><td>—</td></tr></tfoot>
+        </table>
+      </section>
+      <details class="card">
+        <summary>Event log</summary>
+        <div class="log" id="log"></div>
+      </details>
+    </aside>
+  </main>
+
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+  // ---------- DOM refs ----------
+  const els = {
+    dot: document.getElementById('dot'),
+    statusText: document.getElementById('statusText'),
+    brain: document.getElementById('brain'),
+    format: document.getElementById('format'),
+    sessionId: document.getElementById('sessionId'),
+    modeBtns: Array.from(document.querySelectorAll('.modeBtn')),
+    greeting: document.getElementById('greeting'),
+    lang: document.getElementById('lang'),
+    connectBtn: document.getElementById('connectBtn'),
+    ptt: document.getElementById('ptt'),
+    stopBtn: document.getElementById('stopBtn'),
+    textForm: document.getElementById('textForm'),
+    textInput: document.getElementById('textInput'),
+    sendBtn: document.getElementById('sendBtn'),
+    transcript: document.getElementById('transcript'),
+    latencyBody: document.getElementById('latencyBody'),
+    latencyP50: document.getElementById('latencyP50'),
+    log: document.getElementById('log'),
+    toasts: document.getElementById('toasts'),
+  };
+  // ---------- state ----------
+  const state = {
+    ws: null, hangingUp: false, mode: 'vad',
+    micStream: null, micCtx: null, micNode: null,
+    playCtx: null, nextTime: 0, activeSources: [],
+    sampleRate: 16000, currentTurn: null, awaitingFirstAudio: false, releaseAt: null,
+    pttHeld: false,
+    bot: null, captionEl: null, pendingDecision: null,
+    turns: [], log: [],
+  };
+  // ---------- small DOM/format helpers ----------
+  function h(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function fmt(n) { return typeof n === 'number' && isFinite(n) ? String(Math.round(n)) : '—'; }
+  function median(nums) {
+    const a = nums.filter(n => typeof n === 'number').sort((x, y) => x - y);
+    if (!a.length) return null;
+    const mid = a.length >> 1;
+    return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+  }
+  function errMsg(err) { return err && err.message ? err.message : String(err); }
+  function scrollTranscript() { els.transcript.scrollTop = els.transcript.scrollHeight; }
+
+  function toast(message) {
+    const t = h('div', 'toast', message);
+    els.toasts.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+
+  function setStatus(s) {
+    els.dot.className = 'dot ' + s;
+    els.statusText.textContent = { idle: 'Disconnected', connecting: 'Connecting…', live: 'Connected', bad: 'Error' }[s] || s;
+  }
+
+  function resetHeader() {
+    els.brain.textContent = 'brain —';
+    els.format.textContent = 'format —';
+    els.sessionId.textContent = '';
+  }
+  // ---------- event log (last 100, raw) ----------
+  function logEvent(dir, msg) {
+    const ts = new Date();
+    const stamp = ts.toTimeString().slice(0, 8) + '.' + String(ts.getMilliseconds()).padStart(3, '0');
+    const line = stamp + (dir === 'in' ? '  <- ' : '  -> ') + msg.type + '  ' + JSON.stringify(msg);
+    state.log.push(line);
+    if (state.log.length > 100) state.log.shift();
+    renderLog();
+  }
+  function renderLog() {
+    els.log.innerHTML = '';
+    for (const line of state.log) els.log.appendChild(h('div', 'logline', line));
+    els.log.scrollTop = els.log.scrollHeight;
+  }
+  // ---------- transcript ----------
+  function addUserBubble(text, language, ms) {
+    clearCaption();
+    const wrap = h('div', 'msg user');
+    wrap.appendChild(h('div', 'bubble', text));
+    const meta = h('div', 'meta');
+    if (language) meta.appendChild(h('span', 'badge lang', language));
+    meta.appendChild(h('span', null, 'STT ' + fmt(ms) + ' ms'));
+    wrap.appendChild(meta);
+    els.transcript.appendChild(wrap);
+    scrollTranscript();
+  }
+
+  function scenarioLabel(s) { return s.scenario_id + ' · ' + Number(s.confidence).toFixed(2); }
+  function buildChip(decision) {
+    const scenarios = (decision && decision.scenarios) || [];
+    const det = h('details', 'chip');
+    det.appendChild(h('summary', null, scenarios[0] ? scenarioLabel(scenarios[0]) : 'no match'));
+    const list = h('div', 'chipList');
+    scenarios.forEach(s => list.appendChild(h('div', null, scenarioLabel(s) + ' — ' + (s.reason || ''))));
+    det.appendChild(list);
+    return det;
+  }
+  function newBotBubble() {
+    const wrap = h('div', 'msg bot');
+    if (state.pendingDecision) {
+      wrap.appendChild(buildChip(state.pendingDecision.decision));
+      state.pendingDecision = null;
+    }
+    const bubble = h('div', 'bubble', '');
+    wrap.appendChild(bubble);
+    const meta = h('div', 'meta');
+    wrap.appendChild(meta);
+    els.transcript.appendChild(wrap);
+    scrollTranscript();
+    return { bubble, meta };
+  }
+
+  function appendBotDelta(text) {
+    if (!state.bot) state.bot = newBotBubble();
+    state.bot.bubble.textContent += text;
+    scrollTranscript();
+  }
+
+  function finalizeBotBubble(msg) {
+    if (!state.bot) state.bot = newBotBubble();
+    state.bot.bubble.textContent = msg.text;
+    if (msg.language) state.bot.meta.appendChild(h('span', 'badge lang', msg.language));
+    state.bot.meta.appendChild(h('span', null, msg.greeting ? 'Greeting' : ('LLM ' + fmt(msg.ms) + ' ms')));
+    state.bot = null;
+    scrollTranscript();
+  }
+
+  function setCaption(text) {
+    if (!state.captionEl) {
+      state.captionEl = h('div', 'caption', text);
+      els.transcript.appendChild(state.captionEl);
+    } else {
+      state.captionEl.textContent = text;
+    }
+    scrollTranscript();
+  }
+  function clearCaption() {
+    if (state.captionEl) { state.captionEl.remove(); state.captionEl = null; }
+  }
+
+  // ---------- latency table ----------
+  function addLatencyRow(msg) {
+    const l = msg.latency_ms || {};
+    state.turns.push({ turn: msg.turn, stt: l.stt, response: l.response, tts: l.tts_first_audio, total: l.total });
+    if (state.turns.length > 10) state.turns.shift();
+    renderLatencyTable();
+  }
+  function td(text, cls) { return h('td', cls, text); }
+  function renderLatencyTable() {
+    els.latencyBody.innerHTML = '';
+    for (const r of state.turns) {
+      const tr = document.createElement('tr');
+      [String(r.turn), fmt(r.stt), fmt(r.response), fmt(r.tts)].forEach(v => tr.appendChild(td(v)));
+      tr.appendChild(td(fmt(r.total), (r.total != null && r.total <= 1500) ? 'ok' : 'warn'));
+      els.latencyBody.appendChild(tr);
+    }
+    els.latencyP50.innerHTML = '';
+    els.latencyP50.appendChild(td('p50'));
+    ['stt', 'response', 'tts', 'total'].forEach(c => {
+      els.latencyP50.appendChild(td(fmt(median(state.turns.map(r => r[c])))));
+    });
+  }
+
+  function resetSession() {
+    els.transcript.innerHTML = '';
+    state.bot = null; state.captionEl = null; state.pendingDecision = null;
+    state.turns = []; renderLatencyTable();
+    state.log = []; renderLog();
+    state.awaitingFirstAudio = false; state.releaseAt = null; state.currentTurn = null;
+  }
+  // ---------- inline AudioWorklet (mic -> 16kHz mono PCM16, 640-sample frames) ----------
+  function pcmDownsamplerWorklet() {
+    class PCMDownsampler extends AudioWorkletProcessor {
+      constructor() {
+        super();
+        this.ratio = sampleRate / 16000; // AudioWorkletGlobalScope sampleRate
+        this.buf = [];
+        this.pos = 0;
+        this.frame = new Int16Array(640); // 40ms @ 16kHz
+        this.n = 0;
+      }
+      process(inputs) {
+        const ch = inputs[0] && inputs[0][0];
+        if (ch) {
+          for (let i = 0; i < ch.length; i++) this.buf.push(ch[i]);
+          while (this.pos + this.ratio <= this.buf.length) {
+            const a = Math.floor(this.pos);
+            const b = Math.floor(this.pos + this.ratio);
+            const cnt = Math.max(1, b - a);
+            let sum = 0;
+            for (let i = a; i < a + cnt; i++) sum += this.buf[i] || 0;
+            const avg = sum / cnt; // simple low-pass: box average over the source window
+            const s = Math.max(-1, Math.min(1, avg));
+            this.frame[this.n++] = s < 0 ? s * 0x8000 : s * 0x7fff;
+            this.pos += this.ratio;
+            if (this.n === 640) {
+              this.port.postMessage(this.frame.buffer.slice(0));
+              this.n = 0;
+            }
+          }
+          const drop = Math.floor(this.pos);
+          if (drop > 0) { this.buf.splice(0, drop); this.pos -= drop; }
+        }
+        return true;
+      }
+    }
+    registerProcessor('pcm-downsampler', PCMDownsampler);
+  }
+  const WORKLET_URL = URL.createObjectURL(new Blob(
+    ['(' + pcmDownsamplerWorklet.toString() + ')()'],
+    { type: 'application/javascript' }
+  ));
+
+  function shouldSendAudio() {
+    return !!(state.ws && state.ws.readyState === WebSocket.OPEN) && (state.mode === 'vad' || state.pttHeld);
+  }
+
+  async function startMic() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+    });
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.audioWorklet.addModule(WORKLET_URL);
+    const src = ctx.createMediaStreamSource(stream);
+    const node = new AudioWorkletNode(ctx, 'pcm-downsampler');
+    node.port.onmessage = (e) => { if (shouldSendAudio()) state.ws.send(e.data); };
+    const silence = ctx.createGain();
+    silence.gain.value = 0; // keep the worklet pulled without audible mic monitoring
+    src.connect(node).connect(silence).connect(ctx.destination);
+    state.micStream = stream; state.micCtx = ctx; state.micNode = node;
+    const playCtx = new (window.AudioContext || window.webkitAudioContext)();
+    try { await playCtx.resume(); } catch (e) { /* ignore */ }
+    state.playCtx = playCtx; state.nextTime = 0; state.activeSources = [];
+  }
+
+  function stopMic() {
+    if (state.micStream) state.micStream.getTracks().forEach(t => t.stop());
+    if (state.micCtx) state.micCtx.close().catch(() => {});
+    if (state.playCtx) state.playCtx.close().catch(() => {});
+    state.micStream = null; state.micCtx = null; state.micNode = null; state.playCtx = null;
+  }
+  // ---------- playback (gapless scheduling) ----------
+  function schedulePlayback(buf, sampleRate) {
+    const ctx = state.playCtx;
+    if (!ctx) return;
+    const dv = new DataView(buf);
+    const n = buf.byteLength / 2;
+    const f32 = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const s = dv.getInt16(i * 2, true); // little-endian
+      f32[i] = s < 0 ? s / 0x8000 : s / 0x7fff;
+    }
+    const buffer = ctx.createBuffer(1, n, sampleRate || ctx.sampleRate);
+    buffer.copyToChannel(f32, 0);
+    const node = ctx.createBufferSource();
+    node.buffer = buffer;
+    node.connect(ctx.destination);
+    const startAt = Math.max(ctx.currentTime + 0.02, state.nextTime);
+    node.start(startAt);
+    state.nextTime = startAt + buffer.duration;
+    state.activeSources.push(node);
+    node.onended = () => { state.activeSources = state.activeSources.filter(s => s !== node); };
+  }
+  function clearPlayback() {
+    for (const s of state.activeSources.splice(0)) { try { s.stop(); } catch (e) { /* already stopped */ } }
+    state.nextTime = 0;
+  }
+
+  function handleAudio(buf) {
+    schedulePlayback(buf, state.sampleRate);
+    if (state.awaitingFirstAudio) {
+      state.awaitingFirstAudio = false;
+      if (state.releaseAt != null) {
+        const ms = Math.round(performance.now() - state.releaseAt);
+        send({ type: 'client.metrics', turn: state.currentTurn, release_to_sound_ms: ms });
+        state.releaseAt = null;
+      }
+    }
+  }
+  // ---------- WebSocket ----------
+  function send(obj) {
+    if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+    state.ws.send(JSON.stringify(obj));
+    logEvent('out', obj);
+  }
+
+  function onWSMessage(ev) {
+    if (typeof ev.data === 'string') {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      logEvent('in', msg);
+      handleMsg(msg);
+    } else {
+      handleAudio(ev.data);
+    }
+  }
+
+  function handleMsg(msg) {
+    switch (msg.type) {
+      case 'session.ready':
+        state.sampleRate = msg.sample_rate || state.sampleRate;
+        els.brain.textContent = 'brain ' + (msg.brain || '—');
+        els.format.textContent = 'format ' + msg.output_format + ' @ ' + msg.sample_rate + ' Hz';
+        els.sessionId.textContent = msg.session_id ? ('session ' + msg.session_id) : '';
+        setStatus('live');
+        break;
+      case 'stt.partial': setCaption(msg.text); break;
+      case 'stt.final': addUserBubble(msg.text, msg.language, msg.ms); break;
+      case 'router.decision': state.pendingDecision = { decision: msg.decision, ms: msg.ms }; break;
+      case 'response.delta': appendBotDelta(msg.text); break;
+      case 'response.final': finalizeBotBubble(msg); break;
+      case 'tts.start':
+        state.currentTurn = msg.turn;
+        state.sampleRate = msg.sample_rate || state.sampleRate;
+        state.awaitingFirstAudio = true;
+        break;
+      case 'tts.clear':
+        clearPlayback();
+        state.awaitingFirstAudio = false;
+        state.releaseAt = null;
+        break;
+      case 'voice.metrics': addLatencyRow(msg); break;
+      case 'turn.done': break; // no dedicated UI; already in the raw event log
+      case 'error': toast(msg.message || 'Error'); break;
+      default: break; // unknown types also just land in the raw event log
+    }
+  }
+
+  async function connect() {
+    if (state.ws) return;
+    setStatus('connecting');
+    try {
+      await startMic();
+    } catch (err) {
+      toast('Microphone error: ' + errMsg(err));
+      setStatus('idle');
+      return;
+    }
+    resetSession();
+    const params = new URLSearchParams(location.search);
+    const host = params.get('gw') || location.host;
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(proto + '://' + host + '/ws/voice');
+    ws.binaryType = 'arraybuffer';
+    state.ws = ws;
+    lockControls(true);
+    ws.onopen = () => {
+      send({ type: 'start', mode: state.mode, greeting: els.greeting.checked, lang: els.lang.value, session_id: '' });
+    };
+    ws.onmessage = onWSMessage;
+    ws.onclose = onClosed;
+    ws.onerror = () => { /* onclose follows and drives the UI reset */ };
+  }
+  function hangup() {
+    state.hangingUp = true;
+    send({ type: 'stop' });
+    if (state.ws) state.ws.close();
+  }
+  function onClosed() {
+    const clean = state.hangingUp;
+    state.ws = null; state.hangingUp = false;
+    stopMic();
+    clearPlayback();
+    lockControls(false);
+    setStatus('idle');
+    resetHeader();
+    pttReset();
+    if (!clean) toast('Connection closed');
+  }
+
+  function lockControls(connected) {
+    els.modeBtns.forEach(b => b.disabled = connected);
+    els.greeting.disabled = els.lang.disabled = connected;
+    els.stopBtn.disabled = els.textInput.disabled = els.sendBtn.disabled = els.ptt.disabled = !connected;
+    els.connectBtn.textContent = connected ? 'Hang up' : 'Connect';
+  }
+  // ---------- push-to-talk ----------
+  function pttVisual(held) {
+    els.ptt.classList.toggle('active', held);
+    els.ptt.setAttribute('aria-pressed', String(held));
+    els.ptt.textContent = held ? 'Release to send' : 'Hold to talk';
+  }
+  function pttDown() {
+    if (state.mode !== 'ptt' || !state.ws || state.pttHeld) return;
+    state.pttHeld = true;
+    pttVisual(true);
+  }
+  function pttUp() {
+    if (!state.pttHeld) return;
+    state.pttHeld = false;
+    pttVisual(false);
+    state.releaseAt = performance.now();
+    send({ type: 'commit' });
+  }
+  function pttReset() { state.pttHeld = false; pttVisual(false); }
+  function isTypingTarget() {
+    const tag = document.activeElement && document.activeElement.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+  // ---------- wiring ----------
+  els.connectBtn.addEventListener('click', () => { state.ws ? hangup() : connect(); });
+  els.modeBtns.forEach(btn => btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    state.mode = btn.dataset.mode;
+    els.modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    els.ptt.style.display = state.mode === 'ptt' ? '' : 'none';
+  }));
+  els.ptt.addEventListener('mousedown', pttDown);
+  window.addEventListener('mouseup', pttUp);
+  els.ptt.addEventListener('touchstart', (e) => { e.preventDefault(); pttDown(); }, { passive: false });
+  els.ptt.addEventListener('touchend', (e) => { e.preventDefault(); pttUp(); }, { passive: false });
+  els.ptt.addEventListener('touchcancel', (e) => { e.preventDefault(); pttUp(); }, { passive: false });
+  els.ptt.addEventListener('contextmenu', (e) => e.preventDefault());
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' || e.repeat || isTypingTarget() || state.mode !== 'ptt' || !state.ws) return;
+    e.preventDefault();
+    pttDown();
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.code !== 'Space' || isTypingTarget()) return;
+    pttUp();
+  });
+  els.stopBtn.addEventListener('click', () => { clearPlayback(); send({ type: 'interrupt' }); });
+  els.textForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = els.textInput.value.trim();
+    if (!v || !state.ws) return;
+    send({ type: 'text', text: v });
+    els.textInput.value = '';
+  });
+  window.addEventListener('beforeunload', () => { if (state.ws) send({ type: 'stop' }); });
+  // ---------- init ----------
+  renderLatencyTable();
+  setStatus('idle');
+})();
+</script>
+</body>
+</html>

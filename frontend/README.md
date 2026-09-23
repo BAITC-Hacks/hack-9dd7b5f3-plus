@@ -67,3 +67,10 @@ from `frontend`. Open `/call` and select **LLM**; `/admin` shows the same conver
 Chrome/Edge speech recognition and browser speech synthesis work in both mock and core modes.
 Server STT still requires `OPENAI_API_KEY` in `frontend/.env.local`; Kazakh voice availability
 in browser synthesis depends on the installed voices. Sessions/traces do not survive reloads.
+
+
+TTS update: **LLM** mode now uses ElevenLabs through `/api/tts`; set `VOICE_TTS_URL` to the
+voice gateway (default `http://127.0.0.1:8091`). Browser STT is unchanged. Root README documents
+`docker compose --profile llm --profile voice up --build` and the server-only ElevenLabs key.
+The speaker switch stops playback and cancels pending synthesis. If voice is unavailable,
+a visible notice explains the fallback to browser synthesis. Text remains in the transcript.

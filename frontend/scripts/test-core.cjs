@@ -64,3 +64,63 @@ test("failed core request is not silently replaced with lexical routing", async 
       route: async () => { throw new Error("core unavailable"); } })) void event;
   }, /core unavailable/);
 });
+
+const { POST: ttsProxy } = require("../src/app/api/tts/route.ts");
+const { speakElevenLabs, stopSpeaking } = require("../src/lib/voice.ts");
+
+test("TTS proxy forwards RU/KZ text as MP3 and does not expose credentials", async (t) => {
+  for (const lang of ["ru", "kk"]) {
+    t.mock.method(globalThis, "fetch", async (url, init) => {
+      assert.ok(String(url).endsWith("/api/voice/tts"));
+      assert.deepEqual(JSON.parse(init.body), { text: "Тест", lang, format: "mp3_22050_32" });
+      assert.equal(init.headers["xi-api-key"], undefined);
+      return new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "audio/mpeg", "x-tts-model": "test" } });
+    });
+    const response = await ttsProxy(new Request("http://test/api/tts", { method: "POST", body: JSON.stringify({ text: "Тест", lang }) }));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("x-tts-provider"), "elevenlabs");
+    assert.equal((await response.arrayBuffer()).byteLength, 3);
+    t.mock.restoreAll();
+  }
+});
+
+test("TTS proxy rejects invalid input and sanitizes upstream errors", async (t) => {
+  const bad = await ttsProxy(new Request("http://test/api/tts", { method: "POST", body: '{"text":"","lang":"ru"}' }));
+  assert.equal(bad.status, 400);
+  t.mock.method(globalThis, "fetch", async () => new Response("private provider detail", { status: 401 }));
+  const response = await ttsProxy(new Request("http://test/api/tts", { method: "POST", body: '{"text":"Тест","lang":"ru"}' }));
+  assert.equal(response.status, 502);
+  assert.ok(!(await response.text()).includes("private provider detail"));
+});
+
+test("ElevenLabs playback resolves on playing and stops/releases on mute", async (t) => {
+  const originalWindow = globalThis.window;
+  const originalAudio = globalThis.Audio;
+  let paused = false;
+  let ended = false;
+  globalThis.window = { speechSynthesis: { cancel() {} } };
+  globalThis.Audio = class {
+    play() { queueMicrotask(() => this.onplaying?.()); return Promise.resolve(); }
+    pause() { paused = true; }
+  };
+  t.after(() => { stopSpeaking(); globalThis.window = originalWindow; globalThis.Audio = originalAudio; });
+  t.mock.method(globalThis, "fetch", async () => new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "audio/mpeg" } }));
+  const ms = await speakElevenLabs("Тест", "ru", { onEnd: () => { ended = true; } });
+  assert.ok(ms >= 0);
+  assert.equal(ended, false);
+  stopSpeaking();
+  assert.equal(paused, true);
+  assert.equal(ended, true);
+});
+
+test("muting during synthesis cancels the request without starting audio", async (t) => {
+  const originalWindow = globalThis.window;
+  globalThis.window = { speechSynthesis: { cancel() {} } };
+  t.after(() => { globalThis.window = originalWindow; });
+  t.mock.method(globalThis, "fetch", async (_url, init) => new Promise((_resolve, reject) => {
+    init.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+  }));
+  const pending = speakElevenLabs("Тест", "ru");
+  stopSpeaking();
+  assert.equal(await pending, 0);
+});

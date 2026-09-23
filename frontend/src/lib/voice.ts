@@ -2,7 +2,7 @@
  * Browser voice I/O.
  *  - STT: Web Speech API (Chrome / Edge: ru-RU, kk-KZ). One utterance per start(): the browser
  *    stops on its own after a pause and delivers the final transcript.
- *  - TTS: speechSynthesis (mock mode) or <audio> from base64 (real backend).
+ *  - TTS: ElevenLabs via /api/tts; speechSynthesis for keyless mock/fallback.
  *  - Recorder: MediaRecorder → base64 webm/opus for the real backend's STT.
  */
 import type { ReplyLang } from "./contract";
@@ -87,11 +87,74 @@ export function startListening(opts: {
 /* ------------------------------ TTS ------------------------------ */
 
 let currentAudio: HTMLAudioElement | null = null;
+let pendingTts: AbortController | null = null;
+let disposeAudio: (() => void) | null = null;
 
 export function stopSpeaking() {
   if (typeof window === "undefined") return;
+  pendingTts?.abort();
+  pendingTts = null;
+  disposeAudio?.();
+  disposeAudio = null;
   try { window.speechSynthesis?.cancel(); } catch { /* noop */ }
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+}
+
+/** Fetch server-generated MP3 and play it; resolves at actual playback start.
+ * Stopping/resetting cancels pending synthesis and releases the blob URL.
+ */
+export async function speakElevenLabs(text: string, lang: ReplyLang, opts?: { onStart?(): void; onEnd?(): void }): Promise<number> {
+  stopSpeaking();
+  const controller = new AbortController();
+  pendingTts = controller;
+  const t0 = performance.now();
+  try {
+    const response = await fetch("/api/tts", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, lang }),
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(35_000)]),
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.error ?? `TTS: HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    if (controller.signal.aborted) { opts?.onEnd?.(); return 0; }
+    if (!blob.size || !blob.type.startsWith("audio/")) throw new Error("TTS вернул пустое или некорректное аудио");
+    return await new Promise<number>((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudio = audio;
+      let finished = false;
+      const cleanup = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        audio.pause();
+        audio.onplaying = audio.onended = audio.onerror = null;
+        URL.revokeObjectURL(url);
+        if (currentAudio === audio) currentAudio = null;
+        if (disposeAudio === cleanup) disposeAudio = null;
+        if (pendingTts === controller) pendingTts = null;
+        opts?.onEnd?.();
+        resolve(0); // settle even if cancelled before playback begins
+      };
+      const fail = () => {
+        reject(new Error("Не удалось воспроизвести озвучку. Проверьте разрешение на звук в браузере."));
+        cleanup();
+      };
+      const timer = setTimeout(fail, 15_000);
+      disposeAudio = cleanup;
+      audio.onplaying = () => { clearTimeout(timer); opts?.onStart?.(); resolve(Math.round(performance.now() - t0)); };
+      audio.onended = cleanup;
+      audio.onerror = fail;
+      audio.play().catch(fail);
+    });
+  } catch (error) {
+    if (pendingTts === controller) pendingTts = null;
+    if (controller.signal.aborted) { opts?.onEnd?.(); return 0; }
+    throw error;
+  }
 }
 
 function pickVoice(lang: ReplyLang): SpeechSynthesisVoice | undefined {

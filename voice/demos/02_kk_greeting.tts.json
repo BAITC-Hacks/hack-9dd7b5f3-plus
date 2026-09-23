@@ -1,0 +1,14 @@
+{
+  "name": "02_kk_greeting",
+  "lang": "kk",
+  "text": "Сәлеметсіз бе! Мен Saqta дауыстық көмекшісімін. Қалай көмектесе аламын?",
+  "model": "eleven_v3_conversational",
+  "voice": "EXAVITQu4vr4xnSDxMaL",
+  "format": "pcm_16000",
+  "connect_ms": 197.6,
+  "first_audio_ms": 214.1,
+  "total_ms": 1378.8,
+  "audio_ms": 4800,
+  "chars": 71,
+  "at": "2026-09-23T16:07:01+05:00"
+}

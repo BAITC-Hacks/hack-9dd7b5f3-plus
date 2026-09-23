@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 import { createSession, DEFAULT_MODE, runTurn, type ApiMode } from "./api";
 import type { ActionCall, Candidate, DialogState, LatencyMs, PolicyVerdict, ReplyLang, RouterDecision, Stage, Trace, TurnEvent } from "./contract";
 import { newDialogState } from "./mock/engine";
-import { playBase64, speak, startListening, startRecording, stopSpeaking, sttSupported, transcribeOnServer, type Listener, type Recorder } from "./voice";
+import { playBase64, speak, speakElevenLabs, startListening, startRecording, stopSpeaking, sttSupported, transcribeOnServer, type Listener, type Recorder } from "./voice";
 
 export interface Message {
   id: string;
@@ -299,7 +299,14 @@ async function runOne(req: { text?: string; audio_base64?: string; audio_mime?: 
       set({ status: "speaking" });
       const onEnd = () => set((s) => (s.status === "speaking" ? { status: "idle" } : {}));
       if (ttsPayload?.audio_base64) firstAudioMs = await playBase64(ttsPayload.audio_base64, ttsPayload.mime, { onEnd });
-      else firstAudioMs = await speak(finalText, responseLang, { onEnd });
+      else if (state.mode !== "mock") {
+        try {
+          firstAudioMs = await speakElevenLabs(finalText, responseLang, { onEnd });
+        } catch (error) {
+          set({ notice: `${error instanceof Error ? error.message : "Ошибка ElevenLabs"} Использую голос браузера.`, status: "speaking" });
+          firstAudioMs = await speak(finalText, responseLang, { onEnd });
+        }
+      } else firstAudioMs = await speak(finalText, responseLang, { onEnd });
     } else {
       set({ status: "idle" });
     }

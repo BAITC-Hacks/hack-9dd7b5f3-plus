@@ -1,0 +1,13 @@
+{
+  "name": "03_mixed_caller",
+  "mode": "manual",
+  "format": "pcm_16000",
+  "audio_ms": 3600,
+  "first_partial_ms": 2319.6,
+  "final_after_ms": 324.6,
+  "speech_end_ms": 724.7,
+  "text": "Сәлеметсіз бе? Іші аварияға түстім, но я не виноват.",
+  "language": "kk",
+  "expected": "Сәлеметсіз бе, кеше аварияға түстім, но я не виноват.",
+  "at": "2026-09-23T16:10:08+05:00"
+}

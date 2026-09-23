@@ -1,0 +1,57 @@
+; PJSIP config for a Kazakhstan phone number delivered as a SIP trunk.
+; Placeholders ${...} are filled from the environment by entrypoint.sh (envsubst).
+;   SIP_HOST      provider registrar / proxy, e.g. sip.provider.kz
+;   SIP_USER      trunk login (often the number itself, e.g. 77172000000)
+;   SIP_PASSWORD  trunk password
+;   PUBLIC_IP     public IP of this server (NAT)
+
+[global]
+type=global
+user_agent=SaqtaVoice
+
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:5060
+external_media_address=${PUBLIC_IP}
+external_signaling_address=${PUBLIC_IP}
+
+[kz-trunk]
+type=registration
+transport=transport-udp
+outbound_auth=kz-trunk-auth
+server_uri=sip:${SIP_HOST}
+client_uri=sip:${SIP_USER}@${SIP_HOST}
+contact_user=${SIP_USER}
+retry_interval=30
+expiration=300
+
+[kz-trunk-auth]
+type=auth
+auth_type=userpass
+username=${SIP_USER}
+password=${SIP_PASSWORD}
+
+[kz-trunk]
+type=aor
+contact=sip:${SIP_HOST}
+qualify_frequency=30
+
+[kz-trunk]
+type=endpoint
+transport=transport-udp
+context=from-trunk
+disallow=all
+allow=alaw,ulaw
+outbound_auth=kz-trunk-auth
+aors=kz-trunk
+direct_media=no
+rtp_symmetric=yes
+force_rport=yes
+rewrite_contact=yes
+dtmf_mode=rfc4733
+
+[kz-trunk]
+type=identify
+endpoint=kz-trunk
+match=${SIP_HOST}

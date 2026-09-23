@@ -1145,3 +1145,25 @@ AI coding assistants used during development (OpenAI Codex, Claude) are disclose
 - [ ] [docs/PROGRESS.md](docs/PROGRESS.md) filled for 16:00–18:00
 - [ ] README language decided — the organizers' prompt asks for Russian ([README_PROMPT.md](docs/hackathon/README_PROMPT.md))
 - [ ] The captain pressed «Сдать решение» on the platform — pushing is not submitting
+
+## ElevenLabs TTS (from `feat/voice-elevenlabs`)
+
+The existing voice module is included unchanged. The frontend uses **only** its
+`POST /api/voice/tts` endpoint through Next.js `/api/tts`. Browser STT is unchanged.
+In **LLM** mode, enable the existing speaker switch: completed replies are spoken by ElevenLabs.
+The transcript remains visible. **Мок** keeps browser synthesis for keyless review; service errors
+show a notice and fall back to browser synthesis. Audio is currently buffered as MP3 before playback.
+
+Set `ELEVENLABS_API_KEY` in the repository-root `.env` (never commit it), then run:
+```bash
+docker compose --profile llm --profile voice up --build
+```
+Use `FRONTEND_PORT=3200` if port 3000 is occupied. Voice is private to the Compose network;
+no STT/WebSocket/phone connection is made by the frontend. The service runs with `VOICE_BRAIN=echo`.
+For manual startup: `cd voice && VOICE_HTTP_ADDR=127.0.0.1:8091 VOICE_BRAIN=echo VOICE_GREETING=false VOICE_FILLER_AFTER_MS=0 go run ./cmd/voice`.
+Set server-only `VOICE_TTS_URL=http://127.0.0.1:8091` in `frontend/.env.local`.
+
+Defaults from the branch: Sarah (`EXAVITQu4vr4xnSDxMaL`), `eleven_flash_v2_5` for Russian,
+`eleven_v3_conversational` for Kazakh. Override `ELEVENLABS_VOICE_ID`, `ELEVENLABS_VOICE_ID_KK`,
+`ELEVENLABS_TTS_MODEL_RU`, `ELEVENLABS_TTS_MODEL_KK` in root `.env`. TTS keys stay in the Go service.
+Validation: `cd voice && go test ./...`; `cd frontend && npm test && npm run lint && npm run build`.
