@@ -1,19 +1,22 @@
 /**
  * API layer. `NEXT_PUBLIC_API_MODE=mock` (default) runs everything in the browser;
+ * `core` uses Python core-llm via a same-origin proxy plus the local demo executor.
  * `real` talks to the Go backend (NEXT_PUBLIC_API_URL) using the SSE contract.
  */
 import type { DialogState, SupervisorStats, Trace, TurnEvent, TurnRequest } from "./contract";
+import { adaptCoreRoute, requestCoreRoute } from "./core-router";
 import { newDialogState, runMockTurn } from "./mock/engine";
 
-export type ApiMode = "mock" | "real";
+export type ApiMode = "mock" | "core" | "real";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-export const DEFAULT_MODE: ApiMode = (process.env.NEXT_PUBLIC_API_MODE as ApiMode) === "real" ? "real" : "mock";
+export const DEFAULT_MODE: ApiMode = process.env.NEXT_PUBLIC_API_MODE === "real" ? "real" : process.env.NEXT_PUBLIC_API_MODE === "core" ? "core" : "mock";
 
 /* ------------------------------ mock session store ------------------------------ */
 
 const mockSessions = new Map<string, DialogState>();
 const mockTraces: Trace[] = [];
+const coreTraces = new Map<string, Trace[]>();
 
 function uid(): string {
   return "s_" + Math.random().toString(36).slice(2, 10);
@@ -28,6 +31,7 @@ export async function createSession(mode: ApiMode): Promise<{ session_id: string
   const id = uid();
   const state = newDialogState(id);
   mockSessions.set(id, state);
+  if (mode === "core") coreTraces.set(id, []);
   return { session_id: id, state };
 }
 
@@ -37,15 +41,25 @@ export function getMockState(session_id: string): DialogState | undefined {
 
 /** Run one turn and stream its events. */
 export async function* runTurn(mode: ApiMode, req: TurnRequest): AsyncGenerator<TurnEvent> {
-  if (mode === "mock") {
+  if (mode !== "real") {
     const state = mockSessions.get(req.session_id) ?? newDialogState(req.session_id);
     mockSessions.set(req.session_id, state);
     if (!req.text) {
       yield { type: "error", message: "mock mode needs text (use browser speech recognition)" };
       return;
     }
-    for await (const ev of runMockTurn(state, { text: req.text, t0: req.client_t0 ?? Date.now() })) {
-      if (ev.type === "turn.done") mockTraces.push(ev.trace);
+    const traces = coreTraces.get(req.session_id) ?? [];
+    const working = structuredClone(state);
+    const route = mode === "core" ? async (text: string) => adaptCoreRoute(await requestCoreRoute(text, {
+      history: traces.slice(-4).map((t) => ({ text: t.transcript, scenario: t.scenarios[0]?.scenario_id ?? "" })),
+      active: state.active_scenario, last_bot: traces.at(-1)?.response_text,
+    }), text, state) : undefined;
+    for await (const ev of runMockTurn(working, { text: req.text, t0: req.client_t0 ?? Date.now(), speed: mode === "core" ? 0 : 1, route })) {
+      if (ev.type === "turn.done") {
+        mockSessions.set(req.session_id, working);
+        if (mode === "core") { traces.push(ev.trace); coreTraces.set(req.session_id, traces); }
+        else mockTraces.push(ev.trace);
+      }
       yield ev;
     }
     return;
@@ -90,7 +104,8 @@ export async function getSupervisorStats(mode: ApiMode): Promise<SupervisorStats
     if (!r.ok) throw new Error(`stats: HTTP ${r.status}`);
     return r.json();
   }
-  return computeStats(mockTraces, mockSessions.size);
+  if (mode === "core") return computeStats([...coreTraces.values()].flat(), coreTraces.size);
+  return computeStats(mockTraces, mockSessions.size - coreTraces.size);
 }
 
 export function computeStats(traces: Trace[], sessions: number): SupervisorStats {

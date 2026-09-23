@@ -57,9 +57,9 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
-            <Seg label="Данные" value={s.mode} options={[{ value: "mock", label: "Мок" }, { value: "real", label: "Бэкенд" }] as const} onChange={(m) => setMode(m)} />
+            <Seg label="Данные" value={s.mode} options={[{ value: "mock", label: "Мок" }, { value: "core", label: "LLM" }, { value: "real", label: "Бэкенд" }] as const} onChange={(m) => setMode(m)} />
             <Seg label="Язык речи" value={s.sttLang} options={[{ value: "ru-RU", label: "RU" }, { value: "kk-KZ", label: "KK" }] as const} onChange={(l) => setSttLang(l)} />
-            {s.mode === "mock" && <Seg label="Распознавание" value={s.sttProvider} options={[{ value: "browser", label: "Chrome" }, { value: "server", label: "Сервер" }] as const} onChange={(p) => setSttProvider(p)} />}
+            {s.mode !== "real" && <Seg label="Распознавание" value={s.sttProvider} options={[{ value: "browser", label: "Chrome" }, { value: "server", label: "Сервер" }] as const} onChange={(p) => setSttProvider(p)} />}
             <label className="hidden cursor-pointer items-center gap-2 md:flex">
               <span className="text-xs text-muted-foreground">Озвучка</span>
               <Switch checked={s.tts} onCheckedChange={(v) => setTts(v)} />

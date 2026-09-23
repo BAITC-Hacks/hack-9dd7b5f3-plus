@@ -51,3 +51,19 @@ src/components/landing/  landing sections
 npx tsx scripts/eval-mock.ts && python ../data/evaluate.py ../data/predictions_mock.json ../data/dev_utterances.json
 ```
 The mock is a keyword/cue router (no LLM) — a floor for the UI demo, not the product's number.
+
+## Python core-llm integration
+
+From the repository root, start `python3 core-llm/server.py` with `core-llm/.env` configured.
+Copy `frontend/.env.local.example` to `frontend/.env.local`, then run `npm ci && npm run dev`
+from `frontend`. Open `/call` and select **LLM**; `/admin` shows the same conversation's trace.
+
+- `mock`: existing keyless lexical router and demo actions, entirely in the browser.
+- `core`: real Python LLM router through `/api/core-route`, browser dialog state and demo actions.
+- `real`: existing Go SSE contract (separate integration, not needed for core-llm).
+
+`CORE_LLM_URL` is server-only, defaults to `http://127.0.0.1:8090`.
+`NEXT_PUBLIC_API_MODE=core` selects LLM initially; absent this variable, mock remains the default.
+Chrome/Edge speech recognition and browser speech synthesis work in both mock and core modes.
+Server STT still requires `OPENAI_API_KEY` in `frontend/.env.local`; Kazakh voice availability
+in browser synthesis depends on the installed voices. Sessions/traces do not survive reloads.

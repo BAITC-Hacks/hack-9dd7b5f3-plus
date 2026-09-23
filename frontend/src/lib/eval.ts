@@ -7,6 +7,7 @@
  */
 import devJson from "@/data/dev_utterances.json";
 import { API_URL, type ApiMode } from "./api";
+import { requestCoreRoute } from "./core-router";
 import { mockRoute } from "./mock/router";
 
 export interface DevUtterance {
@@ -81,6 +82,15 @@ export async function runEval(mode: ApiMode): Promise<EvalResult> {
   }
   const preds: Record<string, string[]> = {};
   const t0 = performance.now();
+  if (mode === "core") {
+    let model = "core-llm";
+    for (const u of devUtterances) {
+      const result = await requestCoreRoute(u.text);
+      preds[u.id] = result.predicted;
+      model = result.model;
+    }
+    return { ...scorePredictions(preds), mean_ms: (performance.now() - t0) / devUtterances.length, model };
+  }
   for (const u of devUtterances) preds[u.id] = mockRoute(u.text, { awaiting: false }).decision.scenarios.map((s) => s.scenario_id);
   const mean = (performance.now() - t0) / devUtterances.length;
   return { ...scorePredictions(preds), mean_ms: mean, model: "mock-lexical" };

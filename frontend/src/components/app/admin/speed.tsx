@@ -20,7 +20,6 @@ export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean
   const scale = Math.max(TARGET_MS, total ?? 0, sum) * 1.1;
   const hasAny = sum > 0 || typeof total === "number";
   const over = typeof total === "number" && total > TARGET_MS;
-  let cursor = 0;
 
   return (
     <Section
@@ -42,11 +41,10 @@ export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean
             <div className="h-full w-px border-l border-dashed border-muted-foreground/50" />
           </div>
           <div className="space-y-1.5">
-            {ROWS.map(({ stage, label, color }) => {
+            {ROWS.map(({ stage, label, color }, index) => {
               const ms = latency[stage];
-              const left = (cursor / scale) * 100;
+              const left = (ROWS.slice(0, index).reduce((sum, row) => sum + (latency[row.stage] ?? 0), 0) / scale) * 100;
               const width = typeof ms === "number" ? (ms / scale) * 100 : 0;
-              if (typeof ms === "number") cursor += ms;
               return (
                 <div key={stage} className="flex items-center gap-2 text-sm">
                   <span className="w-[104px] shrink-0 text-muted-foreground">{label}</span>
@@ -58,7 +56,7 @@ export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean
               );
             })}
           </div>
-          <div className="mt-2 text-xs text-muted-foreground">Пунктир — ориентир {fmtMs(TARGET_MS)} мс (+2 балла жюри). Мок-замеры, без сети.</div>
+          <div className="mt-2 text-xs text-muted-foreground">Пунктир — ориентир {fmtMs(TARGET_MS)} мс (+2 балла жюри). В режиме LLM учитывается запрос к ядру и сети.</div>
         </div>
       )}
     </Section>

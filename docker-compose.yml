@@ -1,0 +1,23 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_MODE: ${NEXT_PUBLIC_API_MODE:-mock}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      CORE_LLM_URL: http://core-llm:8090
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_STT_MODEL: ${OPENAI_STT_MODEL:-gpt-4o-mini-transcribe}
+  core-llm:
+    profiles: [llm]
+    build: ./core-llm
+    env_file: ./core-llm/.env
+    environment:
+      CORE_LLM_HOST: 0.0.0.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

@@ -22,7 +22,7 @@ import {
 } from "../contract";
 import { backend, isSystemIntent, scenarioById, scenarioLabel, slotByNameOf, systemIntentById, type Scenario } from "../catalog";
 import { fmtMoney, isIrreversible, maskEmail, runAction } from "./actions";
-import { detectLanguage, dominantLanguage, mockRoute, NO, parseSlotAnswer, splitParts, YES } from "./router";
+import { detectLanguage, dominantLanguage, mockRoute, NO, parseSlotAnswer, splitParts, YES, type MockRouteResult } from "./router";
 
 /** Slots whose answer is an identifier — a bare answer is ALWAYS a continuation, never a new intent. */
 const ID_SLOTS = new Set(["phone", "iin", "policy_number", "claim_number", "vehicle_plate", "culprit_vehicle_plate", "new_driver_iin", "drivers_iin", "email", "callback_time", "preferred_date", "incident_date", "payment_date"]);
@@ -54,7 +54,7 @@ interface ExecResult {
 
 /* ------------------------------------------------------------------ */
 
-export async function* runMockTurn(state: DialogState, input: { text: string; t0: number; speed?: number }): AsyncGenerator<TurnEvent> {
+export async function* runMockTurn(state: DialogState, input: { text: string; t0: number; speed?: number; route?: (text: string) => Promise<MockRouteResult> }): AsyncGenerator<TurnEvent> {
   const speed = input.speed ?? 1;
   const t0 = input.t0;
   const now = () => Math.round(performance.now());
@@ -89,13 +89,14 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
       routeText = m[2];
     }
   }
-  const routed = mockRoute(routeText, { awaiting: confirmPrefix ? false : !!state.awaiting });
+  const routeStart = now();
+  const routed = input.route ? await input.route(routeText) : mockRoute(routeText, { awaiting: confirmPrefix ? false : !!state.awaiting });
   await sleep(15 * speed);
-  lat.triage = now() - tTri;
+  lat.triage = input.route ? routeStart - tTri : now() - tTri;
   yield { type: "triage", language, urgent: routed.urgent, parts, normalized, ms: lat.triage };
 
   // --- router (with live candidate snapshots)
-  const tRoute = now();
+  const tRoute = input.route ? routeStart : now();
   const history: Candidate[][] = [];
   if (routed.kind === "route") {
     for (let i = 0; i < routed.snapshots.length; i++) {
@@ -115,11 +116,11 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
     const isId = ID_SLOTS.has(state.awaiting.slot);
     const contentWords = splitParts(text).join(" ").split(/\s+/).length;
     const looksLikeNewIntent = !isId && top && !isSystemIntent(top.scenario_id) && top.confidence >= 0.85 && top.scenario_id !== state.active_scenario && contentWords >= 4;
-    if (parsed !== null && !looksLikeNewIntent) {
+    if (parsed !== null && !looksLikeNewIntent && (!input.route || (decision.route_status === "route" && top?.scenario_id === state.active_scenario))) {
       decision = {
         ...decision,
         is_continuation: true,
-        scenarios: [{ scenario_id: state.active_scenario, confidence: 0.97, reason: `answers pending slot "${state.awaiting.slot}"` }],
+        scenarios: [{ scenario_id: state.active_scenario, confidence: input.route ? top.confidence : 0.97, reason: `answers pending slot "${state.awaiting.slot}"` }],
         alternatives: decision.scenarios.slice(0, 2).map((s) => ({ scenario_id: s.scenario_id, confidence: s.confidence })),
         slots: { ...decision.slots, [state.awaiting.slot]: parsed },
         reason: `Continuation of ${state.active_scenario}: client answered "${state.awaiting.slot}"`,
@@ -130,7 +131,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
     const active = state.active_scenario ?? "SYS_UNCLEAR";
     decision = {
       ...decision,
-      scenarios: [{ scenario_id: active, confidence: 0.98, reason: routed.kind === "yes" ? "explicit confirmation" : "client declined" }],
+      scenarios: [{ scenario_id: active, confidence: input.route ? (decision.scenarios[0]?.confidence ?? 0) : 0.98, reason: routed.kind === "yes" ? "explicit confirmation" : "client declined" }],
     };
   }
   lat.router = now() - tRoute;
@@ -237,7 +238,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
   const trace: Trace = {
     turn: state.turn,
     transcript: text,
-    language,
+    language: decision.language,
     scenarios: decision.scenarios,
     alternatives: decision.alternatives,
     reason: decision.reason,
@@ -282,7 +283,7 @@ function pickReplyLanguage(state: DialogState, text: string): ReplyLang {
 function decide(state: DialogState, d: RouterDecision, kind: "route" | "yes" | "no" | "goodbye"): PolicyVerdict {
   const top = d.scenarios[0];
   const base = { stack: state.stack, low_conf_streak: state.low_conf_streak };
-  if (kind === "goodbye") return { action: "goodbye", scenario_id: "SYS_GOODBYE", reason: "client ends the call", ...base };
+  if (kind === "goodbye" || d.route_status === "goodbye") return { action: "goodbye", scenario_id: "SYS_GOODBYE", reason: "client ends the call", ...base };
   if (kind === "yes" || kind === "no") return { action: "continue", scenario_id: state.active_scenario, reason: kind === "yes" ? "confirmation received → execute" : "client declined → cancel preview", ...base };
   if (!top) return { action: "clarify", scenario_id: null, reason: "no candidates", ...base };
   if (top.scenario_id === "SYS_OUT_OF_SCOPE") return { action: "out_of_scope", scenario_id: null, reason: d.reason, ...base };
@@ -293,12 +294,16 @@ function decide(state: DialogState, d: RouterDecision, kind: "route" | "yes" | "
   }
   if (d.is_continuation) return { action: "continue", scenario_id: top.scenario_id, reason: "continuation of the active scenario (slot filled)", ...base };
   if (top.scenario_id === "SC37") return { action: "run", scenario_id: "SC37", reason: "client asks for a human", ...base };
-  if (top.confidence < CONFIDENCE_CLARIFY) {
+  if (d.route_status === "clarify") {
+    state.low_conf_streak += 1;
+    return { action: state.low_conf_streak >= 2 ? "handoff" : "clarify", scenario_id: null, queue: "operator_general", reason: d.reason, ...base, low_conf_streak: state.low_conf_streak };
+  }
+  if (!d.route_status && top.confidence < CONFIDENCE_CLARIFY) {
     state.low_conf_streak += 1;
     if (state.low_conf_streak >= 2) return { action: "handoff", scenario_id: null, queue: "operator_general", reason: `confidence ${top.confidence} < ${CONFIDENCE_CLARIFY} twice → operator`, ...base, low_conf_streak: state.low_conf_streak };
     return { action: "clarify", scenario_id: null, reason: `confidence ${top.confidence} < ${CONFIDENCE_CLARIFY}`, ...base, low_conf_streak: state.low_conf_streak };
   }
-  if (top.confidence < CONFIDENCE_RUN) {
+  if (!d.route_status && top.confidence < CONFIDENCE_RUN) {
     return { action: "clarify", scenario_id: null, reason: `confidence ${top.confidence} in [${CONFIDENCE_CLARIFY}, ${CONFIDENCE_RUN}) → one clarifying question`, ...base };
   }
   state.low_conf_streak = 0;
@@ -309,7 +314,7 @@ function decide(state: DialogState, d: RouterDecision, kind: "route" | "yes" | "
   // multi-intent: queue the rest
   for (const s of d.scenarios.slice(1)) if (!state.stack.includes(s.scenario_id) && !isSystemIntent(s.scenario_id)) state.stack.push(s.scenario_id);
   state.active_scenario = top.scenario_id;
-  return { action: "run", scenario_id: top.scenario_id, reason: `confidence ${top.confidence} ≥ ${CONFIDENCE_RUN} → run${d.scenarios.length > 1 ? `, ${d.scenarios.length - 1} more queued` : ""}`, stack: state.stack, low_conf_streak: 0 };
+  return { action: "run", scenario_id: top.scenario_id, reason: `${d.route_status ? d.reason : `confidence ${top.confidence} ≥ ${CONFIDENCE_RUN}`} → run${d.scenarios.length > 1 ? `, ${d.scenarios.length - 1} more queued` : ""}`, stack: state.stack, low_conf_streak: 0 };
 }
 
 function clarifyOptions(d: RouterDecision, lang: ReplyLang): [string, string] {

@@ -2,6 +2,29 @@
 
 > Status: living draft — not final; update as decisions change. The API contract here is the source of truth for frontend/backend; change the contract → update this file in the same commit. Source (RU): docs/research/raw/deep-research-output.ru.md
 
+## Implemented frontend ↔ core-llm integration (2026-09-23)
+
+This section describes the implemented path; the Go/DB architecture below remains a target.
+`NEXT_PUBLIC_API_MODE=core` enables Python routing with the existing browser dialog executor.
+`mock` remains keyless, and `real` retains the separate Go SSE contract in `frontend/src/lib/contract.ts`.
+
+- Python `GET /healthz` → `{ok, model}`.
+- Python `POST /api/route` → `Router.route` result. Request:
+  `{text: string, history?: [{text: string, scenario: string}], active?: string|null, last_bot?: string}`.
+  Text limit: 4000 characters; history limit: 10; body limit: 32 KiB.
+- Next.js `POST /api/core-route` proxies the same JSON to server-only `CORE_LLM_URL` (default port 8090).
+  Upstream failures return sanitized 502/503 errors; invalid requests return 400/413. No silent mock fallback.
+- Result: `{primary, status, intents, alternatives, scenarios, predicted, language, model, route_ms, ...usage}`.
+  Entries use `{id, pct, name}`; adapter converts confidence from 0–100 to 0–1. `status` is
+  `route|clarify|handoff|out_of_scope|goodbye`. Core status overrides the mock router's confidence threshold.
+- Browser passes last four completed turns, active scenario and last bot response. It retains slots,
+  confirmation handling, topic stack, synthetic actions and response templates. Failed requests do not commit state.
+- The trace explanation describes returned scores/policy; it is not model-generated reasoning.
+  Routing timing includes the request to Python. No simulated candidate progression in core mode.
+- STT/TTS: browser speech APIs, existing `/api/stt` OpenAI fallback. Core accepts text only.
+- Sessions and traces are tab-local and not persisted. Eval in core mode uses the core's `predicted` IDs.
+- Compose starts frontend by default; `--profile llm` adds private Python service. No Go/DB dependency.
+
 ## ASCII architecture
 ```
 [Browser: mic PCM16 16k / text]  ──WS──┐

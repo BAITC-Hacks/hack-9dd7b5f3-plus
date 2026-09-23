@@ -18,6 +18,10 @@ Every dependency, model, API, dataset, template or UI kit we use must be listed 
 | Hanken Grotesk, Geist Mono (Google Fonts via `next/font`) | SIL OFL 1.1 | https://fonts.google.com | Typography (Speko type system) |
 | Speko design system (brand + console PDFs) | Provided by Speko's founder for this project | `docs/design/references/` | Visual design tokens, component sizes |
 | Web Speech API / speechSynthesis (browser) | Browser built-in | — | Keyless STT/TTS in mock mode (Chrome) |
+| Python standard library | PSF License | https://www.python.org | core-llm HTTP adapter and router |
+| OpenRouter / Google Gemini 2.5 Flash Lite | Commercial API terms | https://openrouter.ai/google/gemini-2.5-flash-lite | LLM scenario routing |
+| OpenAI transcription API | Commercial API terms | https://platform.openai.com | Existing server STT fallback |
+| Node.js and official Node/Python Docker images | MIT / PSF and bundled OS licenses | https://hub.docker.com/_/node · https://hub.docker.com/_/python | Reproducible frontend/core runtime |
 | Go (stdlib `net/http`) | BSD-3-Clause | https://go.dev | Backend service |
 
 ## Planned (from `docs/SPEC.md` / `docs/research/DEEP_RESEARCH_REPORT.md` — confirm when integrated)

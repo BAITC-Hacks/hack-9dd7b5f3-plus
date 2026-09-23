@@ -9,7 +9,7 @@ export default function CallPage() {
     <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-4 py-6 sm:px-8">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-xl font-medium">Звонок в Saqta Insurance</h1>
-        <span className="text-xs text-muted-foreground">{s.mode === "mock" ? "демо без бэкенда" : "бэкенд подключён"}</span>
+        <span className="text-xs text-muted-foreground">{s.mode === "mock" ? "демо без бэкенда" : s.mode === "core" ? "LLM · демо-действия" : "бэкенд"}</span>
       </div>
       <div className="flex h-[calc(100dvh-170px)] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-border bg-background">
         <ConversationPanel className="h-full" />
