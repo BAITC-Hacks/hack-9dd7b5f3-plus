@@ -1,26 +1,153 @@
 @import "tailwindcss";
 
+/* Voice Router — dark operator console. Surfaces are the text colour mixed over
+   the canvas (3–16%), never neutral greys. One accent, status colours only for status. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #0a0d15;
+  --ink: #c7d3e0;
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: color-mix(in srgb, var(--ink) 5%, var(--canvas));
+  --popover: color-mix(in srgb, var(--ink) 8%, var(--canvas));
+  --muted: color-mix(in srgb, var(--ink) 5%, var(--canvas));
+  --muted-foreground: color-mix(in srgb, var(--ink) 55%, var(--canvas));
+  --accent: color-mix(in srgb, var(--ink) 9%, var(--canvas));
+  --border: color-mix(in srgb, var(--ink) 12%, var(--canvas));
+  --input: color-mix(in srgb, var(--ink) 16%, var(--canvas));
+  --sidebar: color-mix(in srgb, var(--ink) 3%, var(--canvas));
+  --sidebar-border: color-mix(in srgb, var(--ink) 8%, var(--canvas));
+  --primary: #3755ed;
+  --primary-foreground: #ffffff;
+  --ring: #3755ed;
+  --success: #37c964;
+  --warning: #ff9f4a;
+  --destructive: #ff6b6b;
+  --info: #6b9bff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-popover: var(--popover);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-info: var(--info);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss08" 1;
+    letter-spacing: -0.02em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 35%, transparent);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: color-mix(in srgb, var(--muted-foreground) 70%, transparent);
+  }
+  /* thin, quiet scrollbars for the console */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ink) 18%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .rise {
+    animation: rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .caret::after {
+    content: "";
+    display: inline-block;
+    width: 2px;
+    height: 0.95em;
+    margin-left: 2px;
+    vertical-align: -0.15em;
+    background: currentColor;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  .ring-pulse {
+    animation: ring-pulse 1.8s ease-out infinite;
+  }
+  .target-highlight:target {
+    border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+@keyframes ring-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .ring-pulse,
+  .caret::after {
+    animation: none;
+  }
 }
