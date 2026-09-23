@@ -3,21 +3,21 @@ import { CtaButton } from "./cta-button";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-paper/80 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between px-5 sm:px-8">
+    <div className="sticky top-4 z-40 px-4 sm:px-8">
+      <header className="mx-auto flex h-14 w-full max-w-[1200px] items-center justify-between rounded-2xl border border-border bg-white/85 px-4 shadow-[0_1px_0_rgba(14,21,18,0.04)] backdrop-blur sm:px-5">
         <Link href="/" className="flex items-center gap-2.5">
-          <span aria-hidden className="grid size-6 place-items-center rounded-md bg-brand text-white"><PlusMark /></span>
-          <span className="text-[15px] font-medium tracking-tight">Bagyt</span>
+          <span aria-hidden className="grid size-7 place-items-center rounded-lg bg-brand text-white"><PlusMark /></span>
+          <span className="text-[15px] font-medium tracking-tight text-ink">Bagyt</span>
         </Link>
-        <nav className="hidden items-center gap-7 text-sm text-body md:flex">
-          <a href="#product" className="hover:text-ink">Продукт</a>
-          <a href="#how" className="hover:text-ink">Как работает</a>
-          <a href="#why" className="hover:text-ink">Почему LLM</a>
-          <Link href="/admin" className="hover:text-ink">Консоль</Link>
+        <nav className="hidden items-center gap-8 text-[15px] text-body md:flex">
+          <a href="#console" className="hover:text-ink">Консоль</a>
+          <a href="#scenarios" className="hover:text-ink">Сценарии</a>
+          <a href="#trace" className="hover:text-ink">Трассировка</a>
+          <Link href="/admin" className="hover:text-ink">Открыть консоль</Link>
         </nav>
         <CtaButton href="/call" className="!h-10">Открыть симулятор</CtaButton>
-      </div>
-    </header>
+      </header>
+    </div>
   );
 }
 

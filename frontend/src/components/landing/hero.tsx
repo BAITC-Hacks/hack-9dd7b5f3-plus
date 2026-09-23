@@ -1,37 +1,30 @@
 import Link from "next/link";
 import { CtaButton } from "./cta-button";
-import { PlusDitherPanel } from "./visuals";
 
 export function Hero() {
   return (
-    <section className="mx-auto grid w-full max-w-[1200px] items-center gap-12 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:pb-28 lg:pt-24">
-      <div>
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs text-body">
-          <span className="size-1.5 rounded-full bg-brand" />
-          Voice Router для контакт-центра · кейс Halyk Bank
-        </div>
-        <h1 className="max-w-[12ch] text-[44px] font-medium leading-[1.02] tracking-[-0.03em] text-ink sm:text-[64px] lg:text-[76px]">
-          Робот, который понимает с первой фразы.
-        </h1>
-        <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-body">
-          Клиент говорит своими словами, по-русски, по-казахски или вперемешку. Bagyt выбирает нужный сценарий из сорока, держит контекст при смене темы и объясняет супервизору каждое решение.
-        </p>
-        <div className="mt-9 flex flex-wrap items-center gap-5">
-          <CtaButton href="/call">Поговорить с роботом</CtaButton>
-          <Link href="/admin" className="group inline-flex items-center gap-2 text-sm font-medium text-ink">
-            Консоль супервизора
-            <span className="transition-transform group-hover:translate-x-0.5">→</span>
-          </Link>
-        </div>
-        <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-border pt-6 text-sm">
-          <div><dt className="text-body">Сценариев</dt><dd className="mt-1 text-2xl font-medium tabular-nums text-ink">40</dd></div>
-          <div><dt className="text-body">Языки</dt><dd className="mt-1 text-2xl font-medium text-ink">ru · kk</dd></div>
-          <div><dt className="text-body">До ответа</dt><dd className="mt-1 text-2xl font-medium tabular-nums text-ink">≤ 1,5 с</dd></div>
-        </dl>
+    <section className="relative z-10 mx-auto w-full max-w-[1200px] px-5 pt-24 text-center sm:px-8 sm:pt-32">
+      <h1 className="mx-auto max-w-[16ch] text-[46px] font-medium leading-[1.02] tracking-[-0.035em] text-ink sm:text-[72px] lg:text-[92px]">
+        Робот, который понимает <span className="dot-text whitespace-nowrap">с первой фразы</span>
+      </h1>
+      <p className="mx-auto mt-8 max-w-[44ch] text-lg leading-relaxed text-body sm:text-[21px]">
+        Русский, казахский и смешанная речь. Сорок сценариев, выбор с объяснением, ответ за полторы секунды.
+      </p>
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+        <CtaButton href="/call">Поговорить с роботом</CtaButton>
+        <Link href="/admin" className="inline-flex h-12 items-center rounded-full border border-border bg-white px-6 text-sm font-medium text-ink transition-colors hover:border-ink/30">
+          Консоль супервизора
+        </Link>
       </div>
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-border bg-white sm:aspect-square lg:aspect-[4/5]">
-        <PlusDitherPanel className="!h-full !w-full" />
-        <div className="pointer-events-none absolute bottom-4 left-4 rounded-full bg-white/85 px-3 py-1 text-xs text-body backdrop-blur">Team Plus · проведите курсором</div>
+
+      {/* blurred blue horizon, stepped like a skyline */}
+      <div aria-hidden className="relative mt-16 h-[240px] overflow-hidden sm:mt-20 sm:h-[300px]">
+        <div className="absolute inset-x-[-6%] bottom-[-90px] flex h-[400px] items-end blur-xl">
+          {[62, 48, 70, 55, 80, 44, 66, 58, 74, 50, 68, 46].map((h, i) => (
+            <div key={i} className="flex-1" style={{ height: `${h}%`, background: "linear-gradient(to bottom, rgba(47,106,209,0.08) 0%, #2f6ad1 32%, #2a5ebb 100%)" }} />
+          ))}
+        </div>
+        <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-b from-transparent to-paper/90" />
       </div>
     </section>
   );

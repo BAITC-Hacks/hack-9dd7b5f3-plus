@@ -3,7 +3,7 @@ import { PlusMark } from "./header";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border">
+    <footer className="relative z-10 border-t border-border bg-paper">
       <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-5 py-8 text-sm text-body sm:px-8">
         <div className="flex items-center gap-2 text-ink"><span className="grid size-5 place-items-center rounded bg-brand text-white"><PlusMark className="size-3" /></span> Bagyt · Team Plus · HackAlem AI 2026</div>
         <nav className="flex items-center gap-6">

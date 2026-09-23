@@ -14,11 +14,10 @@ const SPEED = [
 
 export function Product() {
   return (
-    <section id="product" className="mx-auto w-full max-w-[1200px] px-5 py-20 sm:px-8 lg:py-28">
-      <div className="mb-10 max-w-2xl">
-        <div className="text-sm text-brand">Консоль супервизора</div>
-        <h2 className="mt-2 text-3xl font-medium tracking-[-0.02em] text-ink sm:text-4xl">Не вердикт, а объяснение. После каждой реплики.</h2>
-        <p className="mt-4 text-lg leading-relaxed text-body">Какой сценарий выбран, с какой уверенностью, какие были альтернативы и сколько заняла каждая стадия. Робот не чёрный ящик.</p>
+    <section className="relative z-10 mx-auto w-full max-w-[1200px] px-5 py-16 sm:px-8 lg:py-24">
+      <div className="mb-10 max-w-3xl">
+        <h2 className="text-3xl font-medium tracking-[-0.02em] text-ink sm:text-[40px] sm:leading-[1.1]">Не вердикт, а объяснение. После каждой реплики.</h2>
+        <p className="mt-4 text-[17px] leading-relaxed text-body">Какой сценарий выбран, с какой уверенностью, какие были альтернативы и сколько заняла каждая стадия.</p>
       </div>
 
       <div className="dark overflow-hidden rounded-3xl border border-black/10 bg-[#0d0d0d] text-[#f5f5f5] shadow-[0_40px_80px_-40px_rgba(14,21,18,0.35)]">

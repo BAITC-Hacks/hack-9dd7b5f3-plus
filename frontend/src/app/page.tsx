@@ -1,20 +1,26 @@
+import { Band } from "@/components/landing/band";
+import { EdgeClouds } from "@/components/landing/clouds";
 import { Cta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
 import { Header } from "@/components/landing/header";
 import { Hero } from "@/components/landing/hero";
-import { How } from "@/components/landing/how";
 import { Product } from "@/components/landing/product";
-import { Why } from "@/components/landing/why";
+import { Scenarios } from "@/components/landing/scenarios";
+import { TraceSection } from "@/components/landing/trace";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div className="relative flex min-h-screen flex-col overflow-x-clip bg-paper text-ink">
+      <EdgeClouds />
       <Header />
       <main className="flex-1">
         <Hero />
+        <Band id="console" title="Консоль" text="Живая трассировка каждой реплики: сценарий, уверенность, причина, альтернативы, действия и время по этапам." />
         <Product />
-        <How />
-        <Why />
+        <Band id="scenarios" title="Каталог" text="Сорок сценариев страховой компании и три системных намерения. Роутер знает о них ровно то, что написано в каталоге." />
+        <Scenarios />
+        <Band id="trace" title="Трассировка" text="Формат из стартового кита кейса. Один JSON на реплику — для супервизора, для оценки, для жюри." />
+        <TraceSection />
         <Cta />
       </main>
       <Footer />
