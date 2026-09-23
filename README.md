@@ -451,7 +451,7 @@ Kept per session and sent to the UI after every turn (`state` event):
 | LLM, Go backend | One OpenAI-compatible client: OpenAI (`gpt-4.1-mini`), NVIDIA Build (`meta/llama-3.3-70b-instruct`), OpenRouter / Groq / Gemini / Ollama via `LLM_BASE_URL`; `mock` | — | The same routing inside the turn API | 🚧 |
 | Browser speech | Web Speech API (`SpeechRecognition`), `speechSynthesis`, `MediaRecorder` | built in | Keyless STT / TTS; audio capture | ✅ |
 | STT fallback | OpenAI `gpt-4o-mini-transcribe` through the Next.js route `/api/stt` | — | Recognition when the browser can't reach Google | ✅ (key) |
-| Speech, real mode | ElevenLabs Scribe v2 Realtime (STT, auto language) · `eleven_flash_v2_5` (RU TTS) · `eleven_v3_conversational` (KZ TTS) · `github.com/coder/websocket` | — | Low-latency streaming STT / TTS for RU and KZ | 🚧 |
+| Speech, real mode | ElevenLabs Scribe v2 Realtime (STT, `language_code=kk` — also transcribes Russian) · `eleven_flash_v2_5` (RU TTS) · `eleven_v3_conversational` (KZ TTS) · `github.com/coder/websocket` | — | Low-latency streaming STT / TTS for RU and KZ | 🚧 |
 | Speech, alternative | geko.sh Seta `seta-kk-ru-v2` (STT) · Tokay `tokay-kk-v1` (TTS) | — | KZ-first recognition with code-switching | 📋 |
 | Backend | Go, standard `net/http` | 1.26.5 | API gateway and the turn pipeline | ✅ health · 🚧 API |
 | Storage | PostgreSQL | — | Turns, traces, statistics | 📋 |
@@ -812,15 +812,15 @@ gantt
   TTS first audio           :tts, after resp, 350ms
 ```
 
-| Stage | Case target | Our budget | Mock mode (browser) | Real mode |
+| Stage | Case target | Our budget | Mock mode (browser) | Real providers — measured, see [§9.7](#97-voice-research-speech-to-text-text-to-speech-end-to-end) |
 |---|---|---|---|---|
-| STT final (end of speech → transcript) | — | ~250 ms | simulated 40 ms | ⏳ |
+| STT final (end of speech → transcript) | — | ~250 ms | simulated 40 ms | **263–325 ms** after push-to-talk release · 577–778 ms with server VAD (ElevenLabs Scribe v2 Realtime) |
 | Triage | — | ~20 ms | simulated 15 ms | ⏳ |
-| Router — scenario choice | **≤ 500 ms** | ~450 ms | simulated ~300 ms (four live-candidate frames) | **457 ms p50 · 617 ms p95, 75 % ≤ 500 ms** (`core-llm`, reported: OpenRouter, warm connection, sequential calls, one machine) |
+| Router — scenario choice | **≤ 500 ms** | ~450 ms | simulated ~300 ms (four live-candidate frames) | **457 ms p50 · 617 ms p95, 75 % ≤ 500 ms** (`core-llm`, reported: OpenRouter, warm connection, sequential calls, one machine); LLM first token 369 ms |
 | Policy + executor | — | ~30 ms | < 10 ms | ⏳ |
 | Response, first sentence | — | ~400 ms | simulated 35 ms per sentence | ⏳ |
-| TTS first audio | — | ~350 ms | measured in the browser | ⏳ |
-| **Total: end of speech → first audio** | **≤ 1.5 s** | 1.5 s | ⏳ median over the §8.2 walkthrough | ⏳ median · ⏳ p95 |
+| TTS first audio | — | ~350 ms | measured in the browser | **208–221 ms** KZ (`eleven_v3_conversational`) · 211–245 ms RU (Flash v2.5), over WebSocket |
+| **Total: end of speech → first audio** | **≤ 1.5 s** | 1.5 s | ⏳ median over the §8.2 walkthrough | **1.70–1.95 s** live with phone-like VAD, routing correct in every call · **~1.1 s** estimated for web push-to-talk · ⏳ measured end-to-end in the web app |
 
 Why the router is fast ([`core-llm/README.md`](core-llm/README.md)): a compact index instead of the 90 KB catalog; ~6 output tokens instead of JSON with reasons; a byte-identical system prompt, so ~75 % of the ~5,800 prompt tokens come from the provider's cache; one keep-alive connection with a warm-up; `temperature=0`, reasoning off, providers sorted by latency. The remaining ~450 ms is mostly network round trip to the provider.
 
@@ -835,7 +835,7 @@ Measure the web app on `/admin`: «Скорость» after every turn, «Вре
 | «Қазір ғана соқтығысып қалдық, жолдың ортасында тұрмын» | kk | Chrome Web Speech (`kk-KZ`) | ⏳ | ⏳ |
 | «Кеше аулада көлігімді біреу соғып кетіпті, КАСКО бар, и ещё подскажите, где у вас осмотр делают» | mixed | Chrome Web Speech | ⏳ | ⏳ |
 | the same three phrases | ru / kk / mixed | OpenAI `gpt-4o-mini-transcribe` (`/api/stt`) | ⏳ | ⏳ |
-| the same three phrases | ru / kk / mixed | ElevenLabs Scribe v2 Realtime | ⏳ | ⏳ |
+| RU, KZ and mixed test calls | ru / kk / mixed | ElevenLabs Scribe v2 Realtime | Auto-detect heard Kazakh as **Turkish**; with `language_code=kk` — RU and KZ exact, mixed one word off ([§9.7](#97-voice-research-speech-to-text-text-to-speech-end-to-end)) | 263–325 ms after push-to-talk release |
 
 ### 9.5 Engineering checks
 
@@ -936,14 +936,14 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 | Surface | Routes | Look | Why |
 |---|---|---|---|
-| Landing | `/` | Light "technical paper": paper `#faf9f6`, ink `#0e1512`, a single brand blue `#2f6ad1`, a blue sequential scale `s0–s7`; a WebGL «PLUS» dither in the hero | Tells the product story in four blocks: the console, four steps in 1.5 s, three cases a classifier fails, a call to action |
+| Landing | `/` | Light "technical paper": paper `#faf9f6`, ink `#0e1512`, a single brand blue `#2f6ad1`, a blue sequential scale `s0–s7`; dot-matrix headline and dithered visuals | Tells the product story: the console, the catalogue of scenarios, the trace format, a call to action |
 | Console | `/call`, `/admin` | Dark-first (`#0d0d0d` / `#f5f5f5`); Geist for text, Geist Mono only for numbers and IDs | Operators read numbers — confidence, milliseconds, IDs — all day |
 
 ### 11.2 Screens
 
 | Screen | What is on it | Screenshot |
 |---|---|---|
-| `/` Landing | Hero with the «PLUS» dither and «Поговорить с роботом»; a console product shot («Не вердикт, а объяснение. После каждой реплики.»); «Четыре шага за полторы секунды»; three hard cases — a topic switch, a request on the border of two scenarios, two languages in one phrase; a call to action | ⏳ `docs/screenshots/landing.png` |
+| `/` Landing | Hero with a dot-matrix headline; bands «Консоль» (the live trace of every utterance), «Каталог» (40 scenarios + 3 system intents), «Трассировка» (one JSON per utterance, in the starter kit's format); a call to action | ⏳ `docs/screenshots/landing.png` |
 | `/call` Client | Only the conversation: mic and text, streamed bubbles, spoken reply | ⏳ `docs/screenshots/call.png` |
 | `/admin` Supervisor | Metrics row · conversation · what the robot understood · dialog state · speed waterfall · routing quality · turn log · trace JSON | ⏳ `docs/screenshots/admin.png` |
 | `/admin` Quality | Dev-set metrics by language and type, with the error list | ⏳ `docs/screenshots/admin-quality.png` |
@@ -979,7 +979,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 | D9 | Click to talk, auto-stop on a pause (switched from hold-to-talk in `f02fc21`) | A noisy expo hall makes always-on voice detection misfire; a clean end-of-speech mark for latency | Hold-to-talk; always-on VAD (Silero) | ✅ |
 | D10 | Server-side STT fallback: a Next.js route (`/api/stt`) → OpenAI transcription, with automatic switching | Web Speech fails in Arc / Brave / Yandex browsers and on restricted venue networks | Text only when the browser's STT fails | ✅ |
 | D11 | Reply in the client's dominant language; keep the session language on code-switched turns | The case requires RU / KZ including mid-phrase switching; greetings and loanwords (ОГПО, КАСКО) must not flip the language | Always Russian; per-turn detection only | ✅ (one bug, [§13](#13-limitations-and-known-issues)) |
-| D12 | Real-mode speech: ElevenLabs Scribe v2 Realtime (auto language) + Flash v2.5 for Russian TTS and v3 conversational for Kazakh TTS | v3 conversational is ElevenLabs' only realtime model that speaks Kazakh; Flash is the fastest for Russian | geko.sh Seta / Tokay (KZ-first, code-switching) — kept as the alternative | 🚧 |
+| D12 | Real-mode speech: ElevenLabs Scribe v2 Realtime with `language_code=kk` + Flash v2.5 for Russian TTS and v3 conversational for Kazakh TTS; push-to-talk on the web, server VAD on the phone | Measured ([§9.7](#97-voice-research-speech-to-text-text-to-speech-end-to-end)): auto-detect heard Kazakh as Turkish, `kk` got RU and KZ right; v3 conversational is the only realtime model that speaks Kazakh (first audio 208–221 ms); Flash is the fastest for Russian | Auto language detection; geko.sh Seta / Tokay (KZ-first, code-switching) — kept as the alternative | 🚧 |
 | D13 | Stack: Next.js 16 frontend; the LLM router as a small Python service (standard library) behind a same-origin Next.js proxy; a Go backend next; Docker Compose; Railway | The key stays on the server; the core stays dependency-free and easy to benchmark; one `docker compose` command; the Go backend can reuse the core's prompt and index | One language for everything; calling OpenRouter from the browser (it would expose the key) | ✅ (Go API, PostgreSQL 🚧) |
 | D14 | `dev_utterances.json` is for evaluation only; no router reads it at runtime | Anti-hardcoding (case §10); an honest measurement | Few-shot examples from the dev set | ✅ |
 | D15 | Product name **Bagyt** (Бағыт, "route") | Reads naturally in RU and KZ; a direct routing metaphor | "Saqta Voice Router", "Plus Router" | ✅ |
@@ -1006,7 +1006,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 **Speech in the web app**
 
-- Browser STT works in Chrome / Edge only, with one language per recognition session (the «Язык речи» toggle), so Russian–Kazakh switching inside one phrase is recognized poorly by voice — type such phrases, try the «Сервер» recognizer, or use real mode (ElevenLabs, auto language) 🚧.
+- Browser STT works in Chrome / Edge only, with one language per recognition session (the «Язык речи» toggle), so Russian–Kazakh switching inside one phrase is recognized poorly by voice — type such phrases, try the «Сервер» recognizer, or use real mode (ElevenLabs with `language_code=kk`, which handled RU, KZ and mixed calls — [§9.7](#97-voice-research-speech-to-text-text-to-speech-end-to-end)) 🚧.
 - Browsers rarely ship a Kazakh voice; Kazakh answers may be read with a Russian voice.
 - Mock stage timings (STT, triage, router, policy, response) are simulated delays, not measurements; only TTS first audio and the total are measured in the browser.
 
