@@ -15,7 +15,7 @@ export function wavesTo(router: ReturnType<typeof useRouter>, href: string) {
   const stack = buildWaveStack("start");
   requestAnimationFrame(() => requestAnimationFrame(() => { stack.querySelectorAll<HTMLElement>(".wave").forEach((w) => w.classList.add("in")); }));
   try { sessionStorage.setItem("bagyt:enter", "1"); } catch { /* noop */ }
-  window.setTimeout(() => router.push(href), 950);
+  window.setTimeout(() => router.push(href), 1050);
   window.setTimeout(() => stack.remove(), 9000); // safety: the next page removes it on mount
 }
 

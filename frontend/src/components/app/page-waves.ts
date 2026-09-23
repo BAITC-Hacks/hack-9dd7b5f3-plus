@@ -1,5 +1,5 @@
-/** Wave transition shared by the landing CTA (rise) and the platform (exit). Black → white → blue. */
-export const WAVE_COLORS = ["#0e1512", "#ffffff", "#2f6ad1"] as const;
+/** Wave transition shared by the landing CTA (rise) and the platform (exit). Blue → white → black; black ends on top. */
+export const WAVE_COLORS = ["#2f6ad1", "#ffffff", "#0e1512"] as const;
 const PATH = "M0,70 C180,10 360,130 540,70 C720,10 900,130 1080,70 C1260,10 1440,130 1620,70 L1620,140 L0,140 Z";
 
 export function buildWaveStack(state: "start" | "covering"): HTMLDivElement {
