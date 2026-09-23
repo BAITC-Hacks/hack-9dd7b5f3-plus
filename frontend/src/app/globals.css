@@ -362,3 +362,14 @@
   -webkit-mask-size: 9px 9px;
   mask-size: 9px 9px;
 }
+
+/* ── Landing motion ── */
+@keyframes sky { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.09); } }
+.sky-col { transform-origin: bottom; animation: sky 7s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: var(--o, 0.6); } 50% { opacity: calc(var(--o, 0.6) * 0.25); } }
+.px-twinkle { animation: twinkle 4s ease-in-out infinite; }
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.reveal.is-in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .sky-col, .px-twinkle { animation: none; } .reveal { opacity: 1; transform: none; transition: none; } }
+.lift { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.35s, box-shadow 0.35s; }
+.lift:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--brand) 40%, var(--hairline)); box-shadow: 0 24px 60px -36px rgba(47, 106, 209, 0.35); }

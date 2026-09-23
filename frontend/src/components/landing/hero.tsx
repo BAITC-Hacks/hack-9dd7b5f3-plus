@@ -27,7 +27,7 @@ export function Horizon() {
     <div aria-hidden className="relative z-10 mt-14 h-[230px] overflow-hidden sm:mt-16 sm:h-[280px]">
       <div className="absolute inset-x-[-4%] bottom-[-60px] flex h-[420px] items-end blur-xl">
         {[58, 44, 68, 52, 78, 40, 64, 56, 72, 48, 66, 42, 60, 50].map((h, i) => (
-          <div key={i} className="flex-1" style={{ height: `${h}%`, background: "linear-gradient(to bottom, rgba(47,106,209,0.04) 0%, #2f6ad1 30%, #2a5ebb 100%)" }} />
+          <div key={i} className="sky-col flex-1" style={{ animationDelay: `${i * 0.45}s`, height: `${h}%`, background: "linear-gradient(to bottom, rgba(47,106,209,0.04) 0%, #2f6ad1 30%, #2a5ebb 100%)" }} />
         ))}
       </div>
       <div className="absolute inset-x-0 bottom-0 h-14" style={{ background: "linear-gradient(to bottom, rgba(42,94,187,0), #2a5ebb 70%)" }} />

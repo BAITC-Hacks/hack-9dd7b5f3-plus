@@ -20,7 +20,7 @@ export function Product() {
         <p className="mt-4 text-[17px] leading-relaxed text-body">Какой сценарий выбран, с какой уверенностью, какие были альтернативы и сколько заняла каждая стадия.</p>
       </div>
 
-      <div className="dark overflow-hidden rounded-3xl border border-black/10 bg-[#0d0d0d] text-[#f5f5f5] shadow-[0_40px_80px_-40px_rgba(14,21,18,0.35)]">
+      <div className="lift dark overflow-hidden rounded-3xl border border-black/10 bg-[#0d0d0d] text-[#f5f5f5] shadow-[0_40px_80px_-40px_rgba(14,21,18,0.35)]">
         <div className="flex items-center justify-between border-b border-[#242424] px-5 py-3 text-xs text-[#8b8b8b]">
           <span className="flex items-center gap-2"><span className="size-2 rounded-[2px] bg-brand" /> Bagyt · Консоль · реплика 3</span>
           <span>пример</span>

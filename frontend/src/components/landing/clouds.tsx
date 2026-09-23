@@ -32,7 +32,7 @@ export function PixelField() {
   return (
     <span aria-hidden className="pointer-events-none absolute inset-0 hidden overflow-hidden md:block">
       {FIELD.map(([x, y, s, o], i) => (
-        <span key={i} className="absolute rounded-[1px] bg-brand" style={{ left: `${x}%`, top: `${y}%`, width: s, height: s, opacity: o }} />
+        <span key={i} className="px-twinkle absolute rounded-[1px] bg-brand" style={{ left: `${x}%`, top: `${y}%`, width: s, height: s, ["--o" as string]: o, animationDelay: `${(i * 137) % 4000}ms` }} />
       ))}
     </span>
   );

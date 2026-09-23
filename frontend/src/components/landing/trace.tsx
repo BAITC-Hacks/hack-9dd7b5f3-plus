@@ -46,7 +46,7 @@ export function TraceSection() {
           ))}
         </ol>
       </div>
-      <div className="rounded-3xl border border-border bg-white">
+      <div className="lift rounded-3xl border border-border bg-white">
         <div className="flex items-center justify-between border-b border-border px-5 py-3 text-xs text-body">
           <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-paper-2 ring-1 ring-border" /><span className="size-2.5 rounded-full bg-paper-2 ring-1 ring-border" /><span className="size-2.5 rounded-full bg-paper-2 ring-1 ring-border" /></span>
           <span className="font-mono">trace · turn 3</span>

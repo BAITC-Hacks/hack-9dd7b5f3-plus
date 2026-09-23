@@ -9,8 +9,8 @@ const FN = FC * FR;
 const CC = 110;
 const EDGE_LO = 36;
 const EDGE_HI = 130;
-const EDGES = ["+", ".", "+", ",", "-"];
-const BRIGHTS = [..."+++P+++L+++U+++S"];
+const EDGES = ["+", "+", "+", "+", "+"];
+const BRIGHTS = ["+"];
 const ALL_CHARS = [...EDGES, ...BRIGHTS];
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const TL = 320;
@@ -383,7 +383,7 @@ export function PlusDither({
           }
         }
         fluid.step();
-        if (!isStatic() && frame++ % 8 === 0) phase = (phase + 1) % 255;
+        frame++; // glyphs stay fixed: no flicker, the field only bends under the cursor
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);

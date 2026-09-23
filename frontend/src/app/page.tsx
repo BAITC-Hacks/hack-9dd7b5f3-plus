@@ -5,6 +5,7 @@ import { Footer } from "@/components/landing/footer";
 import { Header } from "@/components/landing/header";
 import { Hero, Horizon } from "@/components/landing/hero";
 import { Product } from "@/components/landing/product";
+import { Reveal } from "@/components/landing/reveal";
 import { Scenarios } from "@/components/landing/scenarios";
 import { TraceSection } from "@/components/landing/trace";
 
@@ -17,12 +18,12 @@ export default function Home() {
         <Hero />
         <Horizon />
         <Band id="console" title="Консоль" text="Живая трассировка каждой реплики: сценарий, уверенность, причина, альтернативы, действия и время по этапам." />
-        <Product />
+        <Reveal><Product /></Reveal>
         <Band id="scenarios" title="Каталог" text="Сорок сценариев страховой компании и три системных намерения. Роутер знает о них ровно то, что написано в каталоге." />
-        <Scenarios />
+        <Reveal><Scenarios /></Reveal>
         <Band id="trace" title="Трассировка" text="Формат из стартового кита кейса. Один JSON на реплику — для супервизора, для оценки, для жюри." />
-        <TraceSection />
-        <Cta />
+        <Reveal><TraceSection /></Reveal>
+        <Reveal><Cta /></Reveal>
       </main>
       <Footer />
     </div>
