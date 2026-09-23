@@ -166,6 +166,13 @@ const { startRecording } = require("../src/lib/voice.ts");
 test("microphone recorder supports MP4 and releases tracks after stop or cancellation", async (t) => {
   const oldNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   const oldRecorder = globalThis.MediaRecorder;
+  const oldWindow = globalThis.window;
+  globalThis.window = { setInterval, clearInterval, AudioContext: class {
+    createAnalyser() { return { fftSize: 1024, getByteTimeDomainData(buffer) { buffer.fill(128); } }; }
+    createMediaStreamSource() { return { connect() {} }; }
+    close() { return Promise.resolve(); }
+  } };
+
   let released = 0;
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: { mediaDevices: {
     getUserMedia: async () => ({ getTracks: () => [{ stop: () => { released++; } }] }),
@@ -183,6 +190,7 @@ test("microphone recorder supports MP4 and releases tracks after stop or cancell
     if (oldNavigator) Object.defineProperty(globalThis, "navigator", oldNavigator);
     else delete globalThis.navigator;
     globalThis.MediaRecorder = oldRecorder;
+    globalThis.window = oldWindow;
   });
   const recorder = await startRecording();
   const result = await recorder.stop();
