@@ -792,6 +792,35 @@ Measure the web app on `/admin`: «Скорость» after every turn, «Вре
 
 ⏳ After the technical review — record the hit rate on the jury's 10 hidden utterances if the organizers share it.
 
+### 9.7 Voice research: speech-to-text, text-to-speech, end to end
+
+Measured with real providers on branch [`feat/voice-elevenlabs`](https://github.com/BAITC-Hacks/hack-9dd7b5f3-plus/tree/feat/voice-elevenlabs/voice) (`fb7d16c`, 2026-09-23). Full write-up with method, charts and decisions: **[docs/research/RESEARCH.md](docs/research/RESEARCH.md)**. Raw numbers and audio: [`voice/demos/RESULTS.md`](https://github.com/BAITC-Hacks/hack-9dd7b5f3-plus/blob/feat/voice-elevenlabs/voice/demos/RESULTS.md).
+
+| Question | Result | Decision |
+|---|---|---|
+| STT for RU / KZ / mixed (ElevenLabs Scribe v2 Realtime) | auto-detect transcribed Kazakh as **Turkish**; `language_code=kk` got RU and KZ exact and mixed with one word off | `language_code=kk`, no secondary language |
+| STT speed | final transcript **263–325 ms** after push-to-talk release; 577–778 ms after audio end with server VAD | push-to-talk on web, VAD on phone |
+| Kazakh TTS | only `eleven_v3_conversational` speaks Kazakh in real time; first audio **208–221 ms** over WebSocket vs **211–245 ms** for Flash v2.5 (RU) | Flash for RU, v3 conversational for KZ |
+| LLM first token via OpenRouter | gemini-2.5-flash-lite **369 ms** · gpt-4o-mini 705 ms · claude-haiku-4.5 794 ms · gpt-4.1-mini 1238 ms | gemini-2.5-flash-lite for routing and reply |
+| End of speech → reply audio (phone-like VAD, live) | **1.70–1.95 s**; routing correct in every call (SC30, SC27, SC12) | attack the end-of-turn wait (0.8–1.1 s) next |
+| End of speech → reply audio (web push-to-talk) | **~1.1 s, estimate** from measured stages; end-to-end run ⏳ | — |
+
+```mermaid
+gantt
+  title Measured live turn, phone-like VAD mode (ms after the caller's last word)
+  dateFormat x
+  axisFormat %S.%L s
+  section Hear
+  VAD silence + STT final      :stt, 0, 934ms
+  section Decide + answer
+  LLM first text               :crit, llm, after stt, 472ms
+  section Speak
+  TTS first audio              :tts, after llm, 239ms
+  network + buffer             :net, after tts, 103ms
+  section Target
+  1.5 s target                 :milestone, m1, 1500, 0ms
+```
+
 ---
 
 ## 10. Data and integrations
@@ -959,6 +988,7 @@ AI coding assistants used during development (OpenAI Codex, Claude) are disclose
 | [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) | Frontend ⇄ backend contract (types: `frontend/src/lib/contract.ts`) |
 | [`docs/TASKS.md`](docs/TASKS.md) · [`docs/PROGRESS.md`](docs/PROGRESS.md) | Build plan · hourly progress log |
 | [`docs/PITCH.md`](docs/PITCH.md) | 3-minute pitch and hard jury questions |
+| [`docs/research/RESEARCH.md`](docs/research/RESEARCH.md) | Research log: measured STT / TTS / LLM / end-to-end latency, language A/B tests, charts, decisions |
 | [`docs/research/DEEP_RESEARCH_REPORT.md`](docs/research/DEEP_RESEARCH_REPORT.md) | STT / TTS / LLM provider research |
 | [`docs/design/`](docs/design/) | Architecture visual, design notes, references |
 | [`data/README.md`](data/README.md) | The starter kit (EN; RU and KZ versions alongside) |

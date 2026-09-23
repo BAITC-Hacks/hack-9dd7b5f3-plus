@@ -16,7 +16,8 @@
 - Pages in progress: `/` landing, `/call` client simulator, `/admin` supervisor console (live candidates, decision, policy, actions, latency waterfall, turn journal).
 
 ## 16:00–17:00
-- 
+- Voice layer (Tair, branch `feat/voice-elevenlabs`): ElevenLabs STT (Scribe v2 Realtime) + TTS (Flash v2.5 RU, v3 conversational KZ), real-time gateway `/ws/voice`, phone transports (Asterisk AudioSocket for a KZ number, Twilio), logs/stats, tests.
+- Research log `docs/research/RESEARCH.md`: STT language A/B (auto-detect labels Kazakh as Turkish → `language_code=kk`), TTS/LLM first-token benchmarks, live end-to-end latency 1.7–1.95 s (phone mode), charts.
 
 ## 17:00–18:00
 - 

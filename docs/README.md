@@ -20,6 +20,7 @@
 - [`/data`](../data/) — official starter kit (read-only). Start with [`data/README.md`](../data/README.md) (EN) · [RU](../data/README.ru.md) · [KZ](../data/README.kz.md).
 
 ## Research — [`research/`](research/)
+- **[RESEARCH.md](research/RESEARCH.md)** — research log with measured numbers and charts: routing benchmark, STT language A/B (Kazakh → Turkish finding), TTS first-audio by model, LLM first token, end-to-end latency, language policy, phone options, decisions.
 - [DEEP_RESEARCH_REPORT.md](research/DEEP_RESEARCH_REPORT.md) — findings on STT/TTS (geko, ElevenLabs), LLM choice, routing approach, VAD, speculative routing, telephony, proposed third-party list.
 - [DEEP_RESEARCH_PROMPT.md](research/DEEP_RESEARCH_PROMPT.md) — prompt used to generate the research.
 - [`raw/`](research/raw/) — original Russian sources: `case-analysis.ru.md`, `deep-research-output.ru.md` (English docs above are translations of these).
