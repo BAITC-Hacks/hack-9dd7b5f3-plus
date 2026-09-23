@@ -54,7 +54,7 @@ interface ExecResult {
 
 /* ------------------------------------------------------------------ */
 
-export async function* runMockTurn(state: DialogState, input: { text: string; t0: number; speed?: number; route?: (text: string) => Promise<MockRouteResult> }): AsyncGenerator<TurnEvent> {
+export async function* runMockTurn(state: DialogState, input: { text: string; t0: number; speed?: number; sttMs?: number; route?: (text: string) => Promise<MockRouteResult> }): AsyncGenerator<TurnEvent> {
   const speed = input.speed ?? 1;
   const t0 = input.t0;
   const now = () => Math.round(performance.now());
@@ -69,7 +69,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
   // --- STT (text already recognised by the browser; simulate the finalisation cost)
   await sleep(40 * speed);
   const language = detectLanguage(text);
-  lat.stt = now() - start;
+  lat.stt = input.sttMs ?? now() - start;
   yield { type: "stt.final", text, language, ms: lat.stt };
 
   // --- triage

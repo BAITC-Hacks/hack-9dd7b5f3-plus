@@ -18,7 +18,7 @@ Every dependency, model, API, dataset, template or UI kit we use must be listed 
 | Hanken Grotesk, Geist Mono (Google Fonts via `next/font`) | SIL OFL 1.1 | https://fonts.google.com | Typography (Speko type system) |
 | Speko design system (brand + console PDFs) | Provided by Speko's founder for this project | `docs/design/references/` | Visual design tokens, component sizes |
 | Web Speech API / speechSynthesis (browser) | Browser built-in | — | Keyless STT/TTS in mock mode (Chrome) |
-| ElevenLabs TTS — Flash v2.5 / v3 conversational | Commercial API terms | https://elevenlabs.io | Russian/Kazakh voice replies via imported voice module |
+| ElevenLabs STT/TTS — Scribe v2 / Flash v2.5 / v3 conversational | Commercial API terms | https://elevenlabs.io | Russian/Kazakh microphone transcription and voice replies via imported voice module |
 | github.com/coder/websocket | ISC | https://github.com/coder/websocket | Imported voice module WebSocket dependency (frontend uses HTTP TTS only) |
 | Python standard library | PSF License | https://www.python.org | core-llm HTTP adapter and router |
 | OpenRouter / Google Gemini 2.5 Flash Lite | Commercial API terms | https://openrouter.ai/google/gemini-2.5-flash-lite | LLM scenario routing |

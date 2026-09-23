@@ -49,7 +49,7 @@ export interface ConversationState {
   status: Status;
   interim: string;
   sttLang: "ru-RU" | "kk-KZ";
-  /** browser = Chrome Web Speech (Google); server = /api/stt (OpenAI). */
+  /** browser = Chrome Web Speech (Google); server = /api/stt (ElevenLabs Scribe). */
   sttProvider: "browser" | "server";
   tts: boolean;
   sttAvailable: boolean;
@@ -67,7 +67,7 @@ let state: ConversationState = {
   status: "idle",
   interim: "",
   sttLang: "ru-RU",
-  sttProvider: "browser",
+  sttProvider: DEFAULT_MODE === "mock" ? "browser" : "server",
   tts: true,
   sttAvailable: false,
   error: null,
@@ -95,6 +95,7 @@ export function useConversation(): ConversationState {
 let listener: Listener | null = null;
 let recorder: Recorder | null = null;
 let busy = false;
+let captureStarting = false;
 let msgSeq = 0;
 
 export async function ensureSession(): Promise<string> {
@@ -105,18 +106,20 @@ export async function ensureSession(): Promise<string> {
 }
 
 export function setMode(mode: ApiMode) {
-  if (busy || state.status === "listening") return;
+  if (busy || captureStarting || state.status === "thinking" || state.status === "listening") return;
   stopSpeaking();
-  set({ mode, sessionId: null, messages: [], traces: [], live: null, status: "idle", error: null, notice: null, dialog: newDialogState("—") });
+  set({ mode, sttProvider: mode === "mock" ? "browser" : "server", sessionId: null, messages: [], traces: [], live: null, status: "idle", error: null, notice: null, dialog: newDialogState("—") });
 }
 
 export function setSttLang(lang: "ru-RU" | "kk-KZ") { set({ sttLang: lang }); }
-export function setSttProvider(p: "browser" | "server") { listener?.abort(); listener = null; set({ sttProvider: p, error: null, notice: null, status: "idle", interim: "" }); }
+export function setSttProvider(p: "browser" | "server") { if (busy || captureStarting || state.status === "thinking") return; listener?.abort(); listener = null; recorder?.abort(); recorder = null; set({ sttProvider: p, error: null, notice: null, status: "idle", interim: "" }); }
 export function setTts(on: boolean) { if (!on) stopSpeaking(); set({ tts: on }); }
 
 export function resetConversation() {
-  if (busy) return;
+  if (busy || captureStarting || state.status === "thinking") return;
   stopSpeaking();
+  recorder?.abort();
+  recorder = null;
   listener?.abort();
   listener = null;
   set({ sessionId: null, messages: [], traces: [], live: null, status: "idle", interim: "", error: null, notice: null, dialog: newDialogState("—") });
@@ -129,66 +132,71 @@ export async function toggleVoice() {
 }
 
 export async function startVoice() {
-  if (busy || state.status === "listening") return;
-  stopSpeaking();
-  set({ error: null, notice: null, sttAvailable: sttSupported() });
+  if (busy || captureStarting || state.status === "thinking" || state.status === "listening") return;
+  captureStarting = true;
   try {
-    await ensureSession();
-  } catch (e) {
-    set({ error: "Не удалось создать сессию: " + String(e) });
-    return;
-  }
-  if (state.mode === "real" || state.sttProvider === "server") {
+    stopSpeaking();
+    set({ error: null, notice: null, sttAvailable: sttSupported() });
     try {
-      recorder = await startRecording();
-      set({ status: "listening", interim: "", notice: "Говорите. Нажмите на микрофон ещё раз, когда закончите." });
-    } catch {
-      set({ error: "Нет доступа к микрофону. Разрешите его в адресной строке." });
+      await ensureSession();
+    } catch (e) {
+      set({ error: "Не удалось создать сессию: " + String(e) });
+      return;
     }
-    return;
-  }
-  if (!sttSupported()) {
-    set({ error: "Распознавание речи работает в Chrome или Edge. Здесь можно написать текстом." });
-    return;
-  }
-  listener = startListening({
-    lang: state.sttLang,
-    onInterim: (t) => set({ interim: t }),
-    onFinal: (text, endedAt) => { void sendText(text, endedAt); },
-    onEmpty: () => set({ notice: "Ничего не расслышала. Нажмите на микрофон и скажите ещё раз." }),
-    onError: (m) => {
-      if (/сервисом распознавания/.test(m)) {
-        // Chrome could not reach Google's speech service → switch to server STT
-        set({ sttProvider: "server", status: "idle", interim: "", error: null, notice: "Браузер не дотянулся до сервиса распознавания Google. Переключилась на серверное распознавание — нажмите на микрофон ещё раз." });
-        return;
+    if (state.mode === "real" || state.sttProvider === "server") {
+      try {
+        recorder = await startRecording();
+        set({ status: "listening", interim: "", notice: "Говорите. Нажмите на микрофон ещё раз, когда закончите." });
+      } catch {
+        set({ error: "Нет доступа к микрофону. Разрешите его в адресной строке." });
       }
-      set({ error: m, status: "idle", interim: "" });
-    },
-    onEnd: () => { listener = null; set((s) => ({ status: s.status === "listening" ? "idle" : s.status, interim: "" })); },
-  });
-  if (!listener) {
-    set({ error: "Не удалось включить микрофон. Попробуйте в Chrome.", status: "idle" });
-    return;
+      return;
+    }
+    if (!sttSupported()) {
+      set({ error: "Распознавание речи работает в Chrome или Edge. Здесь можно написать текстом." });
+      return;
+    }
+    listener = startListening({
+      lang: state.sttLang,
+      onInterim: (t) => set({ interim: t }),
+      onFinal: (text, endedAt) => { void sendText(text, endedAt); },
+      onEmpty: () => set({ notice: "Ничего не расслышала. Нажмите на микрофон и скажите ещё раз." }),
+      onError: (m) => {
+        if (/сервисом распознавания/.test(m)) {
+          // Chrome could not reach Google's speech service → switch to server STT
+          set({ sttProvider: "server", status: "idle", interim: "", error: null, notice: "Браузер не дотянулся до сервиса распознавания Google. Переключилась на серверное распознавание — нажмите на микрофон ещё раз." });
+          return;
+        }
+        set({ error: m, status: "idle", interim: "" });
+      },
+      onEnd: () => { listener = null; set((s) => ({ status: s.status === "listening" ? "idle" : s.status, interim: "" })); },
+    });
+    if (!listener) {
+      set({ error: "Не удалось включить микрофон. Попробуйте в Chrome.", status: "idle" });
+      return;
+    }
+    set({ status: "listening", interim: "" });
+  } finally {
+    captureStarting = false;
   }
-  set({ status: "listening", interim: "" });
 }
 
 export async function stopVoice() {
   if (recorder) {
     const r = recorder; recorder = null;
     set({ status: "thinking", notice: null });
-    const { audio_base64, mime, endedAt } = await r.stop();
-    if (state.mode === "real") {
-      await runOne({ audio_base64, audio_mime: mime, client_t0: endedAt });
-      return;
-    }
+    busy = true;
     try {
+      const { audio_base64, mime, endedAt } = await r.stop();
       const { text } = await transcribeOnServer(audio_base64, mime, state.sttLang === "kk-KZ" ? "kk" : "ru");
       if (!text) { set({ status: "idle", notice: "Ничего не расслышала. Попробуйте ещё раз." }); return; }
-      set({ status: "idle" });
-      await sendText(text, endedAt);
+      const stt_ms = Math.max(0, Date.now() - endedAt);
+      busy = false;
+      await runOne({ text, client_t0: endedAt, stt_ms });
     } catch (e) {
       set({ status: "idle", error: String(e instanceof Error ? e.message : e) });
+    } finally {
+      busy = false;
     }
     return;
   }
@@ -201,7 +209,7 @@ export async function sendText(text: string, endedAt = Date.now()) {
   await runOne({ text: t, client_t0: endedAt });
 }
 
-async function runOne(req: { text?: string; audio_base64?: string; audio_mime?: string; client_t0: number }) {
+async function runOne(req: { text?: string; audio_base64?: string; audio_mime?: string; client_t0: number; stt_ms?: number }) {
   if (busy) return;
   busy = true;
   stopSpeaking();

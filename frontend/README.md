@@ -74,3 +74,9 @@ voice gateway (default `http://127.0.0.1:8091`). Browser STT is unchanged. Root 
 `docker compose --profile llm --profile voice up --build` and the server-only ElevenLabs key.
 The speaker switch stops playback and cancels pending synthesis. If voice is unavailable,
 a visible notice explains the fallback to browser synthesis. Text remains in the transcript.
+
+
+STT update: **LLM → Распознавание → ElevenLabs** is now the default microphone path.
+Click once to record and again to submit. `/api/stt` forwards the recording to the voice service's
+Scribe v2 endpoint, then sends the transcript to core-llm. `VOICE_STT_URL` defaults to `VOICE_TTS_URL`.
+The Chrome option remains available. No OpenAI key is needed for microphone recognition anymore.

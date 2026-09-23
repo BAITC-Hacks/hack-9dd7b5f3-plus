@@ -1153,10 +1153,11 @@ Photos from the day are at the [top of this README](#from-the-hackathon-floor).
 - [ ] README language decided — the organizers' prompt asks for Russian ([README_PROMPT.md](docs/hackathon/README_PROMPT.md))
 - [ ] The captain pressed «Сдать решение» on the platform — pushing is not submitting
 
-## ElevenLabs TTS (from `feat/voice-elevenlabs`)
+## ElevenLabs STT/TTS (from `feat/voice-elevenlabs`)
 
-The existing voice module is included unchanged. The frontend uses **only** its
-`POST /api/voice/tts` endpoint through Next.js `/api/tts`. Browser STT is unchanged.
+The existing voice module is included unchanged. The frontend uses `POST /api/voice/tts` and `POST /api/voice/stt` through Next.js `/api/tts` and `/api/stt`.
+In LLM mode ElevenLabs recognition is selected by default. Click the microphone to record,
+then click again to finish and send. Chrome recognition remains selectable as a keyless fallback.
 In **LLM** mode, enable the existing speaker switch: completed replies are spoken by ElevenLabs.
 The transcript remains visible. **Мок** keeps browser synthesis for keyless review; service errors
 show a notice and fall back to browser synthesis. Audio is currently buffered as MP3 before playback.
@@ -1166,7 +1167,7 @@ Set `ELEVENLABS_API_KEY` in the repository-root `.env` (never commit it), then r
 docker compose --profile llm --profile voice up --build
 ```
 Use `FRONTEND_PORT=3200` if port 3000 is occupied. Voice is private to the Compose network;
-no STT/WebSocket/phone connection is made by the frontend. The service runs with `VOICE_BRAIN=echo`.
+no WebSocket/phone connection is made by the frontend. The service runs with `VOICE_BRAIN=echo`.
 For manual startup: `cd voice && VOICE_HTTP_ADDR=127.0.0.1:8091 VOICE_BRAIN=echo VOICE_GREETING=false VOICE_FILLER_AFTER_MS=0 go run ./cmd/voice`.
 Set server-only `VOICE_TTS_URL=http://127.0.0.1:8091` in `frontend/.env.local`.
 
@@ -1174,3 +1175,15 @@ Defaults from the branch: Sarah (`EXAVITQu4vr4xnSDxMaL`), `eleven_flash_v2_5` fo
 `eleven_v3_conversational` for Kazakh. Override `ELEVENLABS_VOICE_ID`, `ELEVENLABS_VOICE_ID_KK`,
 `ELEVENLABS_TTS_MODEL_RU`, `ELEVENLABS_TTS_MODEL_KK` in root `.env`. TTS keys stay in the Go service.
 Validation: `cd voice && go test ./...`; `cd frontend && npm test && npm run lint && npm run build`.
+
+STT verification: in `/call`, select **LLM**, check **Распознавание → ElevenLabs**, click the microphone,
+say a request, and click again. The transcript appears in the conversation, the LLM routes it, and
+ElevenLabs speaks the reply. `/api/stt` accepts multipart `file` (up to 20 MiB) and returns
+`{text, language, ms, provider: "elevenlabs"}`. Scribe v2 uses `ELEVENLABS_STT_LANGUAGE=kk` as in the
+voice branch for RU/KZ/mixed input. `VOICE_STT_URL` defaults to `VOICE_TTS_URL`; OpenAI STT is no longer used.
+Recognition is batch after recording stops; partial transcripts and automatic silence detection
+are not part of this connection. STT latency includes recording finalization, upload and recognition.
+
+STT smoke check on bundled synthetic recordings: RU payment → SC30, KK renewal → SC27.
+The mixed sample misrecognized the time marker («кеше»), which led to SC11 instead of SC12;
+recognition quality is still a limitation, particularly for mixed speech and time markers.

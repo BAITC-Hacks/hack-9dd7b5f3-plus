@@ -54,7 +54,7 @@ export async function* runTurn(mode: ApiMode, req: TurnRequest): AsyncGenerator<
       history: traces.slice(-4).map((t) => ({ text: t.transcript, scenario: t.scenarios[0]?.scenario_id ?? "" })),
       active: state.active_scenario, last_bot: traces.at(-1)?.response_text,
     }), text, state) : undefined;
-    for await (const ev of runMockTurn(working, { text: req.text, t0: req.client_t0 ?? Date.now(), speed: mode === "core" ? 0 : 1, route })) {
+    for await (const ev of runMockTurn(working, { text: req.text, t0: req.client_t0 ?? Date.now(), speed: mode === "core" ? 0 : 1, route, sttMs: req.stt_ms })) {
       if (ev.type === "turn.done") {
         mockSessions.set(req.session_id, working);
         if (mode === "core") { traces.push(ev.trace); coreTraces.set(req.session_id, traces); }

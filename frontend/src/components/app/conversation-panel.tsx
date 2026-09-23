@@ -108,7 +108,7 @@ export function ConversationPanel({ className, compact = false }: { className?: 
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
           <span className={cn(listening && "text-foreground")}>{STATUS_TEXT[s.status]}</span>
-          {s.sessionId && !s.sttAvailable && <span>Голос работает в Chrome</span>}
+          {s.sessionId && s.sttProvider === "browser" && !s.sttAvailable && <span>Голос работает в Chrome</span>}
         </div>
       </div>
     </div>

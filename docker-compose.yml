@@ -9,8 +9,7 @@ services:
     environment:
       CORE_LLM_URL: http://core-llm:8090
       VOICE_TTS_URL: http://voice:8090
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_STT_MODEL: ${OPENAI_STT_MODEL:-gpt-4o-mini-transcribe}
+      VOICE_STT_URL: http://voice:8090
   core-llm:
     profiles: [llm]
     build: ./core-llm
@@ -32,6 +31,7 @@ services:
       - path: ./.env
         required: false
     environment:
+      ELEVENLABS_STT_LANGUAGE: kk
       VOICE_BRAIN: echo
       VOICE_GREETING: "false"
       VOICE_FILLER_AFTER_MS: "0"

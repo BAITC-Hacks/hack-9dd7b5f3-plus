@@ -167,3 +167,15 @@ Limits: 6000 text characters, 30-second upstream deadline; provider errors are s
 Voice/model selection stays in the imported Go module. No changes to browser STT or `/api/stt`.
 Compose `--profile voice` starts the service without exposing a host port, alongside profile `llm`.
 `ELEVENLABS_API_KEY` is read from local root `.env`; `VOICE_TTS_URL` is server-only.
+
+## ElevenLabs microphone input
+
+This supersedes the browser-only/OpenAI STT path above. Core and real modes default to ElevenLabs;
+mock defaults to Chrome. MediaRecorder captures one utterance (click to start, click to send),
+then `/api/stt` forwards multipart `file` to `VOICE_STT_URL/api/voice/stt` (falls back to VOICE_TTS_URL).
+The unchanged Go gateway uses Scribe v2 with `ELEVENLABS_STT_LANGUAGE=kk`. The resulting text goes
+through the existing router and TTS; no alternate brain/WebSocket session is opened.
+Response: `{text, language, ms, provider}`. Empty transcripts prompt retry; upstream errors are
+sanitized; limit 20 MiB and timeout 30s. Browser request timeout is 35s. `TurnRequest.stt_ms`
+records the measured recognition latency in the trace. Recording is cancelled on reset/provider
+switch, and further input is blocked while transcription is running. Partial STT/VAD is not enabled.

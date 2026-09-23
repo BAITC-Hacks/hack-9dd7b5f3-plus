@@ -131,6 +131,7 @@ export type TurnEvent =
 /* ------------------------------------------------------------------ */
 
 export interface TurnRequest {
+  stt_ms?: number; // measured recording finalization + server transcription latency
   session_id: string;
   text?: string; // text fallback or browser-STT result
   audio_base64?: string; // webm/opus from MediaRecorder (real backend does STT)

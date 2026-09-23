@@ -124,3 +124,72 @@ test("muting during synthesis cancels the request without starting audio", async
   stopSpeaking();
   assert.equal(await pending, 0);
 });
+
+const { POST: sttProxy } = require("../src/app/api/stt/route.ts");
+function recordingRequest(type = "audio/webm", data = [1, 2, 3]) {
+  const form = new FormData();
+  form.append("file", new Blob([new Uint8Array(data)], { type }), "recording.webm");
+  return new Request("http://test/api/stt", { method: "POST", body: form });
+}
+test("STT forwards audio to voice gateway and returns sanitized transcript metadata", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, init) => {
+    assert.ok(String(url).endsWith("/api/voice/stt"));
+    const audio = init.body.get("file");
+    assert.equal(audio.type, "audio/webm");
+    assert.equal(audio.size, 3);
+    return Response.json({ text: " Полисті ұзарту ", language: "kk", ms: 123 });
+  });
+  const response = await sttProxy(recordingRequest());
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.text, "Полисті ұзарту");
+  assert.equal(result.provider, "elevenlabs");
+  assert.equal(result.language, "kk");
+});
+test("STT rejects empty/non-audio input and hides provider errors", async (t) => {
+  assert.equal((await sttProxy(recordingRequest("audio/webm", []))).status, 400);
+  assert.equal((await sttProxy(recordingRequest("text/plain"))).status, 415);
+  t.mock.method(globalThis, "fetch", async () => new Response("private upstream error", { status: 401 }));
+  const response = await sttProxy(recordingRequest());
+  assert.equal(response.status, 502);
+  assert.ok(!(await response.text()).includes("private upstream"));
+});
+test("recorded speech preserves actual STT latency in final trace", async () => {
+  let trace;
+  for await (const event of runMockTurn(newDialogState("test"), { text: "Хочу продлить полис", t0: Date.now(), speed: 0, sttMs: 417 })) {
+    if (event.type === "turn.done") trace = event.trace;
+  }
+  assert.equal(trace.latency_ms.stt, 417);
+});
+
+const { startRecording } = require("../src/lib/voice.ts");
+test("microphone recorder supports MP4 and releases tracks after stop or cancellation", async (t) => {
+  const oldNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const oldRecorder = globalThis.MediaRecorder;
+  let released = 0;
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { mediaDevices: {
+    getUserMedia: async () => ({ getTracks: () => [{ stop: () => { released++; } }] }),
+  } } });
+  globalThis.MediaRecorder = class {
+    static isTypeSupported(type) { return type === "audio/mp4"; }
+    constructor(_stream, options) { this.mimeType = options.mimeType; this.state = "inactive"; }
+    start() { this.state = "recording"; }
+    stop() {
+      this.state = "inactive";
+      queueMicrotask(() => { this.ondataavailable?.({ data: new Blob(["audio"], { type: this.mimeType }) }); this.onstop?.(); });
+    }
+  };
+  t.after(() => {
+    if (oldNavigator) Object.defineProperty(globalThis, "navigator", oldNavigator);
+    else delete globalThis.navigator;
+    globalThis.MediaRecorder = oldRecorder;
+  });
+  const recorder = await startRecording();
+  const result = await recorder.stop();
+  assert.equal(result.mime, "audio/mp4");
+  assert.equal(atob(result.audio_base64), "audio");
+  assert.equal(released, 1);
+  const cancelled = await startRecording();
+  cancelled.abort();
+  assert.equal(released, 2);
+});

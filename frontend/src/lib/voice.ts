@@ -205,35 +205,50 @@ export function playBase64(audio_base64: string, mime = "audio/mpeg", opts?: { o
 
 export interface Recorder {
   stop(): Promise<{ audio_base64: string; mime: string; endedAt: number }>;
+  abort(): void;
 }
 
 export async function startRecording(): Promise<Recorder> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
-  const rec = new MediaRecorder(stream, { mimeType: mime });
+  const release = () => stream.getTracks().forEach((t) => t.stop());
+  let rec: MediaRecorder;
+  try {
+    const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"].find((type) => MediaRecorder.isTypeSupported(type));
+    rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    rec.start(250);
+  } catch (error) { release(); throw error; }
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-  rec.start(250);
   return {
-    stop: () =>
-      new Promise((resolve) => {
-        rec.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
+    abort() {
+      rec.ondataavailable = null;
+      if (rec.state !== "inactive") rec.stop();
+      release();
+    },
+    stop: () => new Promise((resolve, reject) => {
+      const endedAt = Date.now();
+      rec.onerror = () => { release(); reject(new Error("Не удалось сохранить запись микрофона")); };
+      rec.onstop = async () => {
+        release();
+        try {
+          const mime = rec.mimeType || chunks[0]?.type || "audio/webm";
           const blob = new Blob(chunks, { type: mime });
-          const buf = await blob.arrayBuffer();
+          if (!blob.size) throw new Error("Пустая запись. Нажмите на микрофон и повторите фразу.");
+          const bytes = new Uint8Array(await blob.arrayBuffer());
           let bin = "";
-          const bytes = new Uint8Array(buf);
           for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-          resolve({ audio_base64: btoa(bin), mime, endedAt: Date.now() });
-        };
-        rec.stop();
-      }),
+          resolve({ audio_base64: btoa(bin), mime, endedAt });
+        } catch (error) { reject(error); }
+      };
+      if (rec.state === "inactive") { release(); reject(new Error("Запись уже остановлена")); }
+      else rec.stop();
+    }),
   };
 }
 
 /* ------------------------------ server STT (fallback) ------------------------------ */
 
-/** Send a recording to /api/stt (Next route → OpenAI). Resolves with the transcript. */
+/** Send a recording to /api/stt (Next route → ElevenLabs Scribe). Resolves with the transcript. */
 export async function transcribeOnServer(audio_base64: string, mime: string, language: "ru" | "kk"): Promise<{ text: string; ms: number }> {
   const bin = atob(audio_base64);
   const bytes = new Uint8Array(bin.length);
@@ -241,7 +256,7 @@ export async function transcribeOnServer(audio_base64: string, mime: string, lan
   const fd = new FormData();
   fd.append("file", new Blob([bytes], { type: mime }), "audio.webm");
   fd.append("language", language);
-  const r = await fetch("/api/stt", { method: "POST", body: fd });
+  const r = await fetch("/api/stt", { method: "POST", body: fd, signal: AbortSignal.timeout(35_000) });
   const j = (await r.json().catch(() => ({}))) as { text?: string; ms?: number; error?: string };
   if (!r.ok) throw new Error(j.error ?? `STT: HTTP ${r.status}`);
   return { text: j.text ?? "", ms: j.ms ?? 0 };
