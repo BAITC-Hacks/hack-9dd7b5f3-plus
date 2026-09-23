@@ -60,7 +60,7 @@ Team **Plus** · HackAlem AI 2026 · Track 09 «Communications» · Case **Halyk
 | The organizers ask | Short answer | Details |
 |---|---|---|
 | **What does it solve?** | Voice robots mis-route live speech — topic switches, requests between two scenarios, Russian↔Kazakh switching inside a phrase — because the scenario is picked by an encoder intent classifier. Bagyt picks it with an LLM layer over the dialog context, asks or hands off when unsure, and shows the supervisor why. | [§1](#1-problem-and-users) |
-| **How do I run it?** | Live: **[bagyt.plus](https://bagyt.plus)**. Locally: `docker compose up --build` → open http://localhost:3000/admin — mode «Мок», no keys. With keys (OpenRouter in `core-llm/.env`, ElevenLabs in `.env`): `NEXT_PUBLIC_API_MODE=core docker compose --profile llm --profile voice up --build` → «LLM» mode with ElevenLabs voice. Without Docker: `cd frontend && npm ci && npm run dev`. | [§7](#7-install-and-run) |
+| **How do I run it?** | **Live: [bagyt.plus](https://bagyt.plus)** — just open it: nothing to install, and no keys needed (they live on the server). Locally without keys: `docker compose up --build` → http://localhost:3000/admin (engine «демо»). Locally with the LLM router and ElevenLabs voice: your keys in `core-llm/.env` (OpenRouter) and `.env` (ElevenLabs), then `NEXT_PUBLIC_API_MODE=core docker compose --profile llm --profile voice up --build`. Without Docker: `cd frontend && npm ci && npm run dev`. | [§7](#7-install-and-run) |
 | **Which technologies?** | Next.js 16 · React 19 · TypeScript · Tailwind 4 · Python LLM core on **OpenRouter** (Gemini 2.5 Flash-Lite) · Go 1.26 voice service on **ElevenLabs** (Scribe v2 STT, Flash v2.5 / v3 conversational TTS) · browser Web Speech API as the keyless fallback | [§5](#5-technologies) |
 | **How do I verify it?** | A 10-step walkthrough in the web app (RU, KZ, mixed, multi-intent, topic return, confirmation, clarify → handoff), the same phrases in «LLM» mode, the official `evaluate.py` and the unit tests | [§8](#8-how-to-verify) |
 
@@ -79,7 +79,7 @@ Team **Plus** · HackAlem AI 2026 · Track 09 «Communications» · Case **Halyk
 
 **Test it in 60 seconds:**
 
-1. Open **[bagyt.plus](https://bagyt.plus)** → **«Консоль»** (the conversation on the left, the robot's reasoning on the right). Log in with the jury access above if asked.
+1. Open **[bagyt.plus](https://bagyt.plus)** → **«Аналитика»** (the conversation on the left, the robot's reasoning on the right). Log in with the jury access above if asked.
 2. The live app keeps the OpenRouter and ElevenLabs keys on the server — you need no keys of your own. Turn the replies' sound on with the speaker icon next to the text field.
 3. Click the mic, say **«Хочу продлить ОГПО и добавить сына»** and click again to send — or type it. Then try **«Кеше аварияға түстім, но я не виноват, виновник у вас застрахован»**.
 4. After each phrase, read the right column: the scenarios with confidence, why, the rejected alternatives, what the robot did and how many milliseconds each stage took.
@@ -134,11 +134,11 @@ Legend: ✅ works on `main` · 🚧 in progress, not on `main` yet · 📋 plann
 
 | Capability | Status | Where |
 |---|---|---|
-| **ElevenLabs speech recognition:** click the mic to record, click again to send → Next.js `POST /api/stt` → voice service `POST /api/voice/stt` → Scribe v2 with `language_code=kk` (Russian, Kazakh and mixed speech). The recognizer in «LLM» mode; in «Мок» the browser's Web Speech recognizes, and its network errors switch to ElevenLabs automatically | ✅ needs `ELEVENLABS_API_KEY` + `--profile voice` | [`api/stt/route.ts`](frontend/src/app/api/stt/route.ts), [`voice/`](voice/) — [§5.2](#52-elevenlabs--speech-in-and-out) |
+| **ElevenLabs speech recognition, hands-free:** click the mic and speak — it stops by itself after a pause (VAD) or on a second click, with live partial transcripts and a mic-level ring → Next.js `POST /api/stt` → voice service `POST /api/voice/stt` → Scribe v2 with `language_code=kk` (Russian, Kazakh and mixed speech). The recognizer in «LLM» mode; in «Мок» the browser's Web Speech recognizes, and its network errors switch to ElevenLabs automatically | ✅ needs `ELEVENLABS_API_KEY` + `--profile voice` | [`api/stt/route.ts`](frontend/src/app/api/stt/route.ts), [`voice/`](voice/) — [§5.2](#52-elevenlabs--speech-in-and-out) |
 | **ElevenLabs voice replies** in «LLM» mode: Next.js `POST /api/tts` → voice service → Flash v2.5 for Russian, v3 conversational for Kazakh, the Russian voice for English greetings. Each reply keeps its MP3 for the conversation: play/pause, seekable waveform, elapsed/duration, download | ✅ needs `ELEVENLABS_API_KEY` + `--profile voice` | [`api/tts/route.ts`](frontend/src/app/api/tts/route.ts), [`audio-message.tsx`](frontend/src/components/app/audio-message.tsx) |
 | Browser voice (keyless): Web Speech API in, `speechSynthesis` out — «Мок» mode, and the fallback when the voice service is unavailable | ✅ | [`frontend/src/lib/voice.ts`](frontend/src/lib/voice.ts) |
 | Text input as the fallback channel | ✅ | [`conversation-panel.tsx`](frontend/src/components/app/conversation-panel.tsx) |
-| Interface language RU / ҚАЗ in the header, saved in the browser; it does not change speech recognition or the reply language | ✅ | [`lib/ui-language.ts`](frontend/src/lib/ui-language.ts) |
+| One RU / ҚАЗ switch in the header for the interface, speech recognition and the reply, saved in the browser; the header also shows the engine («демо» or «LLM») and has «Новый диалог» | ✅ | [`lib/ui-language.ts`](frontend/src/lib/ui-language.ts), [`console-shell.tsx`](frontend/src/components/app/console-shell.tsx) |
 | Language detection `ru` / `kk` / `mixed`; answer in the client's dominant language, keep the session language on code-switched turns | ✅ | [`mock/router.ts`](frontend/src/lib/mock/router.ts), [`mock/engine.ts`](frontend/src/lib/mock/engine.ts) |
 | Client identification by phone / IIN against `mock_backend.json`; spoken numbers → digits in RU and KZ («плюс жеті жеті жүз бір…» → `+7701…`) | ✅ | `mock/router.ts` (`wordsToDigits`, `extractSlots`) |
 
@@ -152,7 +152,7 @@ Legend: ✅ works on `main` · 🚧 in progress, not on `main` yet · 📋 plann
 | Router output contract used by the UI: ranked `scenarios[]` with confidence + reason, `alternatives[]`, `language`, `slots`, `is_continuation`, `model`, `tier` | ✅ | [`frontend/src/lib/contract.ts`](frontend/src/lib/contract.ts) |
 | Keyless mock router: token overlap with the catalog's ru/kk examples + hand-written cues that mirror `not_this_if`; labelled «Мок» in the UI | ✅ | `mock/router.ts` |
 | Multi-intent: split the utterance; urgent scenarios first (SC11, SC15, SC38), then in spoken order | ✅ | `core-llm/prompt.md`, `mock/router.ts`, `mock/engine.ts` |
-| Decision policy: ≥ 0.75 run · 0.45–0.75 clarify · < 0.45 twice → handoff · out-of-scope · goodbye (UI); route ≥ 60 % · extra intents ≥ 20 % (core-llm) | ✅ | `mock/engine.ts` (`decide`), `core-llm/router.py` (`Router.decide`) |
+| Decision policy: ≥ 0.75 run · 0.45–0.75 clarify · < 0.45 twice → service menu (operator on request) · out-of-scope · goodbye (UI); route ≥ 60 % · extra intents ≥ 20 % (core-llm) | ✅ | `mock/engine.ts` (`decide`), `core-llm/router.py` (`Router.decide`) |
 | Topic stack: park the interrupted scenario, come back to it when the new one is done | ✅ | `mock/engine.ts` |
 | Continuation: an answer to a pending slot or a yes/no question is not re-routed | ✅ | `mock/engine.ts`, `core-llm/prompt.md` (CONTEXT rules) |
 | Greetings without a request — `SYS_GREETING` (`status: greeting`, policy action `greeting`), an application system intent; the official 40 scenarios are unchanged. Replies «Здравствуйте, чем могу помочь?» / «Сәлеметсіз бе, қалай көмектесе аламын?» / “Hello, how can I help you?” (for “Hello”, “Hi”, “Good morning”) through the same TTS path; keeps the active scenario, the pending slot or confirmation and the queue, and does not count as an unclear turn. «Здравствуйте, хочу продлить полис» still routes to SC27 | ✅ | `core-llm/prompt.md`, `core-llm/router.py`, `mock/engine.ts` |
@@ -373,7 +373,7 @@ flowchart TD
   Q5 -- yes --> CLR["clarify<br/>one question, top-2 options"]
   Q5 -- no --> Q6{"Second low-confidence<br/>turn in a row?"}
   Q6 -- no --> CLR
-  Q6 -- yes --> HO["handoff<br/>operator queue + context summary"]
+  Q6 -- yes --> HO["service menu<br/>operator on request (SC37)"]
 ```
 
 In «LLM» mode the core's verdict is authoritative (`route_status`: route / clarify / handoff / out_of_scope / goodbye; a scenario counts as requested from `ROUTER_THRESHOLD=60` %, extra intents from 20 %). The thresholds in the diagram (`CONFIDENCE_RUN = 0.75`, `CONFIDENCE_CLARIFY = 0.45` in [`contract.ts`](frontend/src/lib/contract.ts), from the dataset README) apply to the keyword baseline. An explicit request for a human (SC37) goes straight to handoff. **The model proposes, code disposes:** the router never executes anything by itself.
@@ -526,7 +526,7 @@ ElevenLabs handles both ends of the conversation. The Go voice service [`voice/`
 
 | Feature | Details |
 |---|---|
-| Speech recognition | Click the mic to record, click again to send. The recording (webm / opus, up to 20 MiB) goes `POST /api/stt` → `POST /api/voice/stt` → Scribe v2 with `language_code=kk`; the answer is `{text, language, ms, provider: "elevenlabs"}` and the transcript appears in the conversation. ElevenLabs is the recognizer in «LLM» mode; in «Мок» the browser's Web Speech is, and its network errors switch to ElevenLabs by themselves |
+| Speech recognition | Click the mic and speak: recording stops by itself after a pause (VAD) or on a second click, with live partial transcripts and a mic-level ring while you talk. The recording (webm / opus, up to 20 MiB) goes `POST /api/stt` → `POST /api/voice/stt` → Scribe v2 with `language_code=kk`; the answer is `{text, language, ms, provider: "elevenlabs"}` and the transcript appears in the conversation. ElevenLabs is the recognizer in «LLM» mode; in «Мок» the browser's Web Speech is, and its network errors switch to ElevenLabs by themselves |
 | Voice replies | With sound on (the speaker icon), every reply is spoken by ElevenLabs: `POST /api/tts` → `POST /api/voice/tts` → `mp3_22050_32`. Russian → `eleven_flash_v2_5`, Kazakh → `eleven_v3_conversational`, English greetings → the Russian voice with English pronunciation (`lang: en`). Voice: Sarah (`EXAVITQu4vr4xnSDxMaL`), configurable per language |
 | Audio player | Each reply keeps its MP3 for the conversation — play / pause, a seekable waveform computed from the recording, elapsed / duration and download — with the transcript below the player. Muting turns autoplay off but still creates the recording |
 | Fallbacks | A service error shows a notice and falls back to browser speech; «Мок» always uses browser speech, so it needs no key (and has no downloadable recording) |
@@ -694,7 +694,7 @@ Build with `NEXT_PUBLIC_API_MODE=real` and `NEXT_PUBLIC_API_URL=http://localhost
 
 ### 7.5 Deployed version
 
-**[bagyt.plus](https://bagyt.plus)** — the live version. Locally: Docker Compose ([§7.1](#71-quick-start--keyless-about-two-minutes)), no login required. <!-- TODO: paste the URL and the date of the last smoke test (§9.5). -->
+**[bagyt.plus](https://bagyt.plus)** — the live version, served over HTTPS by Caddy ([`deploy/Caddyfile`](deploy/Caddyfile)) with [`docker-compose.prod.yml`](docker-compose.prod.yml) on top of the main compose file; the provider keys are host environment variables, not files in this repo. Locally: Docker Compose ([§7.1](#71-quick-start--keyless-about-two-minutes)), no login required. <!-- TODO: paste the URL and the date of the last smoke test (§9.5). -->
 
 ### 7.6 Environment variables
 
@@ -748,12 +748,12 @@ One env file per component; each ships as a keyless example. Secrets live only i
 | «Сервис озвучки недоступен…» / «Сервис распознавания недоступен…» | Start the voice service (`--profile voice`, or `go run ./cmd/voice`) and check `VOICE_TTS_URL` / `VOICE_STT_URL` |
 | «Нет доступа к микрофону…» | Allow the microphone in the address bar; the page must be on `localhost` or HTTPS |
 | «Ничего не расслышала…» | Click the mic, start speaking right away, pause to send |
-| Kazakh speech comes out as Russian words | In «Мок», the browser recognizer listens in Russian (the language toggle was removed in `bc402c6`) — type Kazakh or mixed phrases, or use «LLM» mode, where ElevenLabs Scribe with `kk` handles both ([§13](#13-limitations-and-known-issues)) |
+| Kazakh speech comes out as Russian words | Switch the header language to ҚАЗ — it sets the recognizer too. Mixed phrases work best in «LLM» mode, where ElevenLabs Scribe with `kk` handles both ([§13](#13-limitations-and-known-issues)) |
 | Kazakh answers are read with a Russian voice | In «Мок», browsers rarely ship a Kazakh voice, so it falls back to a Russian one. In «LLM» with the `voice` profile, ElevenLabs `eleven_v3_conversational` speaks Kazakh |
 | «core-llm не отвечает…» in «LLM» mode | Start the router — `docker compose --profile llm up --build`, or `python3 core-llm/server.py` — and check `CORE_LLM_URL` |
 | «Ошибка core-llm…» / «LLM недоступна…» | Check `OPENROUTER_API_KEY` and `ROUTER_MODEL` in `core-llm/.env` |
 | Port 3000 is busy | `FRONTEND_PORT=3200 docker compose up --build`, or `npm run dev -- -p 3001` |
-| The previous dialog interferes | Reload the page — the dialog lives in the browser tab; within one dialog the client stays identified and slots are remembered |
+| The previous dialog interferes | Click «Новый диалог» — within one dialog the client stays identified and slots are remembered |
 
 ---
 
@@ -764,8 +764,8 @@ One env file per component; each ships as a keyless example. Secrets live only i
 ### 8.1 Setup — 30 seconds
 
 1. Run [§7.1](#71-quick-start--keyless-about-two-minutes) and open **http://localhost:3000/admin** in Chrome.
-2. The default build is «Мок». Turn sound on with the speaker icon next to the text field.
-3. **Reload the page** before each scenario below — the dialog lives in the browser tab. Every step works by typing, and by voice in Russian (click 🎤, speak, pause) — in «Мок» the browser recognizer listens in Russian.
+2. The default build is «Мок» (the header shows «демо»). Turn sound on with the speaker icon next to the text field.
+3. Click **«Новый диалог»** before each scenario below. Every step works by typing or by voice (click 🎤, speak, pause); the header's language switch sets the interface, speech recognition and reply language together.
 
 ### 8.2 Walkthrough — 10 scenarios
 
@@ -775,12 +775,12 @@ The expected results below were produced by running these exact inputs through t
 |---|---|---|---|
 | 1 | «Хочу узнать статус моего заявления» → then the phone: «плюс семь семьсот один ноль ноль ноль ноль ноль ноль семь» (or `+77010000007`) | SC17 "Claim status" 0.96 → the robot asks for the phone → **Sergey Popov** identified (`find_client`, `get_claim`) → «По заявлению CL-500330: на рассмотрении…» | Voice in and out, identification, spoken numbers, a data-grounded answer |
 | 2 | «Здравствуйте, я вчера оплатил, деньги списались, а заказ не подтвердился… а, и ещё, адрес доставки поменять надо» — *the case's own example* | Two scenarios: SC30 0.94 + SC29 0.82; policy `run`, SC29 waits on the stack; slots `incident_date: 2026-09-30`, `contact_field: address`; the robot promises to handle the second question too | Multi-intent, topic stack, slot extraction |
-| 3 | Type «Сәлеметсіз бе, полисімнің мерзімі қашан бітеді?» → then the phone in Kazakh words: «плюс жеті жеті жүз бір нөл нөл нөл нөл нөл нөл бір» | Language KK; SC25 "Check policy validity" 0.90; the answer is in Kazakh: «Тексерейін. Телефон нөміріңізді айтып жіберіңізші.» → **Arman Tulegenov** → «SQ-OGPO-104501 полисі 2027-03-14 дейін жарамды.» | Kazakh in and out |
+| 3 | Switch the language to **ҚАЗ**, then say or type «Сәлеметсіз бе, полисімнің мерзімі қашан бітеді?» → then the phone in Kazakh words: «плюс жеті жеті жүз бір нөл нөл нөл нөл нөл нөл бір» | Language KK; SC25 "Check policy validity" 0.90; the answer is in Kazakh: «Тексерейін. Телефон нөміріңізді айтып жіберіңізші.» → **Arman Tulegenov** → «SQ-OGPO-104501 полисі 2027-03-14 дейін жарамды.» | Kazakh in and out |
 | 4 | «Кеше аварияға түстім, но я не виноват, виновник у вас застрахован» | Language **RU+KK** (mixed inside one phrase); SC12 "Claim as victim under culprit's OGPO" 0.90, while SC11 "Road accident just happened" is only an alternative (0.32); the robot asks for the culprit's plate | Code-switching, a scenario boundary |
 | 5 | «Проверьте, действует ли мой полис, и ещё мне звонили якобы из страховой и просили код из смс» | SC38 "Fraud report" (urgent) is handled **first** although it was said second; SC25 is queued; anti-fraud advice | Urgent-first priority |
 | 6 | «Хочу записаться к терапевту по ДМС» → `+77010000002` → «Подождите, а какие клиники есть в Астане?» | SC21 → **Aigerim Bekova** → switch to SC23 (`list_clinics`: Saulet Medical, Nur Med Astana) → the robot returns on its own: «Теперь по вопросу «Запись к врачу по ДМС»…» | Topic switch and return |
 | 7 | «Хочу продлить ОГПО» → `+77010000003` → «Да» | `renew_policy:preview` + read-back «Проверю: полис SQ-OGPO-102850, стоимость 31 200 тенге… Всё верно? Это действие нельзя будет отменить.» → only after «Да»: `renew_policy:execute`, `send_sms` | No irreversible action without an explicit «да» |
-| 8 | «Алло, я по поводу страховки» → «Ну там вопрос» | `SYS_UNCLEAR` → one clarifying question with two options → second vague turn → `handoff`: `transfer_to_operator` with a context summary | Asks instead of guessing; hands off to a human |
+| 8 | «Алло, я по поводу страховки» → «Ну там вопрос» | `SYS_UNCLEAR` → one clarifying question with two options → a second vague turn → a menu of the services the robot can help with (no automatic transfer); «Соедините с оператором» (SC37) → `transfer_to_operator` with a context summary | Asks instead of guessing; hands off to a human on request |
 | 9 | «Можно у вас взять кредит на машину?» | `SYS_OUT_OF_SCOPE` → a polite refusal plus what the robot can help with | Out-of-scope detection |
 | 10 | On `/admin`, after any turn: **«JSON последней реплики»** | The trace in the dataset README format — transcript, language, scenarios with confidence, alternatives, reason, slots, actions, `latency_ms`; «Скорость» next to it shows the per-stage waterfall against the 1.5 s line | The trace the case asks for |
 
@@ -875,7 +875,7 @@ Use `python3` where `python` is not on the path.
 | Constraint: no hardcoded test utterances | [§4.7](#47-why-this-is-not-an-intent-classifier--and-not-hardcoded) | ✅ |
 | Constraint: synthetic data only, no real recordings | [§10](#10-data-and-integrations) | ✅ |
 | Constraint: launch with one command | `docker compose up --build` (+ `--profile llm --profile voice` for the LLM router and ElevenLabs voice) | ✅ |
-| Minimum: the robot hands the call to an operator where it cannot cope | Step 8; also the SC15, SC30, SC37 handoff rules | ✅ |
+| Minimum: the robot hands the call to an operator where it cannot cope | SC37 on request (step 8) with a context summary; the SC15, SC30 handoff rules | ✅ |
 
 ---
 
@@ -1120,7 +1120,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 ### 11.3 UX principles
 
 - The client sees only the conversation; router internals live on the supervisor's screen.
-- Click once to talk and click again to send (with the Chrome recognizer a pause also sends) — no press-and-hold and no always-on voice detection in a noisy hall.
+- Click once to talk; a pause or a second click sends — no press-and-hold, and the robot listens only after the client clicks.
 - Text is always a full channel; every error has a plain Russian message and a way out (ElevenLabs recognition when the browser's is blocked, browser speech when ElevenLabs is down).
 - Voice replies stay in the conversation as recordings you can replay, scrub and download.
 - Uncertainty is visible: clarifications and low confidence are flagged, and the robot asks instead of guessing.
@@ -1141,11 +1141,11 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 | D2 | The whole catalog goes into the prompt as a hand-built compact index (~5,800 tokens, ~75 % served from the provider's prompt cache) — no retrieval shortlist | No retrieval misses; one stable, cacheable prefix; only what matters for choosing (no reply templates, slots or actions) | Embedding shortlist of top-K (SPEC draft); the raw 90 KB `scenarios.json` | ✅ |
 | D3 | The model outputs only `ID:PERCENT` pairs (~6 tokens); the supervisor's explanation is built deterministically | Decode time → routing near 450 ms; the explanation can never drift from what the policy did | Strict JSON with a free-text `reason` (SPEC draft) | ✅ |
 | D4 | Default model `google/gemini-2.5-flash-lite` via OpenRouter; `temperature=0`, reasoning off, providers sorted by latency | Fastest model with top accuracy in the team's benchmark (p50 470 ms); Gemini 3.x flash-lite equal in quality but ~200 ms slower | 15+ models benchmarked ([§9.1](#91-routing-accuracy-on-the-dev-set)); swap any time via `ROUTER_MODEL` | ✅ |
-| D5 | A deterministic policy outside the LLM: urgent first, topic stack, clarify, handoff. In «LLM» mode the core's verdict is authoritative (route ≥ 60 %, extra intents ≥ 20 %); the keyword baseline uses ≥ 0.75 run · 0.45–0.75 clarify · < 0.45 twice → handoff | Predictable and explainable; the model proposes, code disposes | Let the LLM choose the action | ✅ |
+| D5 | A deterministic policy outside the LLM: urgent first, topic stack, clarify, handoff. In «LLM» mode the core's verdict is authoritative (route ≥ 60 %, extra intents ≥ 20 %); the keyword baseline uses ≥ 0.75 run · 0.45–0.75 clarify · < 0.45 twice → service menu (operator on request) | Predictable and explainable; the model proposes, code disposes | Let the LLM choose the action | ✅ |
 | D6 | Mock-driven development: a typed event contract (`contract.ts`) plus an in-browser mock engine; the backend replaces the mock without UI changes | Frontend and backend built in parallel in a 5-hour window; UI testable without keys; keyless review for the jury (rules §5.6.6) | Wait for the backend; a recorded demo (forbidden) | ✅ |
 | D7 | One turn = `POST /api/turn` → a Server-Sent Events stream of typed events | Streams live candidates, actions and text deltas to both screens; simpler than a WebSocket for a request–response turn | A WebSocket for everything (SPEC draft) — kept for streaming audio | ✅ contract |
 | D8 | The 9 irreversible actions of `actions.json` run only after a preview and an explicit «да» | A safety constraint of the case | — | ✅ |
-| D9 | Click to talk (switched from hold-to-talk in `f02fc21`): ElevenLabs records until the second click; Chrome also stops on a pause | A noisy expo hall makes always-on voice detection misfire; a clean end-of-speech mark for latency | Hold-to-talk; always-on VAD (Silero) | ✅ |
+| D9 | Click to talk (switched from hold-to-talk in `f02fc21`); a pause (VAD) or a second click sends, with live partial transcripts (`fe6ba3d`) | A noisy expo hall makes always-on voice detection misfire; a clean end-of-speech mark for latency | Hold-to-talk; always-on VAD (Silero) | ✅ |
 | D10 | Server-side speech through the Go voice service and ElevenLabs — `/api/stt` → Scribe v2, `/api/tts` → Flash v2.5 / v3 conversational — replacing the earlier OpenAI transcription fallback; Chrome Web Speech stays as the keyless fallback | One provider for both directions with measured Kazakh support; the key stays in the service; Web Speech fails in Arc / Brave / Yandex browsers and on restricted venue networks | OpenAI `gpt-4o-mini-transcribe` (used until `0bbdbaf`); text only | ✅ |
 | D11 | Reply in the client's dominant language; keep the session language on code-switched turns | The case requires RU / KZ including mid-phrase switching; greetings and loanwords (ОГПО, КАСКО) must not flip the language | Always Russian; per-turn detection only | ✅ (one bug, [§13](#13-limitations-and-known-issues)) |
 | D12 | Real-mode speech: ElevenLabs Scribe v2 Realtime with `language_code=kk` + Flash v2.5 for Russian TTS and v3 conversational for Kazakh TTS; push-to-talk on the web, server VAD on the phone | Measured ([§9.7](#97-voice-research-speech-to-text-text-to-speech-end-to-end)): auto-detect heard Kazakh as Turkish, `kk` got RU and KZ right; v3 conversational is the only realtime model that speaks Kazakh (first audio 208–221 ms); Flash is the fastest for Russian | Auto language detection; geko.sh Seta / Tokay (KZ-first, code-switching) — kept as the alternative | ✅ web app (batch) · streaming in `voice/` |
@@ -1154,7 +1154,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 | D15 | Product name **Bagyt** (Бағыт, "route") | Reads naturally in RU and KZ; a direct routing metaphor | "Saqta Voice Router", "Plus Router" | ✅ |
 | D16 | Speko design tokens: a light "technical paper" landing and a dark operator console; coss ui on Base UI + ObsidianUI; Geist | The trace panel is scored → a data-dense console where numbers are the heroes | 1609SAT design system ([`DESIGN.md`](DESIGN.md)) | ✅ |
 | D17 | Hybrid fast path: templates for the 9 `fast_path_eligible` scenarios **vs.** an LLM cascade | An optional case item, worth points only with a measured latency gain | — | 🟡 open — ⏳ measure |
-| D18 | Modes: `NEXT_PUBLIC_API_MODE=mock \| core \| real`, fixed at build time; «Мок» needs no keys. The runtime switch and the recognizer / language toggles left the header in `bc402c6` to keep the screens simple | Keyless review for the jury; one UI for all three routers | `MOCK_MODE=1` (SPEC draft); a runtime switch in the header (until `bc402c6`) | ✅ |
+| D18 | Modes: `NEXT_PUBLIC_API_MODE=mock \| core \| real`, fixed at build time; «Мок» needs no keys. The runtime switch left the header in `bc402c6`; since `fe6ba3d` the header shows the engine («демо» / «LLM»), one RU / ҚАЗ switch for interface, speech and reply, and «Новый диалог» | Keyless review for the jury; one UI for all three routers | `MOCK_MODE=1` (SPEC draft); a runtime switch in the header (until `bc402c6`) | ✅ |
 | D19 | No silent fallback from «LLM» to the mock | The supervisor and the jury must know which router answered; a silent fallback would pass off the mock's answer as the LLM's | Fall back to the mock on errors | ✅ |
 | D20 | Go backend layout: `cmd/server` + `/health` (today) **vs.** `cmd/api` + chi + pgx + `/healthz` (AGENTS.md) | — | — | 🟡 open |
 | D21 | Greetings are an application system intent, `SYS_GREETING`: a fixed reply in RU / KZ / EN that keeps the active scenario, the pending slot or confirmation and the queue, and does not count as an unclear turn | A caller's «Здравствуйте» is not a request — routing it to a scenario or to `SYS_UNCLEAR` derails the dialog; the official 40 scenarios stay unchanged | Treat greetings as `SYS_UNCLEAR` | ✅ |
@@ -1178,9 +1178,9 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 **Speech in the web app**
 
-- **ElevenLabs is wired in batch, not streaming.** Recognition starts after the second click — no partial transcripts and no automatic end of speech — so the STT time includes finalizing, uploading and recognizing the recording; replies are buffered as MP3 before playback. The streaming path (Scribe v2 Realtime, TTS over WebSockets, a push-to-talk commit 263–325 ms after release) exists in the voice service's `/ws/voice` gateway but is not connected to the web app yet.
+- **Voice replies are not streamed yet:** they are buffered as MP3 before playback. The fully streaming path — Scribe v2 Realtime and TTS over WebSockets, a push-to-talk commit 263–325 ms after release — lives in the voice service's `/ws/voice` gateway and is not used by the web app yet.
 - **Mixed speech and time markers:** in the smoke check, «кеше» (yesterday) was misheard in a mixed phrase, which sent it to SC11 (accident right now) instead of SC12 (victim claim).
-- **Keyless browser speech («Мок»):** Web Speech works in Chrome / Edge only and listens in Russian (the language toggle was removed in `bc402c6`), so Kazakh and mixed phrases are recognized poorly — type them, or use «LLM» mode with ElevenLabs. Browsers rarely ship a Kazakh voice, so Kazakh answers may be read with a Russian one, and browser speech cannot be downloaded.
+- **Keyless browser speech («Мок»):** Web Speech works in Chrome / Edge only, one language at a time (the RU / ҚАЗ switch), so mixed phrases are recognized poorly — type them, or use «LLM» mode with ElevenLabs. Browsers rarely ship a Kazakh voice, so Kazakh answers may be read with a Russian one, and browser speech cannot be downloaded.
 - English covers greetings only (“Hello, how can I help you?”); the 40 insurance scenarios are Russian and Kazakh.
 - ElevenLabs quota: the team key is on the Creator plan, ~128k characters a month.
 - Mock stage timings (STT, triage, router, policy, response) are simulated delays, not measurements; only TTS first audio and the total are measured in the browser.
