@@ -8,6 +8,10 @@
 
 Team **Plus** · HackAlem AI 2026 · Track 09 «Communications» · Case **Halyk Bank — Voice Router**
 
+<img src="docs/assets/hackathon/team.jpg" width="520" alt="Team Plus, all three members, in front of the HackAlem AI wall">
+<br/>
+<sub>Team Plus at HackAlem AI · Astana · 23 September 2026 · <a href="#15-team">who built what</a> · <a href="#from-the-hackathon-floor">more photos</a></sub>
+
 ![status](https://img.shields.io/badge/status-hackathon%20build-orange)
 ![review](https://img.shields.io/badge/web%20demo-no%20API%20keys%20needed-2f6ad1)
 ![speech](https://img.shields.io/badge/speech-RU%20%7C%20KK%20%7C%20mixed-2f6ad1)
@@ -27,6 +31,28 @@ Team **Plus** · HackAlem AI 2026 · Track 09 «Communications» · Case **Halyk
 <!-- TODO(team): when the Go backend / ElevenLabs / deploy land, rewrite this callout and flip the statuses in §2, §4.6, §5, §8.5. -->
 
 > **Кратко по-русски.** Bagyt — веб-симулятор голосового робота контакт-центра страховой компании (вымышленная Saqta Insurance из стартового кита Halyk Bank). Клиент говорит по-русски, по-казахски или вперемешку; робот выбирает один из 40 сценариев с учётом всего диалога, отвечает голосом, переспрашивает, когда не уверен, передаёт разговор оператору с контекстом и не выполняет необратимых действий без явного «да». Супервизор после каждой реплики видит сценарий, уверенность, обоснование, альтернативы и задержку по этапам. Проверка без ключей: `docker compose up --build` → http://localhost:3000/admin, режим «Мок» (прозрачный детерминированный baseline вместо LLM). С ключом OpenRouter в `core-llm/.env`: `docker compose --profile llm up --build` и режим «LLM» — продуктовый роутер [`core-llm/`](core-llm/) (Gemini 2.5 Flash-Lite через OpenRouter, 104/104 на dev-наборе по отчёту автора, ~457 мс p50).
+
+### From the hackathon floor
+
+<details>
+<summary>Photos from the day: the entrance, the hall, the team at work, picking the case</summary>
+
+<table>
+  <tr>
+    <td width="33%" align="center"><img src="docs/assets/hackathon/entrance.jpg" width="100%" alt="The queue at the entrance of the EXPO hall"><br/><sub>The morning queue at the entrance</sub></td>
+    <td width="33%" align="center"><img src="docs/assets/hackathon/hall.jpg" width="100%" alt="The hackathon hall, Purple Zone C"><br/><sub>The hall</sub></td>
+    <td width="33%" align="center"><img src="docs/assets/hackathon/swag.jpg" width="100%" alt="A qairuhub cap and HackAlem stickers"><br/><sub>Swag</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/assets/hackathon/team-at-work.jpg" width="100%" alt="Team Plus at work at the desk"><br/><sub>Building Bagyt</sub></td>
+    <td align="center"><img src="docs/assets/hackathon/cap.jpg" width="100%" alt="A qairuhub cap"><br/><sub>qairuhub</sub></td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center"><img src="docs/assets/hackathon/case-page.jpg" width="100%" alt="The hackathon platform: Track 09 Communications, the Voice Router case"><br/><sub>Picking the case: Track 09 «Коммуникации» → Voice Router</sub></td>
+  </tr>
+</table>
+
+</details>
 
 ## Jury quick path
 
@@ -1034,11 +1060,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 ## 15. Team
 
-<p align="center">
-  <img src="docs/assets/hackathon/team.jpg" width="560" alt="Team Plus in front of the HackAlem AI wall">
-  <br/>
-  <sub>Team Plus at HackAlem AI · Astana · 23 September 2026</sub>
-</p>
+The team photo is at the [top of this README](#bagyt--voice-router).
 
 | Member | Role | Contribution |
 |---|---|---|
@@ -1050,22 +1072,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 AI coding assistants used during development (OpenAI Codex, Claude) are disclosed in [THIRD_PARTY.md](THIRD_PARTY.md).
 
-### From the hackathon floor
-
-<table>
-  <tr>
-    <td width="33%" align="center"><img src="docs/assets/hackathon/entrance.jpg" width="100%" alt="The queue at the entrance of the EXPO hall"><br/><sub>The morning queue at the entrance</sub></td>
-    <td width="33%" align="center"><img src="docs/assets/hackathon/hall.jpg" width="100%" alt="The hackathon hall, Purple Zone C"><br/><sub>The hall</sub></td>
-    <td width="33%" align="center"><img src="docs/assets/hackathon/swag.jpg" width="100%" alt="A qairuhub cap and HackAlem stickers"><br/><sub>Swag</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="docs/assets/hackathon/team-at-work.jpg" width="100%" alt="Team Plus at work at the desk"><br/><sub>Building Bagyt</sub></td>
-    <td align="center"><img src="docs/assets/hackathon/cap.jpg" width="100%" alt="A qairuhub cap"><br/><sub>qairuhub</sub></td>
-  </tr>
-  <tr>
-    <td colspan="3" align="center"><img src="docs/assets/hackathon/case-page.jpg" width="100%" alt="The hackathon platform: Track 09 Communications, the Voice Router case"><br/><sub>Picking the case: Track 09 «Коммуникации» → Voice Router</sub></td>
-  </tr>
-</table>
+Photos from the day are at the [top of this README](#from-the-hackathon-floor).
 
 ---
 
