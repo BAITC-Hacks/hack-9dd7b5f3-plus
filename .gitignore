@@ -1,0 +1,21 @@
+.env
+.env.local
+*.log
+node_modules/
+.next/
+out/
+dist/
+/backend/bin/
+/backend/tmp/
+.DS_Store
+.idea/
+.vscode/
+*.exe
+
+# build artifacts
+/backend/server
+/backend/cmd/server/server
+
+# OS
+Thumbs.db
+__MACOSX/
