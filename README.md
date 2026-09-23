@@ -694,7 +694,41 @@ Build with `NEXT_PUBLIC_API_MODE=real` and `NEXT_PUBLIC_API_URL=http://localhost
 
 ### 7.5 Deployed version
 
-**[bagyt.plus](https://bagyt.plus)** — the live version, served over HTTPS by Caddy ([`deploy/Caddyfile`](deploy/Caddyfile)) with [`docker-compose.prod.yml`](docker-compose.prod.yml) on top of the main compose file; the provider keys are host environment variables, not files in this repo. Locally: Docker Compose ([§7.1](#71-quick-start--keyless-about-two-minutes)), no login required. <!-- TODO: paste the URL and the date of the last smoke test (§9.5). -->
+The VPS deployment uses **https://bagyt.plus** (37.151.92.185). Nginx terminates
+Let's Encrypt HTTPS and forwards to the frontend on `127.0.0.1:3080`.
+The frontend calls `core-llm:8090` and `voice:8090` over the private Compose network;
+provider keys never go to the browser. Go backend health is on `127.0.0.1:8085/healthz`.
+The Go service is still a skeleton; the working dialog routes through Python core + voice.
+
+Server files:
+- `/opt/bagyt/current`: active release (symlink into `/opt/bagyt/releases/`).
+- `/opt/bagyt/shared/app.env`: root runtime settings and ElevenLabs key, mode 600.
+- `/opt/bagyt/shared/core.env`: OpenRouter key, mode 600.
+- Each release links `.env` and `core-llm/.env` to these private files.
+
+Production settings in `app.env` are `NEXT_PUBLIC_API_MODE=core`,
+`FRONTEND_PORT=127.0.0.1:3080`, `BACKEND_PORT=8085`,
+`CORS_ORIGINS=https://bagyt.plus`, a generated `POSTGRES_PASSWORD` and the matching
+`DATABASE_URL`. Keep the existing DB password when updating a release.
+Runtime keys follow the env examples; do not commit the actual env files.
+
+```bash
+cd /opt/bagyt/current
+docker compose -p bagyt -f docker-compose.yml -f deploy/compose.production.yml --profile server up --build -d --wait
+docker compose -p bagyt -f docker-compose.yml -f deploy/compose.production.yml --profile server ps
+```
+
+[`deploy/compose.production.yml`](deploy/compose.production.yml) adds frontend
+restart and health checks. [`deploy/bagyt.plus.nginx.conf`](deploy/bagyt.plus.nginx.conf)
+is the domain configuration. Install it into `/etc/nginx/sites-available/bagyt.plus`
+and link into `sites-enabled` after issuing the certificate with Certbot webroot
+`/var/www/bagyt-acme`. Certbot renews automatically; the server's deploy hook
+reloads Nginx after renewal. All five containers restart automatically.
+
+Verification: open `/call` and `/admin`, allow microphone access, send a Russian
+or Kazakh request, then check the selected scenario and audio response. No login is required.
+
+**[bagyt.plus](https://bagyt.plus)** — the live version. Locally: Docker Compose ([§7.1](#71-quick-start--keyless-about-two-minutes)), no login required. <!-- TODO: paste the URL and the date of the last smoke test (§9.5). -->
 
 ### 7.6 Environment variables
 

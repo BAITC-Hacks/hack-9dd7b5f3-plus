@@ -47,3 +47,6 @@ Every dependency, model, API, dataset, template or UI kit we use must be listed 
 AI coding assistants used during development: OpenAI Codex, Claude.
 
 | Official Go, Alpine and PostgreSQL Docker images | BSD-3-Clause / Alpine package licenses / PostgreSQL License | https://hub.docker.com/_/golang · https://hub.docker.com/_/alpine · https://hub.docker.com/_/postgres | Backend multi-stage build, runtime, and local database |
+
+| Nginx | BSD-2-Clause | https://nginx.org | VPS HTTPS reverse proxy |
+| Certbot | Apache-2.0 | https://certbot.eff.org | Automatic Let’s Encrypt certificate issuance and renewal |
