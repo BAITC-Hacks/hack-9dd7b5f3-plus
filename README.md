@@ -1064,8 +1064,8 @@ The team photo is at the [top of this README](#bagyt--voice-router).
 
 | Member | Role | Contribution |
 |---|---|---|
-| Tair Kaldybayev | Captain · AI / LLM routing · docs | Case analysis and research, PRD / SPEC / API docs, architecture visual, README; ⏳ voice integration |
-| Alikhan | ⏳ | Mock-driven frontend — landing, `/call`, `/admin`, event contract, mock engine, the `evaluate.py` port, the server STT fallback (`59d5a2c`, `f02fc21`, `ab1a78b`); ⏳ |
+| Tair Kaldybayev | AI / LLM routing · docs | Case analysis and research, PRD / SPEC / API docs, architecture visual, README; ⏳ voice integration |
+| Alikhan | Captain⏳ | Mock-driven frontend — landing, `/call`, `/admin`, event contract, mock engine, the `evaluate.py` port, the server STT fallback (`59d5a2c`, `f02fc21`, `ab1a78b`); ⏳ |
 | Ramazan | ⏳ | ⏳ |
 
 <!-- TODO(team): each member — role + 1–2 lines on what you built, with links to your commits. The rules require a personal, visible contribution from everyone. core-llm and its web integration (a39cbb4, a9e053b) and the backend prototypes on branches were committed by GitHub user heiphin7 — credit the right member. -->
