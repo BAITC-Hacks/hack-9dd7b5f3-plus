@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { CtaButton } from "./cta-button";
-import { DotText } from "./dot-text";
+import { DotMatrixText } from "./dot-matrix-text";
 
 export function Hero() {
   return (
     <section className="relative z-10 mx-auto w-full max-w-[1200px] px-5 pt-24 text-center sm:px-8 sm:pt-32">
       <h1 className="mx-auto max-w-[24ch] text-[46px] font-medium leading-[1.02] tracking-[-0.035em] text-ink sm:text-[72px] lg:text-[88px]">
-        Робот, который понимает<br className="hidden sm:block" /> <DotText>с первой фразы</DotText>
+        Робот, который понимает<br className="hidden sm:block" /> <DotMatrixText text="с первой фразы" />
       </h1>
       <p className="mx-auto mt-8 max-w-[44ch] text-lg leading-relaxed text-body sm:text-[21px]">
         Русский, казахский и смешанная речь. Сорок сценариев, выбор с объяснением, ответ за полторы секунды.

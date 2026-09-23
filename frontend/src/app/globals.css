@@ -391,3 +391,13 @@
 .page-wipe.is-on { transform: translate(-50%, -50%) scale(1); }
 @keyframes enterReveal { from { clip-path: circle(160% at 50% 50%); } to { clip-path: circle(0% at 50% 50%); } }
 .enter-reveal { position: fixed; inset: 0; z-index: 100; background: var(--brand); pointer-events: none; animation: enterReveal 0.65s cubic-bezier(0.785, 0.135, 0.15, 0.86) forwards; }
+
+/* ── Wave page transition: three sheets rise from the bottom (black, white, blue) and leave upwards ── */
+.wave-stack { position: fixed; inset: 0; z-index: 100; pointer-events: none; overflow: hidden; }
+.wave { position: absolute; left: 0; right: 0; top: 0; height: 130%; transform: translateY(112%); transition: transform 0.8s cubic-bezier(0.76, 0, 0.24, 1); will-change: transform; }
+.wave.in { transform: translateY(0); }
+.wave.out { transform: translateY(-118%); }
+.wave svg { position: absolute; left: -8%; top: 0; width: 116%; height: 13vh; display: block; transform: translateY(-98%); animation: waveRoll 1.6s linear infinite; }
+.wave-body { position: absolute; inset: 0; }
+@keyframes waveRoll { from { transform: translate(0, -98%); } to { transform: translate(-6.9%, -98%); } }
+@media (prefers-reduced-motion: reduce) { .wave { transition-duration: 0.01s; } .wave svg { animation: none; } }
