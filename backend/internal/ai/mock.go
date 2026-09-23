@@ -25,6 +25,9 @@ func (m *Mock) Route(ctx context.Context, in domain.RouteInput, _ func(domain.Ca
 	}
 	lower := strings.ToLower(in.Text)
 	if strings.Contains(lower, "оператор") || strings.Contains(lower, "адаммен") {
+		if _, ok := m.catalog.Find("SC37"); ok {
+			d.ScenarioID = "SC37"
+		}
 		d.Status = "handoff"
 		d.Reason = "Mock: клиент просит оператора."
 		return d, nil
@@ -59,6 +62,11 @@ func (m *Mock) Route(ctx context.Context, in domain.RouteInput, _ func(domain.Ca
 		d.ScenarioID = candidates[0].id
 		d.Confidence = 0.8
 		d.Reason = "Mock: детерминированное совпадение с каталогом. Для смыслового выбора включите LLM."
+	}
+	if d.Status == "clarify" {
+		if _, ok := m.catalog.Find("SYS_UNCLEAR"); ok {
+			d.ScenarioID = "SYS_UNCLEAR"
+		}
 	}
 	return d, nil
 }

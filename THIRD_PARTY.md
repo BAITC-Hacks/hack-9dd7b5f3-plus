@@ -26,8 +26,10 @@
 | Python 3 standard library | PSF License | https://docs.python.org/3/license.html | Evaluation and fixture generation scripts |
 | Synthetic catalog, text cases and audio scripts | Original Team Plus work under hackathon repo terms | backend/data/demo, samples, scripts | Demonstration data; not organizer data |
 
-Versions and all transitives are pinned by frontend/package-lock.json and backend/go.sum. UI is original CSS/components using Lucide; no shadcn/ObsidianUI or external templates were added. Organizer starter-kit datasets were not present and have not been represented as available. Any additional local/hosted LLM selected later must be disclosed here with its license/terms.
+Versions and all transitives are pinned by frontend/package-lock.json and backend/go.sum. UI is original CSS/components using Lucide; no shadcn/ObsidianUI or external templates were added. Organizer datasets are present under data/ and unchanged; source files were integrated after synchronizing main. Any additional local/hosted LLM selected later must be disclosed here with its license/terms.
 
 AI coding assistance during this implementation: OpenAI Codex. No AI authorship trailers added to git commits.
 
-| Organizer Voice Router / Saqta starter kit | HackAlem case usage terms (synthetic, supplied by organizers) | data/README.md | Original 40 scenarios, 3 system intents, facts, synthetic clients and reference evaluator; integration in progress |
+| Organizer Voice Router / Saqta starter kit | HackAlem case usage terms (synthetic, supplied by organizers) | data/README.md | Original 40 scenarios, 3 system intents, facts, synthetic clients and reference evaluator; runtime normalization, grounded answers and official evaluation export |
+
+Development formatting tool: Prettier 3.6.2 (MIT, https://prettier.io), run via npm exec; not a runtime dependency.

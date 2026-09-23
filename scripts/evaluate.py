@@ -78,7 +78,7 @@ def audio_input(base, file):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="http://localhost:8080")
-    parser.add_argument("--cases", type=Path, default=Path("samples/text_cases.json"))
+    parser.add_argument("--cases", type=Path, default=Path("data/dev_utterances.json"))
     parser.add_argument("--audio", action="store_true", help="Send actual audio bytes through STT, never fixture transcripts")
     parser.add_argument("--with-tts", action="store_true", help="Download reply PCM into WAV; measures TTS first byte, NOT audible end-to-end")
     parser.add_argument("--stream", action="store_true", help="Print live stage events")
@@ -86,9 +86,11 @@ def main(argv=None):
     parser.add_argument("--repeat", type=int, default=1)
     parser.add_argument("--min-accuracy", type=float, default=0)
     parser.add_argument("--output", type=Path, default=Path("reports/evaluation.json"))
+    parser.add_argument("--predictions", type=Path, help="Export original evaluate.py predictions (requires repeat=1)")
     parser.add_argument("--compare", type=Path, help="Compare to a prior report made on the same cases")
     args = parser.parse_args(argv)
     if args.repeat < 1 or not 0 <= args.min_accuracy <= 1: parser.error("repeat >= 1 and 0 <= min-accuracy <= 1 required")
+    if args.predictions and args.repeat != 1: parser.error("--predictions requires --repeat 1")
     health = request(args.base_url, "/healthz")
     if health["provider"] == "mock" and not args.allow_mock: parser.error("MOCK is not a model benchmark. Select a real LLM or explicitly use --allow-mock.")
     if args.audio and not health["speech_ready"]: parser.error("Audio evaluation requires SPEECH_PROVIDER=openai and OPENAI_API_KEY. Fixture transcripts are never substituted.")
@@ -97,8 +99,9 @@ def main(argv=None):
     args.output.parent.mkdir(parents=True, exist_ok=True)
     for repeat in range(args.repeat):
         for index, case in enumerate(cases):
-            item = {"id": case.get("id", index), "repeat": repeat, "expected": case.get("expected_scenario", case.get("scenario_id", case.get("expected"))), "expected_status": case.get("expected_status", "route")}
+            item = {"id": case.get("id", index), "repeat": repeat, "expected": case.get("expected_scenario", case.get("scenario_id", case.get("expected"))), "expected_status": case.get("expected_status")}
             try:
+                if not item["expected"] and not item["expected_status"]: raise ValueError("Case requires expected label(s) or expected_status")
                 session_id = ""
                 for history in case.get("history", []):
                     history_text = history if isinstance(history, str) else history["text"]
@@ -117,7 +120,10 @@ def main(argv=None):
                 result = route(args.base_url, text, session_id, "audio_file" if args.audio else "text", stt_ms, args.stream)
                 turn = result["turn"]
                 item.update({"transcript": text, "scenario": turn["decision"]["scenario_id"], "status": turn["decision"]["status"], "source": turn["source"], "routing_ms": turn["timing"]["routing_ms"], "stt_ms": stt_ms, "request_to_result_ms": (time.perf_counter() - start) * 1000, "turn": turn})
-                item["correct"] = turn["source"] != "provider_error" and item["status"] == item["expected_status"] and (item["expected"] in (None, "") or item["scenario"] == item["expected"])
+                expected = item["expected"] if isinstance(item["expected"], list) else [item["expected"]] if item["expected"] else []
+                item["predicted"] = list(dict.fromkeys(([item["scenario"]] if item["scenario"] else []) + turn["decision"]["pending"])) if turn["source"] != "provider_error" else []
+                item["correct"] = turn["source"] != "provider_error" and (not item["expected_status"] or item["status"] == item["expected_status"]) and (not expected or (bool(item["predicted"]) and item["predicted"][0] == expected[0]))
+                item["full_match"] = set(item["predicted"]) == set(expected) if expected else item["correct"]
                 if args.with_tts:
                     tts_start = time.perf_counter()
                     with request(args.base_url, f'/api/sessions/{result["session_id"]}/turns/{turn["id"]}/speech', stream=True) as response:
@@ -141,6 +147,10 @@ def main(argv=None):
         if baseline.get("cases_file") != report["cases_file"] or baseline.get("n") != report["n"]: raise ValueError("Comparison requires the same cases path and count")
         if baseline.get("benchmark_kind") != report["benchmark_kind"]: raise ValueError("Cannot compare mock, text, and audio benchmarks")
         report["comparison"] = {"accuracy_delta": accuracy - baseline["accuracy"], "routing_p95_delta_ms": report["routing_p95_ms"] - baseline["routing_p95_ms"] if report["routing_p95_ms"] is not None and baseline.get("routing_p95_ms") is not None else None}
+    if args.predictions:
+        args.predictions.parent.mkdir(parents=True, exist_ok=True)
+        args.predictions.write_text(json.dumps({str(r["id"]): r.get("predicted", []) for r in results}, ensure_ascii=False, indent=2)+"\n")
+    report["full_match"] = sum(r.get("full_match", False) for r in results) / len(results)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({k: v for k, v in report.items() if k not in ("results", "configuration")}, ensure_ascii=False, indent=2))
     return int(report["errors"] > 0 or accuracy < args.min_accuracy)

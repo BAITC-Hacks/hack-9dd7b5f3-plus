@@ -2,7 +2,7 @@
 
 **HackAlem AI · Halyk Bank · кейс Voice Router.** Голосовой симулятор страхового контакт-центра: клиент говорит по-русски или по-казахски, LLM выбирает сценарий с учётом контекста, супервизор видит причину, альтернативы и время по этапам.
 
-> Статус: рабочий стенд со встроенным **синтетическим каталогом из 12 сценариев**. Официальные `scenarios.json` (40), `evaluate.py` и остальные файлы стартового кита не были найдены в исходном checkout. Качество на проверке жюри и достижение 500/1500 мс **не заявлены**. Mock — тест инфраструктуры, не результат LLM. Deployed-ссылка пока отсутствует.
+> Статус: реализован стенд на официальном наборе **Saqta Insurance: 40 сценариев + 3 системных намерения**, 104 dev-реплики и исходный оценщик в `data/`. Автотесты и Docker-путь проверяются без ключей. Точность настоящей модели и достижение 500/1500 мс **не заявлены до запуска с API-ключом**. Mock — тест инфраструктуры. Deployed-ссылка пока отсутствует.
 
 ## Что реализовано
 
@@ -103,8 +103,8 @@ NVIDIA: `LLM_PROVIDER=nvidia`, `NVIDIA_API_KEY`, `NVIDIA_MODEL`. Если endpoi
 | REALTIME_MODEL | gpt-live-transcribe; клиентский VAD и manual commit |
 | CORS_ORIGINS | http://localhost:3000; список через запятую |
 | NEXT_PUBLIC_API_URL | http://localhost:8080; фиксируется при сборке frontend |
-| DATA_PATH | ./backend/data/demo; путь на хосте для Compose mount |
-| DATA_DIR | data/demo; путь для native Go; Compose задаёт /app/data |
+| DATA_PATH | ./data; путь на хосте для Compose mount |
+| DATA_DIR | ../data; путь для native Go; Compose задаёт /app/data |
 | DATABASE_URL | native: пусто → память; Compose: postgres://plus:plus@db:5432/plus?sslmode=disable |
 | PORT | native backend 8080 |
 | API_PORT / WEB_PORT | порты хоста Compose: 8080 / 3000 |
@@ -141,11 +141,11 @@ python3 scripts/evaluate.py --audio --cases samples/audio_cases.json \
 
 ```bash
 # Настоящий LLM, текстовые случаи. Достаточно LLM ключа, speech API не нужен.
-python3 scripts/evaluate.py --cases samples/text_cases.json --repeat 3 --output reports/llm.json
+python3 scripts/evaluate.py --cases data/dev_utterances.json --repeat 3 --output reports/llm.json
 # Инфраструктура без ключа; низкая точность mock ожидаема и не скрывается.
-python3 scripts/evaluate.py --allow-mock --cases samples/text_cases.json --output reports/mock.json
+python3 scripts/evaluate.py --allow-mock --cases data/dev_utterances.json --output reports/mock.json
 # Сравнение после изменения модели/промпта на том же наборе и числе прогонов.
-python3 scripts/evaluate.py --cases samples/text_cases.json --repeat 3 \
+python3 scripts/evaluate.py --cases data/dev_utterances.json --repeat 3 \
   --compare reports/llm.json --output reports/candidate.json
 # Автотесты без ключей:
 (cd backend && go test -race ./... && go vet ./...)
@@ -153,7 +153,15 @@ python3 scripts/evaluate.py --cases samples/text_cases.json --repeat 3 \
 python3 -m unittest discover -s scripts -p 'test_*.py'
 ```
 
-Критерий CI можно задать `--min-accuracy 0.9`. Ошибки провайдера не засчитываются как правильный handoff. API-ошибки/неуспех порога дают ненулевой exit code. Mock-бенчмарк требует явный `--allow-mock` и помечается отдельно. `evaluate.py` организаторов не заменён: его не было в checkout. Для точного baseline-сравнения нужен исходный скрипт.
+Критерий CI можно задать `--min-accuracy 0.9`. Ошибки провайдера не засчитываются как правильный handoff. API-ошибки/неуспех порога дают ненулевой exit code. Mock-бенчмарк требует явный `--allow-mock` и помечается отдельно. Оригинальный `data/evaluate.py` сохранён без изменений. Это оценщик predictions, а не модель baseline. Экспорт и официальный подсчёт:
+
+```bash
+python3 scripts/evaluate.py --cases data/dev_utterances.json \
+  --predictions reports/predictions.json --output reports/official.json
+python3 data/evaluate.py reports/predictions.json data/dev_utterances.json
+```
+
+104 реплики оцениваются по primary accuracy, full match и multi-intent recall; текущие дополнительные намерения экспортируются после главного. Исторические прерванные темы не примешиваются к текущему ответу. Для сравнения с другой реализацией нужен её файл predictions.
 
 Повторная генерация аудио на macOS (не обязательна): `python3 scripts/make_samples.py`; требуется `say` с Milena и `ffmpeg`.
 
@@ -166,29 +174,29 @@ curl -N http://localhost:8080/api/turns/stream -H 'Content-Type: application/jso
 curl http://localhost:8080/api/stats
 ```
 
-## Данные, интеграции и подключение стартового кита
+## Данные и интеграции
 
-Встроенный набор написан для этого проекта; это не реальные клиенты и не проверочные реплики жюри. В `backend/data/demo` — scenarios, knowledge_base, mock_backend. Маршрутизатор работает только с каталогом и историей, не читает test manifests. Никакого хардкода скрытых проверочных реплик.
+Оригинальный стартовый кит находится в `data/` и не изменяется. Все клиенты, телефоны, полисы, адреса и условия в нём синтетические. **Дата среза — 2026-10-01**, именно она используется для проверки срока полиса. Каталог: 40 SCxx и 3 SYS_*; эталоны: 104 реплики и 10 диалогов. Приложение загружает только сценарии, слоты, knowledge_base и mock_backend; dev_utterances и разметку диалогов маршрутизатор не читает.
 
-Когда стартовый кит доступен:
+Backend нормализует оригинальные `scenario_id`, `not_this_if`, `priority`, RU/KK examples и responses, не меняя ID. LLM видит компактный каталог (без длинных ответных шаблонов) и историю. У `urgent` приоритет выше остальных намерений. Отдельно хранится стек прерванных тем. Слоты валидируются; при нехватке данных задаётся вопрос из `slots.json`.
 
-1. Сохраните исходные файлы в отдельной папке внутри этого репозитория, например `backend/data/official`.
-2. Проверьте форму scenarios по [SPEC](docs/SPEC.md). ID всех 40 сценариев должны остаться исходными. При неизвестной форме загрузчик завершится с ошибкой, а не молча подменит данные.
-3. Добавьте проверенные `response_ru/response_kk` из facts/примеров стартового кита. Без них загрузчик использует нейтральный уточняющий ответ, а не выдумывает условия страхования. Укажите опасные сценарии `requires_confirmation=true`.
-4. Поставьте `DATA_PATH=./backend/data/official` в `.env`; перезапустите backend. Для native: `DATA_DIR=data/official`.
-5. Добавьте происхождение/условия использования в THIRD_PARTY.md. Прогоните официальный evaluate.py согласно его README; наш скрипт принимает список либо `{cases:[...]}` / `{utterances:[...]}`, поля text/utterance, expected_scenario/scenario_id, history.
+Ответы основаны на opening-шаблонах; есть read-only lookup офиса/клиник по городу, статуса заявления, срока полиса и способов оплаты. Панель показывает конкретную запись-источник. Закрывающие шаблоны с выдуманным «SMS отправлено»/«полис оформлен» не используются. Мутации отключены, заполненные параметры дают только подтверждение подготовки обращения.
+
+Compose монтирует `./data`. Native Go из `backend/` использует `../data`. Для Railway backend context содержит проверенную копию **только runtime-файлов** в `backend/data/official` с SHA256; обновить её можно `python3 scripts/sync_data.py`. Разметка и оценщик туда не копируются. При сборке из /backend DATA_DIR по умолчанию `/app/data/official`.
+
+Независимый маленький каталог разработки сохранён в `backend/data/demo`: включается явно `DATA_PATH=./backend/data/demo`; он не предназначен для официальных аудио/текстовых manifests. Собственные перефразированные регрессии: `samples/text_cases.json`.
 
 Официальные API-справочники: [structured output](https://developers.openai.com/api/docs/guides/structured-outputs), [file STT](https://developers.openai.com/api/docs/guides/speech-to-text), [Realtime transcription](https://developers.openai.com/api/docs/guides/realtime-transcription), [WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=realtime), [streaming TTS](https://developers.openai.com/api/docs/guides/text-to-speech).
 
 ## Ограничения и измерения
 
-- Нет официального кита и доступа к настоящей модели в этой проверке: нельзя утверждать точность на 40 сценариях или улучшение baseline. Синтетические tests — только регрессии/инфраструктура.
+- Нет API-ключа для проверки настоящих LLM/STT/TTS: нельзя утверждать точность на 40 сценариях, улучшение baseline или качество живой казахской речи. Локальные tests используют mock HTTP-провайдеры.
 - 500 мс / 1,5 с — отображаемые цели; сеть, объём каталога, output tokens, VAD и провайдер влияют на результат. UI показывает превышение; p50/p95 mock исключены.
 - Самооценка confidence не калибрована. Короткое объяснение не является доказательством правильности; проверяйте по размеченным данным.
 - Шумный микрофон может преждевременно завершить речь или не обнаружить паузу. У VAD фиксированный порог. Максимум 30 секунд записи / 10 реплик.
 - Только одна backend-реплика; для нескольких нужны распределённые блокировки. Native memory store теряет историю после рестарта. PostgreSQL UI-метрики смотрят последние 100 сессий.
 - Редактор каталога, телефония, операторский helpdesk, реальные платежи и авторизация не реализованы. Это стенд для синтетических данных, не публичный production контакт-центр.
-- Нет автоматической проверки личности и запросов реального статуса заявления. Ответы шаблонные и могут попросить уточнение; реальные мутации отключены.
+- Нет автоматической проверки личности и доступа к реальной страховой системе. Read-only ответы берутся из организаторских синтетических records; остальные сценарии собирают параметры. Реальные мутации отключены.
 
 ## Railway и воспроизводимость
 

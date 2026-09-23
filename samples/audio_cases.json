@@ -1,19 +1,19 @@
 {
-  "source": "synthetic_demo",
+  "source": "synthetic_audio_for_official_catalog",
   "voice": "macOS Milena; Russian only",
   "cases": [
     {
       "id": "payment_ru",
       "file": "../frontend/public/samples/01-payment.wav",
       "transcript": "Здравствуйте. Я оплатил страховку. Деньги списались, а полиса нет.",
-      "expected_scenario": "payment_failed",
+      "expected_scenario": "SC30",
       "history": []
     },
     {
       "id": "topic_switch_ru",
       "file": "../frontend/public/samples/02-topic-switch.wav",
       "transcript": "А теперь другой вопрос. Где находится ваш офис и когда он работает?",
-      "expected_scenario": "office",
+      "expected_scenario": "SC33",
       "history": [
         "Я оплатил страховку. Деньги списались, а полиса нет."
       ]
@@ -22,7 +22,7 @@
       "id": "return_topic_ru",
       "file": "../frontend/public/samples/03-return-topic.wav",
       "transcript": "Вернёмся к полису. Хочу продлить страховку, которая заканчивается завтра.",
-      "expected_scenario": "renew_policy",
+      "expected_scenario": "SC27",
       "history": [
         "Хочу продлить действующий полис",
         "Где находится ваш офис?"

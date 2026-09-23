@@ -117,10 +117,10 @@ func (s *Server) lock(id string) *sync.Mutex {
 	return &s.locks[h.Sum32()%256]
 }
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
-	write(w, 200, map[string]any{"status": "ok", "provider": s.Router.Name(), "model": s.Router.Model(), "speech_provider": ai.Env("SPEECH_PROVIDER", "browser"), "speech_ready": s.Speech.Enabled && s.Speech.Key != "", "realtime_model": s.Speech.RealtimeModel, "catalog_source": s.Catalog.Source, "catalog_count": len(s.Catalog.Scenarios), "catalog_hash": s.Catalog.Hash, "storage": s.DBMode, "max_turns": 10})
+	write(w, 200, map[string]any{"status": "ok", "provider": s.Router.Name(), "model": s.Router.Model(), "speech_provider": ai.Env("SPEECH_PROVIDER", "browser"), "speech_ready": s.Speech.Enabled && s.Speech.Key != "", "realtime_model": s.Speech.RealtimeModel, "catalog_source": s.Catalog.Source, "catalog_count": s.Catalog.BusinessCount, "system_count": s.Catalog.SystemCount, "catalog_hash": s.Catalog.Hash, "storage": s.DBMode, "max_turns": 10})
 }
 func (s *Server) newSession(ctx context.Context) (*domain.Session, error) {
-	v := &domain.Session{ID: id(), Turns: []domain.Turn{}, Pending: []string{}, CreatedAt: time.Now().UTC()}
+	v := &domain.Session{CatalogHash: s.Catalog.Hash, ID: id(), Turns: []domain.Turn{}, Pending: []string{}, CreatedAt: time.Now().UTC()}
 	return v, s.Store.Save(ctx, v)
 }
 func (s *Server) create(w http.ResponseWriter, r *http.Request) {
@@ -196,6 +196,10 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, stream bool) {
 		}
 		return
 	}
+	if session.CatalogHash != "" && session.CatalogHash != s.Catalog.Hash {
+		fail(w, 409, "catalog changed; start a new session")
+		return
+	}
 	if len(session.Turns) >= 10 {
 		fail(w, 409, "10-turn limit reached; start a new session")
 		return
@@ -215,7 +219,7 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, stream bool) {
 		w.WriteHeader(200)
 	}
 	emit("input", map[string]any{"text": in.Text, "session_id": session.ID, "active": session.Active, "pending": session.Pending})
-	emit("routing_started", map[string]any{"provider": s.Router.Name(), "model": s.Router.Model(), "catalog_count": len(s.Catalog.Scenarios), "catalog_hash": s.Catalog.Hash, "history_turns": len(session.Turns)})
+	emit("routing_started", map[string]any{"provider": s.Router.Name(), "model": s.Router.Model(), "catalog_count": s.Catalog.BusinessCount, "system_count": s.Catalog.SystemCount, "catalog_hash": s.Catalog.Hash, "history_turns": len(session.Turns)})
 	calls := []domain.Call{}
 	routeStart := time.Now()
 	d, err := s.Router.Route(r.Context(), domain.RouteInput{Text: in.Text, History: session.Turns, Active: session.Active, Pending: session.Pending}, func(call domain.Call) { calls = append(calls, call); emit("llm_attempt", call) })
@@ -242,17 +246,18 @@ func (s *Server) route(w http.ResponseWriter, r *http.Request, stream bool) {
 		d.Status = "handoff"
 		d.Reason = "Повторное непонимание: требуется оператор."
 	}
-	reply, policyWarnings := s.Catalog.Reply(&d)
+	reply, policyWarnings, evidence := s.Catalog.Answer(&d, session.Turns)
 	warnings = append(warnings, policyWarnings...)
-	turn := domain.Turn{ID: id(), Text: in.Text, Reply: reply, Decision: d, PreviousScenario: session.Active, TopicChanged: d.Status == "route" && session.Active != "" && session.Active != d.ScenarioID, Source: source, Calls: calls, Warnings: warnings, CreatedAt: time.Now().UTC(), Timing: domain.Timing{RoutingMS: routingMS, PolicyMS: ms(policyStart), STTMS: in.STTMS, InputKind: in.InputKind}}
+	turn := domain.Turn{Evidence: evidence, ID: id(), Text: in.Text, Reply: reply, Decision: d, PreviousScenario: session.Active, TopicChanged: d.Status == "route" && session.Active != "" && session.Active != d.ScenarioID, Source: source, Calls: calls, Warnings: warnings, CreatedAt: time.Now().UTC(), Timing: domain.Timing{RoutingMS: routingMS, PolicyMS: ms(policyStart), STTMS: in.STTMS, InputKind: in.InputKind}}
 	if scenario, ok := s.Catalog.Find(d.ScenarioID); ok {
 		turn.ScenarioName = scenario.Name
 	}
-	if d.Status == "route" {
+	session.Pending = domain.PendingTopics(session.Active, session.Pending, d)
+	if d.Status == "route" && !strings.HasPrefix(d.ScenarioID, "SYS_") {
 		session.Active = d.ScenarioID
 	}
-	session.Pending = d.Pending
-	emit("policy", map[string]any{"status": d.Status, "reply": reply, "warnings": warnings, "topic_changed": turn.TopicChanged})
+	turn.PendingTopics = session.Pending
+	emit("policy", map[string]any{"status": d.Status, "reply": reply, "warnings": warnings, "topic_changed": turn.TopicChanged, "evidence": evidence, "pending_topics": session.Pending})
 	turn.Timing.ServerMS = ms(started)
 	session.Turns = append(session.Turns, turn)
 	if e = s.Store.Save(r.Context(), session); e != nil {
@@ -439,7 +444,7 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, map[string]any{"source_counts": counts, "routing_n": len(routing), "routing_p50_ms": percentile(routing, .5), "routing_p95_ms": percentile(routing, .95), "audio_n": len(audio), "end_to_audio_p50_ms": percentile(audio, .5), "end_to_audio_p95_ms": percentile(audio, .95), "note": "Mock excluded. Client audio timings are telemetry, not an independent benchmark. Latest 100 sessions with PostgreSQL."})
 }
 func Run() error {
-	catalog, e := domain.LoadCatalog(ai.Env("DATA_DIR", "data/demo"))
+	catalog, e := domain.LoadCatalog(ai.Env("DATA_DIR", "../data"))
 	if e != nil {
 		return fmt.Errorf("load catalog: %w", e)
 	}

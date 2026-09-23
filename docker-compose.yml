@@ -36,7 +36,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       DATA_DIR: /app/data
     volumes:
-      - ${DATA_PATH:-./backend/data/demo}:/app/data:ro
+      - ${DATA_PATH:-./data}:/app/data:ro
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:

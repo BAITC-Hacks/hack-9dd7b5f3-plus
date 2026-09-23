@@ -10,13 +10,24 @@ import (
 	"strings"
 )
 
+type SlotDefinition struct {
+	Name    string            `json:"name"`
+	Type    string            `json:"type"`
+	Pattern string            `json:"pattern"`
+	Values  []any             `json:"values"`
+	Prompt  map[string]string `json:"prompt"`
+}
 type Catalog struct {
-	Scenarios []Scenario      `json:"scenarios"`
-	Source    string          `json:"source"`
-	Hash      string          `json:"hash"`
-	Raw       json.RawMessage `json:"-"`
-	Knowledge json.RawMessage `json:"-"`
-	Customers json.RawMessage `json:"-"`
+	Scenarios     []Scenario                `json:"scenarios"`
+	Source        string                    `json:"source"`
+	Hash          string                    `json:"hash"`
+	BusinessCount int                       `json:"business_count"`
+	SystemCount   int                       `json:"system_count"`
+	Raw           json.RawMessage           `json:"-"`
+	Knowledge     json.RawMessage           `json:"-"`
+	Customers     json.RawMessage           `json:"-"`
+	Slots         map[string]SlotDefinition `json:"-"`
+	AsOf          string                    `json:"as_of_date"`
 }
 
 func LoadCatalog(dir string) (*Catalog, error) {
@@ -25,37 +36,76 @@ func LoadCatalog(dir string) (*Catalog, error) {
 		return nil, err
 	}
 	var rows []map[string]any
+	var envelope struct {
+		Scenarios []map[string]any `json:"scenarios"`
+		System    []map[string]any `json:"system_intents"`
+		Meta      struct {
+			Dataset string `json:"dataset"`
+			AsOf    string `json:"as_of_date"`
+		} `json:"meta"`
+	}
 	if err = json.Unmarshal(b, &rows); err != nil {
-		var envelope struct {
-			Scenarios []map[string]any `json:"scenarios"`
-		}
 		if err = json.Unmarshal(b, &envelope); err != nil {
 			return nil, err
 		}
 		rows = envelope.Scenarios
 	}
 	if len(rows) == 0 || len(rows) > 200 {
-		return nil, fmt.Errorf("catalog must contain 1..200 scenarios")
+		return nil, fmt.Errorf("catalog must contain 1..200 business scenarios")
 	}
-	c := &Catalog{Raw: b, Source: "external", Scenarios: []Scenario{}}
+	c := &Catalog{Source: "external", Scenarios: []Scenario{}, BusinessCount: len(rows), SystemCount: len(envelope.System), Slots: map[string]SlotDefinition{}, AsOf: envelope.Meta.AsOf}
+	if envelope.Meta.Dataset == "Voice Router - Saqta Insurance" && len(rows) == 40 {
+		c.Source = "organizer_saqta"
+	}
 	if _, err := os.Stat(filepath.Join(dir, "SYNTHETIC_DEMO")); err == nil {
 		c.Source = "synthetic_demo"
 	}
 	sum := sha256.Sum256(b)
 	c.Hash = hex.EncodeToString(sum[:])[:16]
 	seen := map[string]bool{}
-	for _, row := range rows {
-		encoded, _ := json.Marshal(row)
-		var s Scenario
-		_ = json.Unmarshal(encoded, &s)
-		s.ID = firstString(row, "id", "scenario_id", "code")
-		s.Name = firstString(row, "name", "title", "name_ru")
-		s.Description = firstString(row, "description", "purpose", "description_ru")
+	businessCount := len(rows)
+	rows = append(rows, envelope.System...)
+	compact := []map[string]any{}
+	for i, row := range rows {
+		s := Scenario{ID: firstString(row, "id", "scenario_id", "code"), Name: firstString(row, "name", "title", "name_ru"), Description: firstString(row, "description", "purpose", "description_ru"), Raw: row, System: i >= businessCount, Slug: firstString(row, "slug"), Priority: firstString(row, "priority"), Boundaries: firstString(row, "boundaries"), ResponseRU: firstString(row, "response_ru"), ResponseKK: firstString(row, "response_kk")}
+		if s.System {
+			s.Name = s.ID
+		}
 		if s.ID == "" || s.Name == "" || seen[s.ID] {
 			return nil, fmt.Errorf("each scenario needs a unique string id/scenario_id and name/title; invalid %q", s.ID)
 		}
 		seen[s.ID] = true
-		s.Raw = row
+		s.RequiresConfirmation, _ = row["requires_confirmation"].(bool)
+		s.Actions = stringsArray(row["actions"])
+		s.RequiredSlots = stringsArray(row["required_slots"])
+		if slots, ok := row["slots"].(map[string]any); ok {
+			s.RequiredSlots = stringsArray(slots["required"])
+		}
+		if examples, ok := row["examples"].(map[string]any); ok {
+			s.Examples = append(stringsArray(examples["ru"]), stringsArray(examples["kk"])...)
+		} else {
+			s.Examples = stringsArray(row["examples"])
+		}
+		if boundaries, ok := row["not_this_if"].([]any); ok {
+			parts := []string{}
+			for _, entry := range boundaries {
+				if m, ok := entry.(map[string]any); ok {
+					parts = append(parts, firstString(m, "condition")+" → "+firstString(m, "use_instead"))
+				}
+			}
+			s.Boundaries = strings.Join(parts, "; ")
+		}
+		if responses, ok := row["responses"].(map[string]any); ok {
+			for lang, target := range map[string]*string{"ru": &s.ResponseRU, "kk": &s.ResponseKK} {
+				if local, ok := responses[lang].(map[string]any); ok {
+					*target = firstString(local, "opening")
+				}
+			}
+		}
+		if responses, ok := row["response"].(map[string]any); ok {
+			s.ResponseRU = firstString(responses, "ru")
+			s.ResponseKK = firstString(responses, "kk")
+		}
 		if s.ResponseRU == "" {
 			s.ResponseRU = "Я помогу с вопросом «" + s.Name + "». Уточните, пожалуйста, детали обращения."
 		}
@@ -63,7 +113,9 @@ func LoadCatalog(dir string) (*Catalog, error) {
 			s.ResponseKK = "Осы мәселе бойынша көмектесемін. Өтінішіңіздің мәліметтерін нақтылаңыз."
 		}
 		c.Scenarios = append(c.Scenarios, s)
+		compact = append(compact, map[string]any{"id": s.ID, "name": s.Name, "description": s.Description, "boundaries": s.Boundaries, "priority": s.Priority, "slots": row["slots"], "examples": s.Examples, "system_behavior": row["behavior"]})
 	}
+	c.Raw, _ = json.Marshal(map[string]any{"as_of_date": c.AsOf, "scenarios": compact})
 	for name, target := range map[string]*json.RawMessage{"knowledge_base.json": &c.Knowledge, "mock_backend.json": &c.Customers} {
 		data, e := os.ReadFile(filepath.Join(dir, name))
 		if os.IsNotExist(e) {
@@ -78,8 +130,33 @@ func LoadCatalog(dir string) (*Catalog, error) {
 		}
 		*target = data
 	}
+	if data, e := os.ReadFile(filepath.Join(dir, "slots.json")); e == nil {
+		var defs struct {
+			Slots []SlotDefinition `json:"slots"`
+		}
+		if e = json.Unmarshal(data, &defs); e != nil {
+			return nil, e
+		}
+		for _, d := range defs.Slots {
+			c.Slots[d.Name] = d
+		}
+	} else if !os.IsNotExist(e) {
+		return nil, e
+	}
 	return c, nil
 }
+func stringsArray(v any) []string {
+	out := []string{}
+	if a, ok := v.([]any); ok {
+		for _, x := range a {
+			if s, ok := x.(string); ok {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
+}
+
 func firstString(m map[string]any, keys ...string) string {
 	for _, k := range keys {
 		if s, ok := m[k].(string); ok && strings.TrimSpace(s) != "" {
@@ -137,6 +214,12 @@ func (c *Catalog) Validate(d Decision) error {
 // Reply is grounded in curated catalog data. No LLM can claim an executed operation.
 func (c *Catalog) Reply(d *Decision) (string, []string) {
 	warnings := []string{}
+	if d.ScenarioID == "SYS_UNCLEAR" {
+		d.Status = "clarify"
+	}
+	if d.ScenarioID == "SC37" && c.Source == "organizer_saqta" {
+		d.Status = "handoff"
+	}
 	kk := d.Language == "kk"
 	if d.Status == "route" && d.Confidence < 0.70 {
 		d.Status = "clarify"

@@ -10,6 +10,6 @@ WORKDIR /app
 COPY --from=build /out/api /app/api
 COPY data /app/data
 USER app
-ENV PORT=8080 DATA_DIR=/app/data/demo
+ENV PORT=8080 DATA_DIR=/app/data/official
 EXPOSE 8080
 CMD ["/app/api"]

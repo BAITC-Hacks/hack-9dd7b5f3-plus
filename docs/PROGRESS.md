@@ -26,3 +26,11 @@
 - Added Compose/Dockerfiles, three synthetic Russian WAV files, text/audio evaluation tooling and startup/test documentation.
 - Verified: Go race tests; Python evaluation utility tests; frontend lint and production build; Docker Compose builds and starts PostgreSQL/backend/frontend.
 - Pending live checks: browser walkthrough, persistence restart, clean checkout verification. External blockers: official starter kit/evaluate.py and API credentials not supplied; no real-model accuracy/latency or cloud deployment claims.
+
+## 2026-09-23 · Official data integration and verification
+
+- Synchronized main: discovered the organizer kit newly committed under data/. Preserved all original data and archived the earlier PRD/SPEC proposals under docs/design/earlier-*-proposal.md while recording the implemented contract in SPEC.
+- Integrated all 40 SCxx + 3 SYS_* entries, bilingual templates, boundaries, priorities and slots. Added read-only facts with source evidence and separate interrupted-topic/current-multi-intent tracking.
+- Official evaluator consumes exported predictions; confirmed all 104 records are processed. Mock primary accuracy 0.577 is explicitly an infrastructure check, not an LLM benchmark.
+- Verified browser flow, Docker deployment, sample WAV serving and PostgreSQL persistence across backend restart. Go race/vet, frontend lint/build and Python tests pass. Details in docs/VALIDATION.md.
+- No API keys available for real model/speech validation, no Railway configuration. Remaining external verification is clearly documented, with exact commands.

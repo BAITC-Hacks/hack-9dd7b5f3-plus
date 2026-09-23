@@ -3,6 +3,11 @@ package domain
 import "time"
 
 type Scenario struct {
+	Slug     string   `json:"slug"`
+	Priority string   `json:"priority"`
+	System   bool     `json:"system"`
+	Actions  []string `json:"actions"`
+
 	ID                   string         `json:"id"`
 	Name                 string         `json:"name"`
 	Description          string         `json:"description"`
@@ -53,25 +58,28 @@ type Timing struct {
 	InputKind      string   `json:"input_kind"`
 }
 type Turn struct {
-	ID               string    `json:"id"`
-	Text             string    `json:"text"`
-	Reply            string    `json:"reply"`
-	Decision         Decision  `json:"decision"`
-	ScenarioName     string    `json:"scenario_name"`
-	PreviousScenario string    `json:"previous_scenario"`
-	TopicChanged     bool      `json:"topic_changed"`
-	Source           string    `json:"source"`
-	Calls            []Call    `json:"calls"`
-	Timing           Timing    `json:"timing"`
-	Warnings         []string  `json:"warnings"`
-	CreatedAt        time.Time `json:"created_at"`
+	PendingTopics    []string   `json:"pending_topics"`
+	Evidence         []Evidence `json:"evidence"`
+	ID               string     `json:"id"`
+	Text             string     `json:"text"`
+	Reply            string     `json:"reply"`
+	Decision         Decision   `json:"decision"`
+	ScenarioName     string     `json:"scenario_name"`
+	PreviousScenario string     `json:"previous_scenario"`
+	TopicChanged     bool       `json:"topic_changed"`
+	Source           string     `json:"source"`
+	Calls            []Call     `json:"calls"`
+	Timing           Timing     `json:"timing"`
+	Warnings         []string   `json:"warnings"`
+	CreatedAt        time.Time  `json:"created_at"`
 }
 type Session struct {
-	ID        string    `json:"id"`
-	Turns     []Turn    `json:"turns"`
-	Active    string    `json:"active"`
-	Pending   []string  `json:"pending"`
-	CreatedAt time.Time `json:"created_at"`
+	CatalogHash string    `json:"catalog_hash"`
+	ID          string    `json:"id"`
+	Turns       []Turn    `json:"turns"`
+	Active      string    `json:"active"`
+	Pending     []string  `json:"pending"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 type RouteInput struct {
 	Text    string   `json:"text"`
