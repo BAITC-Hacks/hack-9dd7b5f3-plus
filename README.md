@@ -1304,3 +1304,13 @@ Photos from the day are at the [top of this README](#from-the-hackathon-floor).
 - [ ] [docs/PROGRESS.md](docs/PROGRESS.md) filled for 16:00–18:00
 - [ ] README language decided — the organizers' prompt asks for Russian ([README_PROMPT.md](docs/hackathon/README_PROMPT.md))
 - [ ] The captain pressed «Сдать решение» on the platform — pushing is not submitting
+
+### Service discovery and uncertainty recovery
+
+`SYS_HELP` / `status: help` / policy action `help` handles general questions about available services
+(e.g. «А что ещё доступно?» / «Тағы қандай қызметтер бар?»). The agent offers a concise RU/KK menu
+from supported insurance services and asks what the caller needs. Specific product questions keep their scenario.
+An explicit help request resets the unclear-turn counter and preserves pending slots/confirmations and the queue.
+Two or more unclear turns now offer service options instead of automatically executing an operator transfer.
+Explicit SC37 requests and scenario-required transfers still work; confirmation requirements are unchanged.
+Verification: noisy utterance → clarification → «А что ещё доступно?» → menu → «Хочу продлить полис» → SC27.

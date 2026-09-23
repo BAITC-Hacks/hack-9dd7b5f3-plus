@@ -31,7 +31,7 @@ DEFAULT_MODEL = "google/gemini-2.5-flash-lite"
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 URGENT = ("SC11", "SC15", "SC38")
 
-PAIR_RE = re.compile(r"(SC\s?\d{1,2}|SYS_OUT_OF_SCOPE|SYS_UNCLEAR|SYS_GOODBYE|SYS_GREETING)\s*[:=]\s*(\d{1,3})", re.I)
+PAIR_RE = re.compile(r"(SC\s?\d{1,2}|SYS_OUT_OF_SCOPE|SYS_UNCLEAR|SYS_GOODBYE|SYS_GREETING|SYS_HELP)\s*[:=]\s*(\d{1,3})", re.I)
 INDEX_LINE_RE = re.compile(r"^(SC\d{2}|SYS_[A-Z_]+)\s*\|\s*([^|]+?)\s*\|")
 
 
@@ -269,6 +269,8 @@ class Router:
             status, intents = "clarify", [primary]
         elif pid == "SYS_OUT_OF_SCOPE":
             status, intents = "out_of_scope", [primary]
+        elif pid == "SYS_HELP":
+            status, intents = "help", [primary]
         elif pid == "SYS_GREETING":
             status, intents = "greeting", [primary]
         elif pid == "SYS_GOODBYE":

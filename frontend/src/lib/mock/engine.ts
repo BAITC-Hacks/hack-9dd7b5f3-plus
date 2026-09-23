@@ -7,7 +7,6 @@
  */
 import {
   AS_OF_DATE,
-  CONFIDENCE_CLARIFY,
   CONFIDENCE_RUN,
   type ActionCall,
   type Candidate,
@@ -116,7 +115,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
     const isId = ID_SLOTS.has(state.awaiting.slot);
     const contentWords = splitParts(text).join(" ").split(/\s+/).length;
     const looksLikeNewIntent = !isId && top && !isSystemIntent(top.scenario_id) && top.confidence >= 0.85 && top.scenario_id !== state.active_scenario && contentWords >= 4;
-    if (decision.route_status !== "greeting" && parsed !== null && !looksLikeNewIntent && (!input.route || (decision.route_status === "route" && top?.scenario_id === state.active_scenario))) {
+    if (decision.route_status !== "greeting" && decision.route_status !== "help" && parsed !== null && !looksLikeNewIntent && (!input.route || (decision.route_status === "route" && top?.scenario_id === state.active_scenario))) {
       decision = {
         ...decision,
         is_continuation: true,
@@ -162,7 +161,9 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
   const mergedSlots = { ...decision.slots };
   for (const [k, v] of Object.entries(mergedSlots)) if (v !== undefined && v !== null && v !== "") state.slots[k] = v;
 
-  if (verdict.action === "greeting") {
+  if (verdict.action === "help") {
+    text_out = systemIntentById("SYS_HELP")!.response[lang];
+  } else if (verdict.action === "greeting") {
     text_out = responseLang === "en" ? "Hello, how can I help you?" : systemIntentById("SYS_GREETING")!.response[lang];
   } else if (verdict.action === "goodbye") {
     text_out = systemIntentById("SYS_GOODBYE")!.response[lang];
@@ -174,7 +175,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
   } else if (verdict.action === "clarify") {
     const opts = clarifyOptions(decision, lang);
     text_out = systemIntentById("SYS_UNCLEAR")!.response[lang].replace("{option_a}", opts[0]).replace("{option_b}", opts[1]);
-    state.awaiting = null;
+    // Preserve pending data/confirmation: uncertainty is not a cancellation.
   } else if (verdict.action === "handoff" && !verdict.scenario_id) {
     const summary = summaryFor(state, lang);
     const call = runAction("transfer_to_operator", { queue: verdict.queue ?? "operator_general", summary, __mode: "execute" });
@@ -287,30 +288,24 @@ function pickReplyLanguage(state: DialogState, text: string): ReplyLang {
 function decide(state: DialogState, d: RouterDecision, kind: "route" | "yes" | "no" | "goodbye"): PolicyVerdict {
   const top = d.scenarios[0];
   const base = { stack: state.stack, low_conf_streak: state.low_conf_streak };
+  if (d.route_status === "help" || top?.scenario_id === "SYS_HELP") {
+    state.low_conf_streak = 0;
+    return { action: "help", scenario_id: "SYS_HELP", reason: d.reason, ...base, low_conf_streak: 0 };
+  }
   if (d.route_status === "greeting" || top?.scenario_id === "SYS_GREETING") return { action: "greeting", scenario_id: "SYS_GREETING", reason: d.reason, ...base };
   if (kind === "goodbye" || d.route_status === "goodbye") return { action: "goodbye", scenario_id: "SYS_GOODBYE", reason: "client ends the call", ...base };
   if (kind === "yes" || kind === "no") return { action: "continue", scenario_id: state.active_scenario, reason: kind === "yes" ? "confirmation received → execute" : "client declined → cancel preview", ...base };
-  if (!top) return { action: "clarify", scenario_id: null, reason: "no candidates", ...base };
-  if (top.scenario_id === "SYS_OUT_OF_SCOPE") return { action: "out_of_scope", scenario_id: null, reason: d.reason, ...base };
-  if (top.scenario_id === "SYS_UNCLEAR") {
+  if (top?.scenario_id === "SYS_OUT_OF_SCOPE") return { action: "out_of_scope", scenario_id: null, reason: d.reason, ...base };
+  if (top?.scenario_id === "SC37" && d.route_status !== "clarify") return { action: "run", scenario_id: "SC37", reason: "client asks for a human", ...base };
+  const unclear = !top || top.scenario_id === "SYS_UNCLEAR" || d.route_status === "clarify" || (!d.route_status && top.confidence < CONFIDENCE_RUN);
+  if (unclear) {
     state.low_conf_streak += 1;
-    if (state.low_conf_streak >= 2) return { action: "handoff", scenario_id: null, queue: "operator_general", reason: "two unclear turns in a row → operator with context", ...base, low_conf_streak: state.low_conf_streak };
-    return { action: "clarify", scenario_id: null, reason: d.reason, ...base, low_conf_streak: state.low_conf_streak };
+    // Help with discovery instead of assuming consent to transfer after two unclear turns.
+    return { action: state.low_conf_streak >= 2 ? "help" : "clarify", scenario_id: state.low_conf_streak >= 2 ? "SYS_HELP" : null,
+      reason: state.low_conf_streak >= 2 ? "repeated uncertainty → offer concrete service options" : d.reason || "no confident scenario",
+      ...base, low_conf_streak: state.low_conf_streak };
   }
   if (d.is_continuation) return { action: "continue", scenario_id: top.scenario_id, reason: "continuation of the active scenario (slot filled)", ...base };
-  if (top.scenario_id === "SC37") return { action: "run", scenario_id: "SC37", reason: "client asks for a human", ...base };
-  if (d.route_status === "clarify") {
-    state.low_conf_streak += 1;
-    return { action: state.low_conf_streak >= 2 ? "handoff" : "clarify", scenario_id: null, queue: "operator_general", reason: d.reason, ...base, low_conf_streak: state.low_conf_streak };
-  }
-  if (!d.route_status && top.confidence < CONFIDENCE_CLARIFY) {
-    state.low_conf_streak += 1;
-    if (state.low_conf_streak >= 2) return { action: "handoff", scenario_id: null, queue: "operator_general", reason: `confidence ${top.confidence} < ${CONFIDENCE_CLARIFY} twice → operator`, ...base, low_conf_streak: state.low_conf_streak };
-    return { action: "clarify", scenario_id: null, reason: `confidence ${top.confidence} < ${CONFIDENCE_CLARIFY}`, ...base, low_conf_streak: state.low_conf_streak };
-  }
-  if (!d.route_status && top.confidence < CONFIDENCE_RUN) {
-    return { action: "clarify", scenario_id: null, reason: `confidence ${top.confidence} in [${CONFIDENCE_CLARIFY}, ${CONFIDENCE_RUN}) → one clarifying question`, ...base };
-  }
   state.low_conf_streak = 0;
   // topic switch: park the active scenario
   if (state.active_scenario && state.active_scenario !== top.scenario_id && !isSystemIntent(state.active_scenario)) {

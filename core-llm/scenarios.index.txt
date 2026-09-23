@@ -60,3 +60,5 @@ DISAMBIGUATION — the confusable groups
 - Out of scope (loans, life insurance, weather, jobs) → SYS_OUT_OF_SCOPE. Vague, no concrete need → SYS_UNCLEAR.
 
 SYS_GREETING | Greeting only, no request (also English: hello, hi, good morning) | здравствуйте; привет; добрый день | сәлеметсіз бе; сәлем; қайырлы күн | ≠ greeting plus request → requested SC; vague insurance need → SYS_UNCLEAR
+
+SYS_HELP | Discover services or ask for help choosing | что ещё доступно; какие есть варианты; что вы умеете; помогите выбрать | тағы қандай қызметтер бар; қандай нұсқалар бар; таңдауға көмектесіңіз | ≠ specific product/clinic/payment question → matching SC; explicit human request → SC37

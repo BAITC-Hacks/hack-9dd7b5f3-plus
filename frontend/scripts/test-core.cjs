@@ -250,3 +250,52 @@ test("saved MP3 replays without synthesis and survives stop until explicitly rel
   releaseSavedAudio(saved);
   assert.equal(revokes, 1);
 });
+
+test("screenshot dialog offers options after noisy input and accepts a concrete choice", async () => {
+  const state = newDialogState("help");
+  const unclear = await turn(state, "Здравствуйте. И мне нужно типа саму нажать, а-а-а", result([["SYS_UNCLEAR", 100]], "clarify"));
+  assert.equal(unclear.policy.action, "clarify");
+  const help = await turn(state, "А что ещё доступно?", result([["SYS_HELP", 100]], "help"));
+  assert.equal(help.policy.action, "help");
+  assert.match(help.response_text, /автомобиля.*поездки.*жилья/);
+  assert.equal(help.actions.length, 0);
+  assert.equal(state.low_conf_streak, 0);
+  const choice = await turn(state, "Хочу продлить полис", result([["SC27", 95]]));
+  assert.equal(choice.policy.scenario_id, "SC27");
+});
+
+test("repeated uncertainty never transfers without request, for core and keyless mode", async () => {
+  for (const core of [true, false]) {
+    const state = newDialogState("unclear");
+    let trace;
+    for (let i = 0; i < 3; i++) {
+      if (core) trace = await turn(state, "эээ ммм", result([["SYS_UNCLEAR", 100]], "clarify"));
+      else for await (const event of runMockTurn(state, { text: "эээ ммм", t0: Date.now(), speed: 0 })) if (event.type === "turn.done") trace = event.trace;
+      assert.notEqual(trace.policy.action, "handoff");
+      assert.ok(!trace.actions.some((action) => action.startsWith("transfer_to_operator")));
+    }
+    assert.equal(trace.policy.action, "help");
+  }
+});
+
+test("service help in RU/KK preserves a pending confirmation and never executes it", async () => {
+  for (const [text, lang] of [["Какие есть варианты?", "ru"], ["Тағы қандай қызметтер бар?", "kk"]]) {
+    const state = newDialogState("help");
+    state.active_scenario = "SC27";
+    state.awaiting = { kind: "confirmation", action: "renew_policy" };
+    const pending = structuredClone(state.awaiting);
+    const trace = await turn(state, text, result([["SYS_HELP", 100]], "help"));
+    assert.equal(trace.response_lang, lang);
+    assert.deepEqual(state.awaiting, pending);
+    assert.equal(state.active_scenario, "SC27");
+    assert.deepEqual(trace.actions, []);
+  }
+});
+
+test("explicit operator requests still transfer and product questions do not become a menu", async () => {
+  const trace = await turn(newDialogState("operator"), "Соедините с оператором", result([["SC37", 100]], "handoff"));
+  assert.ok(trace.actions.some((a) => a.startsWith("transfer_to_operator")));
+  const { mockRoute } = require("../src/lib/mock/router.ts");
+  assert.equal(mockRoute("А что ещё доступно?", { awaiting: false }).decision.route_status, "help");
+  assert.notEqual(mockRoute("Какие клиники доступны по ДМС?", { awaiting: false }).decision.route_status, "help");
+});

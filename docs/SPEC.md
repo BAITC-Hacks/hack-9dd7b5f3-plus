@@ -210,3 +210,13 @@ Backend listens on localhost:${BACKEND_PORT:-8080}; the other server services re
 Each server service has a healthcheck and `restart: unless-stopped`.
 Backend waits for the database healthcheck. The full real dialog still uses frontend `core` mode.
 Provider keys are supplied at runtime; they are not copied into images. See README section 7 for setup.
+
+### Service discovery and uncertainty recovery
+
+`SYS_HELP` / `status: help` / policy action `help` handles general questions about available services
+(e.g. «А что ещё доступно?» / «Тағы қандай қызметтер бар?»). The agent offers a concise RU/KK menu
+from supported insurance services and asks what the caller needs. Specific product questions keep their scenario.
+An explicit help request resets the unclear-turn counter and preserves pending slots/confirmations and the queue.
+Two or more unclear turns now offer service options instead of automatically executing an operator transfer.
+Explicit SC37 requests and scenario-required transfers still work; confirmation requirements are unchanged.
+Verification: noisy utterance → clarification → «А что ещё доступно?» → menu → «Хочу продлить полис» → SC27.

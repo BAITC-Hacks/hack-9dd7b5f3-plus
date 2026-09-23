@@ -11,3 +11,9 @@ class GreetingTests(unittest.TestCase):
         self.assertEqual(result["status"], "greeting")
         self.assertEqual(result["predicted"], ["SYS_GREETING"])
         self.assertEqual(result["alternatives"], [])
+
+    def test_service_discovery_is_a_valid_system_intent(self):
+        router = Router(api_key="test-only")
+        result = router.decide(router.parse("SYS_HELP:100"))
+        self.assertEqual(result["status"], "help")
+        self.assertEqual(result["predicted"], ["SYS_HELP"])

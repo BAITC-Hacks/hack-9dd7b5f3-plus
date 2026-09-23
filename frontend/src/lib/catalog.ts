@@ -98,6 +98,14 @@ export interface Payment {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const scenarios: Scenario[] = (scenariosJson as any).scenarios;
 export const systemIntents: SystemIntent[] = [...(scenariosJson as any).system_intents, {
+  id: "SYS_HELP",
+  description: "Overview of available insurance services",
+  behavior: "Offer concrete options and help the client choose without losing context",
+  response: {
+    ru: "Могу помочь подобрать страховку для автомобиля, поездки, жилья или от несчастного случая; проверить, продлить или изменить полис; разобраться со страховым случаем и выплатой. По ДМС — найти клинику или записаться к врачу. Что вам сейчас ближе?",
+    kk: "Автокөлікке, сапарға, тұрғын үйге немесе жазатайым оқиғадан сақтандыруды таңдауға; полисті тексеруге, ұзартуға не өзгертуге; сақтандыру жағдайы мен төлем бойынша көмектесемін. ЕМС бойынша емхана тауып, дәрігерге жазыла аласыз. Қайсысы қажет?",
+  },
+}, {
   id: "SYS_GREETING",
   description: "Greeting without a substantive request",
   behavior: "Greet in the client's language and preserve dialog context",
@@ -134,6 +142,7 @@ export function scenarioLabel(id: ScenarioId, lang: ReplyLang = "ru"): string {
     const map: Record<string, { ru: string; kk: string }> = {
       SYS_OUT_OF_SCOPE: { ru: "Вне компетенции", kk: "Құзырет шегінен тыс" },
       SYS_UNCLEAR: { ru: "Уточнение", kk: "Нақтылау" },
+      SYS_HELP: { ru: "Помощь с выбором", kk: "Таңдауға көмек" },
       SYS_GREETING: { ru: "Приветствие", kk: "Сәлемдесу" },
       SYS_GOODBYE: { ru: "Завершение", kk: "Аяқтау" },
     };

@@ -426,6 +426,11 @@ export interface MockRouteResult {
 export function mockRoute(text: string, ctx: { awaiting: boolean }): MockRouteResult {
   const language = detectLanguage(text);
   const trimmed = text.trim();
+  if (/^(?:а\s+)?(?:что (?:вы умеете|(?:еще|ещё) (?:доступно|есть|можно))|какие (?:есть )?(?:варианты|услуги)(?: (?:есть|доступны))?|чем (?:вы )?можете помочь|помогите (?:мне )?выбрать|(?:тағы )?қандай (?:қызметтер|нұсқалар) бар|таңдауға көмектесіңіз)[.!?\s]*$/i.test(trimmed)) {
+    const candidate = { scenario_id: "SYS_HELP", confidence: 1 };
+    return { kind: "route", parts: [trimmed], urgent: false, snapshots: [[candidate]],
+      decision: { ...emptyDecision(language, false, "client asks for available services"), scenarios: [candidate], route_status: "help" } };
+  }
   if (ENGLISH_GREETING.test(trimmed) || /^(?:(?:здравствуйте|здравствуй|привет|добрый день|доброе утро|добрый вечер|сәлеметсіз бе|сәлеметсіздер ме|сәлем|қайырлы күн|қайырлы таң|қайырлы кеш)[\s,.!?]*)+$/i.test(trimmed)) {
     const candidate = { scenario_id: "SYS_GREETING", confidence: 1 };
     return { kind: "route", parts: [trimmed], urgent: false, snapshots: [[candidate]],

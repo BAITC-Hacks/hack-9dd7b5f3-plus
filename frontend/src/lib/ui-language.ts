@@ -16,6 +16,7 @@ export function restoreUiLanguage() {
 }
 export function useUiLanguage() { return useSyncExternalStore(subscribe, () => language, () => "ru" as UiLanguage); }
 const kk: Record<string, string> = {
+  "Предложил варианты": "Нұсқаларды ұсынды",
   "мс": "мс", "демо без бэкенда": "серверсіз демо", "LLM · демо-действия": "LLM · демо әрекеттер", "бэкенд": "сервер",
   "Не удалось включить звук. Нажмите Play ещё раз.": "Дыбысты қосу мүмкін болмады. Ойнатуды қайта басыңыз.",
   "В этой реплике несколько просьб, по порядку:": "Бұл репликада бірнеше сұрау бар, ретімен:",
