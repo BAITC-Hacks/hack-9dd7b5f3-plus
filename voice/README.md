@@ -86,6 +86,14 @@ docker compose -f deploy/docker-compose.yml up --build # container (context = re
 | `POST /api/voice/stt` | whole recording as the body (webm/opus, wav, mp3) → `{"text","language"}` |
 | `GET /healthz` | brain, models, config warnings |
 
+### Phone-style call page (`/call`)
+
+Open `https://<gateway>/call` on a phone: dialer with the Saqta number, ringback tone, the robot "picks up" with the bilingual greeting, and the call runs hands-free (server VAD) with live captions, a timer, pulsing rings when you or the robot speak, and buttons for mute / speaker / captions / interrupt / hang up. It is a real call as far as the caller can tell, without a SIP number (a KZ number needs a legal entity, see `deploy/README.md`).
+
+- The phone browser only gives microphone access over **HTTPS**: deploy the gateway (Railway, `voice/Dockerfile`, build context = repo root) or run `ngrok http 8090` locally.
+- `?gw=host:port` points the page at another gateway.
+- Same `/ws/voice` protocol as the test page, with `mode:"vad"` and `greeting:true`.
+
 ### `/ws/voice` protocol
 
 Client → server: `{"type":"start","mode":"ptt"|"vad","greeting":true,"lang":""|"ru"|"kk"}` first, then binary PCM16 LE 16 kHz mono frames (20–100 ms), `{"type":"commit"}` on push-to-talk release, `{"type":"text","text":"…"}`, `{"type":"interrupt"}`, `{"type":"stop"}`.

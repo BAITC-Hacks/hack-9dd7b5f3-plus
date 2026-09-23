@@ -104,6 +104,8 @@ func (s *Server) Starter() transport.Starter {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.index)
+	mux.HandleFunc("GET /call", s.callPage)
+	mux.HandleFunc("GET /phone", s.callPage)
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.Handle("GET /ws/voice", &transport.WebHandler{Start: s.Starter(), AllowedOrigins: s.Cfg.AllowedOrigins})
 	tw := &transport.TwilioHandler{Start: s.Starter(), PublicURL: s.Cfg.PublicURL, Greeting: true}
@@ -178,6 +180,13 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(web.Index)
+}
+
+// callPage serves the phone-style call screen (mobile, hands-free, captions).
+func (s *Server) callPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(web.Call)
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
