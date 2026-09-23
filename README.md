@@ -460,19 +460,14 @@ Kept per session and sent to the UI after every turn (`state` event):
 │   ├── router.py                Router class · CLI · --eval · --dialogs · --bench
 │   ├── server.py                private HTTP adapter: GET /healthz, POST /api/route (port 8090)
 │   └── test_server.py           unit tests for the adapter
-<<<<<<< Updated upstream
-├── backend/                     Go service (net/http): GET /healthz + /health, Dockerfile; turn API in progress
-├── docker-compose.yml           web app (keyless) + core-llm (profile "llm")
-=======
 ├── voice/                       ElevenLabs voice service (Go): STT / TTS, /ws/voice gateway, phone, logs
 │   ├── elevenlabs/              client: Scribe v2 Realtime + batch STT, TTS over HTTP and WebSockets
 │   ├── speech/                  per-language model routing, on-disk phrase cache, LLM-delta chunker
 │   ├── agent/ · brain/          real-time conversation engine · reply brains (backend / OpenRouter / echo)
 │   ├── transport/ · deploy/     browser WebSocket, Asterisk AudioSocket, Twilio · phone setup
 │   └── server/ · cmd/           HTTP routes (/api/voice/stt, /api/voice/tts, /api/voice/stats …) · binaries
-├── backend/                     Go service (net/http): GET /health today, turn API in progress
-├── docker-compose.yml           web app (keyless) + core-llm (profile "llm") + voice (profile "voice")
->>>>>>> Stashed changes
+├── backend/                     Go service (net/http): GET /healthz + /health, Dockerfile; turn API in progress
+├── docker-compose.yml           web app, Go backend, PostgreSQL; profiles "llm" (core-llm), "voice" (ElevenLabs), "server" (both)
 ├── data/                        official starter kit (read-only) + our predictions_mock.json
 ├── docs/                        case, analysis, PRD, SPEC, API contract, tasks, pitch, progress, research, design
 ├── DESIGN.md                    design-system reference
