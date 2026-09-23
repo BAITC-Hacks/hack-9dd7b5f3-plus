@@ -92,6 +92,10 @@ func (m *MockRouter) Route(_ context.Context, in Input, sink Sink) (*Result, err
 				d.Alternatives = append(d.Alternatives, Alt{ID: c.ID, Confidence: round2(c.Score)})
 			}
 		}
+		if len(d.Scenarios) == 0 && active != "" && len(oos) == 0 {
+			d.IsContinuation = true
+			d.Scenarios = []ScenarioPick{{ID: active, Confidence: 0.6, Reason: "no new topic detected — continuing the active scenario"}}
+		}
 		if len(d.Scenarios) == 0 {
 			d.Scenarios = []ScenarioPick{{ID: "SYS_UNCLEAR", Confidence: 0.7, Reason: "no confident lexical match"}}
 		}
