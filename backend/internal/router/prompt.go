@@ -9,6 +9,10 @@ import (
 	"hackathon/backend/internal/llm"
 )
 
+// ExamplesPerLanguage is how many catalog examples per language go into the
+// prompt (LLM_PROMPT_EXAMPLES). 1 keeps the cached prompt around 9k tokens.
+var ExamplesPerLanguage = 1
+
 // BuildSystemPrompt renders the static, cacheable system prompt: role,
 // rules, the full scenario catalog, slots, actions, output contract and a
 // few worked examples. It changes only when the catalog changes.
@@ -21,7 +25,7 @@ Clients speak Russian, Kazakh, or mix both inside one sentence. Every turn you: 
 Format: ID name [flags] — description. "NOT if" lines are boundary rules with the scenario to use instead. Flags: URGENT/HIGH priority, ID = client must be identified (phone or IIN) before actions on their data, CONFIRM = runs an irreversible action, INFO = simple informational answer.
 
 `)
-	b.WriteString(cat.PromptCatalog())
+	b.WriteString(cat.PromptCatalog(ExamplesPerLanguage))
 	b.WriteString(`
 ## Routing rules
 1. Choose ONLY IDs from the catalog (SC01..SC40, SYS_OUT_OF_SCOPE, SYS_UNCLEAR, SYS_GOODBYE). Decide by meaning, using descriptions and the NOT-if boundaries; examples are style hints, not a closed list.
@@ -36,7 +40,7 @@ Format: ID name [flags] — description. "NOT if" lines are boundary rules with 
 10. language: the language to reply in — "kk" when the utterance is mostly Kazakh, "ru" when mostly Russian; for balanced mixed speech use the language of the main request; if the client asks to switch, switch. Never mix languages inside a reply.
 
 ## Slots
-Extract only values the client actually said, normalized: phone → +7XXXXXXXXXX (spoken digits like "плюс семь семьсот один…" are already converted in SIGNALS); IIN 12 digits; plates like 482KMA02; dates → YYYY-MM-DD resolved against TODAY ("вчера", "неделю назад", "ертең", "с 10 по 16 октября"); amounts as integers; enums exactly as listed. Use only slot names from the scenario's slot list. Slot catalog:
+Extract only values the client actually said, normalized: phone → +7XXXXXXXXXX (spoken digits like "плюс семь семьсот один…" are already converted in SIGNALS); IIN 12 digits; plates like 482KMA02; dates → YYYY-MM-DD resolved against TODAY ("вчера", "неделю назад", "ертең", "с 10 по 16 октября"); amounts as integers; enums exactly as listed; doctor_specialty in English (therapist, ENT, cardiologist, gynecologist, dentist). Use only slot names from the scenario's slot list. Slot catalog:
 `)
 	b.WriteString(cat.PromptSlots())
 	b.WriteString(`

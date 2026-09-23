@@ -99,6 +99,7 @@ type actionsFile struct {
 type Catalog struct {
 	mu            sync.RWMutex
 	dir           string
+	override      string
 	AsOfDate      string
 	Scenarios     []Scenario
 	SystemIntents []SystemIntent
@@ -128,7 +129,13 @@ func Load(dir string) (*Catalog, error) {
 // catalog can be edited without a restart).
 func (c *Catalog) Reload() error {
 	var sf scenariosFile
-	if err := readJSON(filepath.Join(c.dir, "scenarios.json"), &sf); err != nil {
+	scPath := filepath.Join(c.dir, "scenarios.json")
+	if c.override != "" {
+		if _, err := os.Stat(c.override); err == nil {
+			scPath = c.override
+		}
+	}
+	if err := readJSON(scPath, &sf); err != nil {
 		return err
 	}
 	var slf slotsFile
@@ -233,9 +240,10 @@ func PriorityRank(p string) int {
 	}
 }
 
-// PromptCatalog renders the compact scenario catalog for the LLM system prompt.
-// It is deterministic so the provider's prompt cache stays warm.
-func (c *Catalog) PromptCatalog() string {
+// PromptCatalog renders the compact scenario catalog for the LLM system prompt
+// with examplesPerLang examples per language. It is deterministic so the
+// provider's prompt cache stays warm.
+func (c *Catalog) PromptCatalog(examplesPerLang int) string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	var b strings.Builder
@@ -279,7 +287,7 @@ func (c *Catalog) PromptCatalog() string {
 		ex := []string{}
 		for _, l := range []string{"ru", "kk"} {
 			for i, e := range s.Examples[l] {
-				if i >= 2 {
+				if i >= examplesPerLang {
 					break
 				}
 				ex = append(ex, "«"+e+"»")
@@ -296,24 +304,29 @@ func (c *Catalog) PromptCatalog() string {
 	return b.String()
 }
 
-// PromptSlots renders the slot catalog (types, formats, enum values).
+// PromptSlots renders the slot catalog compactly: enum slots with their
+// values, everything else as name (type).
 func (c *Catalog) PromptSlots() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	var b strings.Builder
+	var plain []string
 	for _, s := range c.Slots {
-		fmt.Fprintf(&b, "- %s (%s): %s", s.Name, s.Type, s.Description)
 		if len(s.Values) > 0 {
 			vals := make([]string, 0, len(s.Values))
 			for _, v := range s.Values {
-				vals = append(vals, fmt.Sprint(v))
+				vals = append(vals, FormatValue(v))
 			}
-			fmt.Fprintf(&b, " — values: %s", strings.Join(vals, "|"))
-		} else if s.Pattern != "" {
-			fmt.Fprintf(&b, " — format %s", s.Pattern)
+			fmt.Fprintf(&b, "- %s: %s\n", s.Name, strings.Join(vals, "|"))
+			continue
 		}
-		b.WriteString("\n")
+		t := s.Type
+		if s.Pattern != "" {
+			t += " " + s.Pattern
+		}
+		plain = append(plain, fmt.Sprintf("%s (%s)", s.Name, t))
 	}
+	fmt.Fprintf(&b, "- other slots: %s\n", strings.Join(plain, ", "))
 	return b.String()
 }
 
@@ -331,6 +344,81 @@ func (c *Catalog) PromptActions() string {
 	}
 	fmt.Fprintf(&b, "Handoff queues: %s\n", strings.Join(c.Queues, ", "))
 	return b.String()
+}
+
+// FormatValue prints JSON numbers without scientific notation.
+func FormatValue(v any) string {
+	if f, ok := v.(float64); ok && f == float64(int64(f)) {
+		return fmt.Sprintf("%d", int64(f))
+	}
+	return fmt.Sprint(v)
+}
+
+// OverridePath is where edited catalogs are persisted (VAR_DIR/catalog/scenarios.json).
+func (c *Catalog) OverridePath() string { return c.override }
+
+// SetOverridePath makes Reload prefer an edited copy of scenarios.json when
+// it exists, so the catalog can be edited without touching data/.
+func (c *Catalog) SetOverridePath(p string) { c.override = p }
+
+// UpdateScenario applies a partial edit (description, boundaries, examples,
+// priority, fast_path_eligible) and persists the whole catalog to the
+// override file.
+func (c *Catalog) UpdateScenario(id string, patch map[string]any) (*Scenario, error) {
+	c.mu.Lock()
+	sc, ok := c.byID[id]
+	if !ok {
+		c.mu.Unlock()
+		return nil, fmt.Errorf("scenario %s not found", id)
+	}
+	if v, ok := patch["description"].(string); ok && strings.TrimSpace(v) != "" {
+		sc.Description = strings.TrimSpace(v)
+	}
+	if v, ok := patch["priority"].(string); ok && (v == "normal" || v == "high" || v == "urgent") {
+		sc.Priority = v
+	}
+	if v, ok := patch["fast_path_eligible"].(bool); ok {
+		sc.FastPathEligible = v
+	}
+	if raw, ok := patch["not_this_if"]; ok {
+		b, _ := json.Marshal(raw)
+		var nt []Boundary
+		if json.Unmarshal(b, &nt) == nil {
+			sc.NotThisIf = nt
+		}
+	}
+	if raw, ok := patch["examples"]; ok {
+		b, _ := json.Marshal(raw)
+		var ex map[string][]string
+		if json.Unmarshal(b, &ex) == nil {
+			for l, list := range ex {
+				clean := list[:0]
+				for _, e := range list {
+					if e = strings.TrimSpace(e); e != "" {
+						clean = append(clean, e)
+					}
+				}
+				sc.Examples[l] = clean
+			}
+		}
+	}
+	out := scenariosFile{Scenarios: c.Scenarios, SystemIntents: c.SystemIntents}
+	out.Meta.Dataset = "Voice Router - Saqta Insurance (edited copy)"
+	out.Meta.Version = "1.0+edit"
+	out.Meta.AsOfDate = c.AsOfDate
+	cp := *sc
+	path := c.override
+	c.mu.Unlock()
+	if path != "" {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return nil, err
+		}
+		b, _ := json.MarshalIndent(out, "", "  ")
+		if err := os.WriteFile(path, b, 0o644); err != nil {
+			return nil, err
+		}
+	}
+	return &cp, nil
 }
 
 // ScenarioIDs returns all scenario IDs in catalog order.

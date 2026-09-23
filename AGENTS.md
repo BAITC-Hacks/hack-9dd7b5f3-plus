@@ -27,23 +27,28 @@ Instructions for every AI coding agent (Codex, Claude Code, Cursor, etc.) workin
 ## 2. Stack
 | Layer | Choice |
 |-------|--------|
-| Backend | **Go** (latest stable), `net/http` + `chi` router, `pgx` for Postgres, `sqlc` optional, JSON REST |
+| Backend | **Go** (latest stable), `chi` router, `coder/websocket`; JSON REST + WebSocket (voice) + SSE (debug). No database: in-memory sessions + JSONL traces in `var/` (see `docs/SPEC.md`) |
 | AI | OpenAI-compatible client behind one interface. Providers: `openai` (OpenAI API), `nvidia` (NVIDIA Build, base URL `https://integrate.api.nvidia.com/v1`), `openai_compatible` (any OpenAI-compatible API via `LLM_BASE_URL` — OpenRouter, Groq, Gemini's OpenAI endpoint, Anthropic's OpenAI-compat endpoint, local Ollama), `mock`. Selected by `LLM_PROVIDER`. Any model is allowed by the rules — just list it in THIRD_PARTY.md. Free credits: OpenAI API $50, NVIDIA (Brev GPU credits; Build API keys at build.nvidia.com/settings/api-keys) |
 | Voice | STT/TTS behind one interface: **geko.sh** (Seta STT `seta-kk-ru-v2`, Tokay TTS `tokay-kk-v1`, KZ/RU code-switching) primary, **ElevenLabs** (Scribe v2 Realtime / Flash v2.5) fallback, mock for keyless mode. See `docs/SPEC.md` |
-| DB | PostgreSQL (Railway plugin in prod, docker-compose locally). SQLite acceptable only if SPEC says so |
-| Frontend | **Next.js** (App Router, TypeScript, Tailwind), `shadcn/ui` + **ObsidianUI** registry (`@obsidian` → `https://www.obsidianui.dev/r/{name}.json`) |
+| DB | None — `internal/store` (memory + `var/traces.jsonl`); Postgres only if a later need appears |
+| Frontend | **Next.js 16** (App Router, TypeScript, Tailwind v4), hand-rolled components + `lucide-react`; design tokens from `DESIGN.md` |
 | Deploy | **Railway**: services `backend` (root `/backend`) and `frontend` (root `/frontend`) + Postgres. Each has a Dockerfile |
 | Local run | `docker compose up --build` must bring everything up |
 
 ## 3. Repo layout
-> Target layout. Current skeleton uses `backend/cmd/server` + stdlib `GET /health` — aligning with the layout below is an open decision (see end of `docs/SPEC.md`).
 ```
-/backend          Go service
-  cmd/api/main.go entrypoint
-  internal/http    handlers, router, middleware (CORS, logging)
-  internal/ai      LLM provider interface + openai/nvidia/mock impls + prompts
-  internal/store   DB access, migrations (embed SQL files, run on boot)
-  internal/domain  core types / business logic
+/backend          Go service (entrypoint cmd/server/main.go)
+  internal/config     env → Config (keyless defaults)
+  internal/catalog    starter kit loader + prompt rendering
+  internal/triage     deterministic layer: language, entities, signals
+  internal/retrieval  BM25 shortlist + config/lexicon.json
+  internal/router     LLM prompt, stream parser, policy, mock router, templates
+  internal/dialog     engine: sessions, facts, executor, TTS streaming, traces
+  internal/mockbackend actions over mock_backend.json + knowledge base
+  internal/llm|stt|tts provider clients (OpenAI-compatible, ElevenLabs, mock/browser)
+  internal/store      sessions + traces.jsonl + supervisor stats
+  internal/eval       dev-set evaluation
+  internal/httpapi    REST + WebSocket + SSE
   Dockerfile
 /frontend         Next.js app
   src/app          routes
@@ -64,7 +69,7 @@ THIRD_PARTY.md
 - Branching: trunk-based. Small commits straight to `main` with `git pull --rebase` before push, or short-lived branches merged within 30 min.
 - Commit messages: Conventional Commits (`feat(api): ...`, `fix(web): ...`, `docs: ...`, `chore: ...`).
 - API contract is the source of truth in `docs/SPEC.md` (endpoints + JSON shapes). Change contract → update SPEC in the same commit.
-- Go: `gofmt`, return errors, no panics in handlers, `context` everywhere, config only from env. Health endpoint `GET /healthz`.
+- Go: `gofmt`, return errors, no panics in handlers, `context` everywhere, config only from env. Health endpoints `GET /health` and `GET /healthz`.
 - Frontend: server components by default, client components only for interactivity. Loading/empty/error states on every data view. Mobile-friendly.
 - LLM calls: timeouts (≤30s), structured JSON output with schema validation, one retry, graceful fallback message. Keep prompts in `internal/ai/prompts/*.md` or Go consts — not scattered.
 - Log every LLM call (provider, model, latency, token usage) — useful for the demo and for judges.

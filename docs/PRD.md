@@ -35,13 +35,14 @@ Translated from the `PRD.md` block of the deep-research output. Product name is 
 - In-UI editing of the scenario catalog.
 - Phone channel (Vapi/Twilio/LiveKit).
 
-## Demo script (3 minutes)
-1. **Simple RU:** "Здравствуйте, хочу узнать статус моей заявки на страховку." (Hello, I'd like to check the status of my insurance claim.) → the router picks the "claim status" scenario with high confidence, responds by voice + shows the trace.
-2. **Mixed speech (official example):** "Здравствуйте, я вчера оплатил, деньги списались, а заказ не подтвердился… а, и ещё, адрес доставки поменять надо." (Hello, I paid yesterday, the money was deducted, but the order wasn't confirmed... oh, and also I need to change the delivery address.) → the robot detects two intents, pushes "change address" onto the topic stack, resolves the payment/confirmation issue first, then returns to the address.
-3. **Kazakh (KZ):** "Сәлеметсіз бе, полисімнің мерзімін ұзартқым келеді." (Hello, I'd like to extend my policy term.) → selects the policy-renewal scenario, responds in Kazakh (Tokay).
-4. **Scenario boundary + uncertainty:** a borderline utterance → low confidence → the robot asks a clarifying question (clarify) instead of guessing; alternatives are shown.
-5. **Topic switch + KZ↔RU mid-phrase:** "Менің шотымнан ақша списалось, помогите разобраться." (Money was deducted from my account, please help me sort it out.) → correct routing, response language follows the dominant language.
-6. Open the supervisor panel: accuracy on `dev_utterances.json`, per-stage latency, where the robot hesitated.
+## Demo script (3 minutes) — as implemented
+1. **Simple RU:** «Здравствуйте, что с моим заявлением по каско?» → `SC17` (claim status) with high confidence, spoken reply, trace panel. Then «телефон плюс семь семьсот один ноль ноль ноль ноль ноль ноль семь» → the client (C007) is identified from the kit and the reply uses their claim CL-500330.
+2. **Topic switch (official example, insurance form):** «Здравствуйте, я вчера оплатил полис, деньги списались, а полис не оформился… а, и ещё адрес поменять надо» → `SC30` then `SC29`; the second topic goes to the stack and is offered after the first is handled.
+3. **Kazakh:** «Сәлеметсіз бе, полисімнің мерзімін ұзартқым келеді» → `SC27`, reply in Kazakh.
+4. **Boundary + uncertainty:** «Здравствуйте, у меня проблема с полисом» → `SYS_UNCLEAR`: the robot asks «полис не пришёл или деньги списались, а полис не оформился?» with both alternatives shown in the trace.
+5. **Mixed speech:** «Кеше аварияға түстім, но я не виноват, виновник у вас застрахован» → `SC12`; language badge MIXED, reply in the dominant language.
+6. **Safety:** «Көлігімді саттым, КАСКО шартын бұзғым келеді» + phone → preview with the refund amount; «Иә, растаймын» → executed only after the yes.
+7. Supervisor: dev-set accuracy (Eval page), per-stage latency, fast-path agreement with the LLM, uncertain turns. Debug page: the model's tokens streaming live.
 
 ## Mapping to scoring criteria
 | Criterion (task, 100) | Score | What we show |

@@ -73,7 +73,9 @@ Irreversible actions (`actions.json: irreversible=true`) requested by the model 
 | `GET /api/eval/last` | — | `{running, progress, report}` |
 | `GET /api/supervisor/stats` | — | aggregates: by scenario/language/path/policy, low confidence, handoffs, fast-path agreement, timing percentiles |
 | `GET /api/supervisor/actions` | — | mock backend action log |
-| `GET /api/catalog` · `POST /api/catalog/reload` | — | catalog JSON · reload from `DATA_DIR` |
+| `GET /api/catalog` · `POST /api/catalog/reload` | — | catalog JSON · reload from disk |
+| `PUT /api/catalog/scenarios/{id}` | `{description?, not_this_if?, examples?, priority?, fast_path_eligible?}` | edits a scenario without a restart: persisted to `VAR_DIR/catalog/scenarios.json` (an override of `data/scenarios.json`, which stays untouched), index and prompt rebuilt |
+| `GET /api/lexicon` | — | the retrieval lexicon in use |
 | `GET /api/debug/events?session=&replay=1` | SSE | every pipeline event of every session |
 | `POST /api/tts` | `{text, lang}` | WAV |
 

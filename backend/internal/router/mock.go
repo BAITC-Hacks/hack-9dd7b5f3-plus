@@ -125,6 +125,9 @@ func (m *MockRouter) Route(_ context.Context, in Input, sink Sink) (*Result, err
 			// keep opening
 		} else if d.IsContinuation {
 			d.Reply = map[string]string{"ru": "Спасибо, записала. Продолжаем.", "kk": "Рақмет, жазып алдым. Жалғастырамыз."}[replyLang]
+			if name := identifiedThisTurn(in); name != "" {
+				d.Reply = map[string]string{"ru": "Спасибо, " + name + ", нашла ваш профиль. ", "kk": "Рақмет, " + name + ", профиліңізді таптым. "}[replyLang] + m.tpl.Opening(primary, replyLang)
+			}
 		}
 		if len(d.Scenarios) > 1 {
 			d.Reply += map[string]string{"ru": " Второй вопрос тоже решим сразу после этого.", "kk": " Екінші сұрағыңызды да осыдан кейін бірден шешеміз."}[replyLang]
@@ -144,6 +147,19 @@ func (m *MockRouter) Route(_ context.Context, in Input, sink Sink) (*Result, err
 }
 
 func (p *PendingAction) isNil() bool { return p == nil }
+
+// identifiedThisTurn returns the client's first name when find_client
+// succeeded in this turn's facts.
+func identifiedThisTurn(in Input) string {
+	for _, f := range in.Facts {
+		if f.Name == "find_client" && f.Error == "" {
+			if n, ok := f.Result["full_name"].(string); ok {
+				return strings.Fields(n)[0]
+			}
+		}
+	}
+	return ""
+}
 
 // hasConcept reports whether the top candidate matched a domain concept
 // (not just generic words).

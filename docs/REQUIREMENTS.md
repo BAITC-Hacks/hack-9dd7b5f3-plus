@@ -5,11 +5,11 @@
 Translated from `docs/CASE.md` — requirements checklist for Halyk Bank / Case 2 "Voice Router".
 
 ## Must-have (mandatory) → our implementation
-- [ ] **Voice interaction in the web app** (the jury speaks into a microphone, the robot answers by voice) → browser mic capture (WebAudio, PCM16 16 kHz) over WebSocket to the Go backend; TTS response streamed back to the browser. Owner: Ramazan+Alikhan.
-- [ ] **Scenario selection happens at the LLM layer, and the layer's inner workings must be shown; an encoder-based intent classifier does NOT count** → retrieval shortlist (embeddings, NOT classification) + generative LLM with JSON output; the UI shows the candidates, the prompt, and the decision. Owner: Tair.
-- [ ] **Correctness** (10 jury utterances: simple, topic switch, mixed speech, boundary cases) → `/api/route` endpoint + `evaluate.py`; hit rate shown in the UI. Tair.
-- [ ] **Trace panel after every utterance** (scenario, reasoning, alternatives, per-stage timing) → `TracePanel` component + `stage_timings` table. Ramazan.
-- [ ] **Russian and Kazakh, including mid-phrase language switching** → geko Seta (KZ/RU single vocabulary) / ElevenLabs Scribe v2 Realtime; response language follows the client's language. Alikhan+Tair.
+- [x] **Voice interaction in the web app** (the jury speaks into a microphone, the robot answers by voice) → browser mic capture (WebAudio, PCM16 16 kHz) over WebSocket to the Go backend; TTS response streamed back to the browser. Owner: Ramazan+Alikhan.
+- [x] **Scenario selection happens at the LLM layer, and the layer's inner workings must be shown; an encoder-based intent classifier does NOT count** → retrieval shortlist (embeddings, NOT classification) + generative LLM with JSON output; the UI shows the candidates, the prompt, and the decision. Owner: Tair.
+- [x] **Correctness** (10 jury utterances: simple, topic switch, mixed speech, boundary cases) → `/api/route` endpoint + `evaluate.py`; hit rate shown in the UI. Tair.
+- [x] **Trace panel after every utterance** (scenario, reasoning, alternatives, per-stage timing) → `TracePanel` component + `stage_timings` table. Ramazan.
+- [x] **Russian and Kazakh, including mid-phrase language switching** → geko Seta (KZ/RU single vocabulary) / ElevenLabs Scribe v2 Realtime; response language follows the client's language. Alikhan+Tair.
 
 ## Optional → keep / cut
 - [x] Hybrid approach (fast-path for obvious cases + LLM for hard ones, measurable gain) → KEEP as P1, show the latency Δ.

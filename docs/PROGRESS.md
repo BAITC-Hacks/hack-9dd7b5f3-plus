@@ -10,10 +10,14 @@
 - Docs reorganized (`docs/README.md` index; `research/`, `design/`, `hackathon/`); AGENTS.md, README, THIRD_PARTY, `.env.example` updated for Voice Router.
 
 ## 15:00–16:00
-- 
+- Backend implemented end to end (Go): triage → lexical retrieval → facts → fast path / LLM router (streaming JSON, decision before reply) → policy → executor (topic stack, confirmation gate) → sentence-streamed TTS → trace. Providers: OpenAI-compatible LLM/STT/TTS, ElevenLabs realtime + batch STT and streaming TTS, keyless mock/browser mode.
+- REST + WebSocket + SSE API (`docs/SPEC.md`), `scripts/eval.py` (official `evaluate.py` wrapper), `scripts/audio_test.py` + 3 test recordings, `scripts/ws_smoke.mjs`.
+- Keyless lexical baseline on the dev set: 90.4 % primary accuracy (from a first 77.9 %), fast path 5/5 precise. Go tests: parser, triage, backend prices, engine with a fake streaming LLM, provider clients against fake servers.
+- Docker image for the backend builds and runs; README/THIRD_PARTY/SPEC rewritten to match the implementation.
 
 ## 16:00–17:00
-- 
+- Frontend (Next.js 16): Call simulator with mic/VAD/push-to-talk, trace panel with timing waterfall, Supervisor, Eval, Catalog, Debug pages.
+- Docker Compose end-to-end check, README verification from a clean clone.
 
 ## 17:00–18:00
 - 

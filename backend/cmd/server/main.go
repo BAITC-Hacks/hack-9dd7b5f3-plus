@@ -37,6 +37,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("catalog: %v (set DATA_DIR to the starter kit folder)", err)
 	}
+	cat.SetOverridePath(filepath.Join(cfg.VarDir, "catalog", "scenarios.json"))
+	if err := cat.Reload(); err != nil {
+		log.Fatalf("catalog: %v", err)
+	}
 	lexPath := os.Getenv("LEXICON_PATH")
 	if lexPath == "" {
 		lexPath = "config/lexicon.json"
@@ -54,6 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("mock backend: %v", err)
 	}
+	router.ExamplesPerLanguage = cfg.LLM.Examples
 	mock := router.NewMockRouter(cat, ix)
 	var primary router.Router = mock
 	if cfg.LLM.Provider == "openai" {

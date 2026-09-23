@@ -66,6 +66,8 @@ func New(cfg config.Config, e *dialog.Engine, lex *retrieval.Lexicon, ttsP tts.P
 		r.Get("/supervisor/actions", s.actionLog)
 		r.Get("/catalog", s.catalog)
 		r.Post("/catalog/reload", s.catalogReload)
+		r.Put("/catalog/scenarios/{id}", s.catalogUpdate)
+		r.Get("/lexicon", s.lexicon)
 		r.Get("/debug/events", s.debugEvents)
 		r.Post("/tts", s.ttsHandler)
 	})
@@ -363,6 +365,32 @@ func (s *Server) catalogReload(w http.ResponseWriter, r *http.Request) {
 	}
 	sc, _ := s.e.Catalog().Snapshot()
 	writeJSON(w, 200, map[string]any{"ok": true, "scenarios": len(sc)})
+}
+
+// catalogUpdate edits one scenario (description, not_this_if, examples,
+// priority, fast_path_eligible), persists the edited catalog to
+// VAR_DIR/catalog/scenarios.json and rebuilds the index and the prompt.
+func (s *Server) catalogUpdate(w http.ResponseWriter, r *http.Request) {
+	id := strings.ToUpper(chi.URLParam(r, "id"))
+	var patch map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
+		writeErr(w, 400, "invalid json: "+err.Error())
+		return
+	}
+	sc, err := s.e.Catalog().UpdateScenario(id, patch)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if err := s.e.ReloadCatalog(s.lex); err != nil {
+		writeErr(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "scenario": sc, "saved_to": s.e.Catalog().OverridePath()})
+}
+
+func (s *Server) lexicon(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, 200, s.lex)
 }
 
 // debugEvents streams every pipeline event as SSE (curl -N .../api/debug/events).

@@ -37,6 +37,7 @@ type LLMConfig struct {
 	MaxTokens   int
 	TimeoutMS   int
 	JSONMode    bool
+	Examples    int // catalog examples per language in the prompt
 }
 
 // STTConfig configures speech-to-text.
@@ -219,6 +220,7 @@ func Load() Config {
 			MaxTokens:   envInt("LLM_MAX_TOKENS", 600),
 			TimeoutMS:   envInt("LLM_TIMEOUT_MS", 20000),
 			JSONMode:    envBool("LLM_JSON_MODE", true),
+			Examples:    envInt("LLM_PROMPT_EXAMPLES", 1),
 		},
 		STT: STTConfig{
 			Provider:           sttProvider,

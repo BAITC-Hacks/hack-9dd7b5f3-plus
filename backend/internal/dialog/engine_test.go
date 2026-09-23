@@ -1,9 +1,11 @@
 package dialog
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -193,5 +195,32 @@ func TestConfirmationGate(t *testing.T) {
 	// second cancel of the same policy must fail (already_done), never silently re-run
 	if _, aerr := e.Backend().Execute("cancel_policy", map[string]any{"policy_number": "SQ-CASCO-204350"}); aerr == nil || aerr.Code != "already_done" {
 		t.Fatalf("expected already_done, got %v", aerr)
+	}
+}
+
+// fakeTTS returns 200 ms of silence per sentence so the audio path is exercised.
+type fakeTTS struct{}
+
+func (fakeTTS) Name() string    { return "fake" }
+func (fakeTTS) SampleRate() int { return 24000 }
+func (fakeTTS) Synthesize(context.Context, string, string) (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(make([]byte, 9600))), nil
+}
+
+func TestVoiceTurnCollectsAudio(t *testing.T) {
+	e, _ := newTestEngine(t, "")
+	e.tts = fakeTTS{}
+	s := e.NewSession("test")
+	var frames int
+	s.SetAudioSink(func(pcm []byte) { frames++ })
+	tr, err := e.RunTurn(context.Background(), s, "Где ваш офис в Алматы? Во сколько открывается?", TurnOptions{Source: "text", Voice: true, CollectAudio: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tr.Reply.Sentences < 1 || len(tr.Audio) != 9600*tr.Reply.Sentences || frames == 0 {
+		t.Fatalf("audio not produced: sentences=%d audio=%d frames=%d", tr.Reply.Sentences, len(tr.Audio), frames)
+	}
+	if _, ok := tr.Timings["first_audio"]; !ok || tr.Timings["tts_first_byte"] < 0 {
+		t.Fatalf("first_audio timing missing: %v", tr.Timings)
 	}
 }
