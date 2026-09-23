@@ -1,4 +1,5 @@
 /** Product shot: the supervisor console with a real example, rendered as a static composition. */
+import { SECTION, SectionHead } from "./section-head";
 const CANDS = [
   { id: "SC12", name: "Обращение пострадавшего по ОГПО виновника", v: 0.9, on: true },
   { id: "SC13", name: "Заявление об ущербе по КАСКО", v: 0.31 },
@@ -14,13 +15,10 @@ const SPEED = [
 
 export function Product() {
   return (
-    <section className="relative z-10 mx-auto w-full max-w-[1200px] px-5 py-16 sm:px-8 lg:py-24">
-      <div className="mb-10 max-w-3xl">
-        <h2 className="text-3xl font-medium tracking-[-0.02em] text-ink sm:text-[40px] sm:leading-[1.1]">Не вердикт, а объяснение. После каждой реплики.</h2>
-        <p className="mt-4 text-[17px] leading-relaxed text-body">Какой сценарий выбран, с какой уверенностью, какие были альтернативы и сколько заняла каждая стадия.</p>
-      </div>
+    <section className={SECTION}>
+      <SectionHead title="Не вердикт, а объяснение. После каждой реплики." text="Какой сценарий выбран, с какой уверенностью, какие были альтернативы и сколько заняла каждая стадия." />
 
-      <div className="lift dark overflow-hidden rounded-3xl border border-black/10 bg-[#0d0d0d] text-[#f5f5f5] shadow-[0_40px_80px_-40px_rgba(14,21,18,0.35)]">
+      <div className="lift dark overflow-hidden rounded-3xl border border-border bg-[#0d0d0d] text-[#f5f5f5]">
         <div className="flex items-center justify-between border-b border-[#242424] px-5 py-3 text-xs text-[#8b8b8b]">
           <span className="flex items-center gap-2"><span className="size-2 rounded-[2px] bg-brand" /> Bagyt · Консоль · реплика 3</span>
           <span>пример</span>

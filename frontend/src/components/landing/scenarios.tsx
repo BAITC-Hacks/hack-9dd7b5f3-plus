@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { scenarioNames, scenarios } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
+import { CARD, SECTION, SectionHead } from "./section-head";
 
 const CAT: Record<string, { label: string; cls: string }> = {
   sales: { label: "продажи", cls: "bg-s4" },
@@ -21,17 +22,18 @@ export function Scenarios() {
   const ident = scenarios.filter((s) => s.requires_identification).length;
   const active = hover ? scenarios.find((s) => s.scenario_id === hover) : null;
   return (
-    <section className="relative z-10 mx-auto grid w-full max-w-[1200px] items-start gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:py-28">
-      <div>
-        <h2 className="text-3xl font-medium tracking-[-0.02em] text-ink sm:text-[40px] sm:leading-[1.1]">Сорок сценариев. Один каталог, ноль переобучения.</h2>
-        <p className="mt-5 text-[17px] leading-relaxed text-body">Роутер читает описание каждого сценария и его границы «не этот, если…». Новый сценарий — это строка в каталоге, а не новая модель.</p>
-        <dl className="mt-8 grid grid-cols-3 gap-4 border-t border-border pt-6">
+    <section className={SECTION}>
+      <SectionHead title="Сорок сценариев. Один каталог, ноль переобучения." text="Роутер читает описание каждого сценария и его границы «не этот, если…». Новый сценарий — это строка в каталоге, а не новая модель." />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+      <div className={CARD + " p-6"}>
+        <div className="text-sm text-body">Каталог из стартового кита</div>
+        <dl className="mt-4 grid grid-cols-3 gap-4 border-t border-border pt-5 lg:grid-cols-1 lg:gap-5">
           <div><dt className="text-sm text-body">срочных</dt><dd className="mt-1 text-3xl font-medium tabular-nums text-ink">{urgent}</dd></div>
           <div><dt className="text-sm text-body">с подтверждением</dt><dd className="mt-1 text-3xl font-medium tabular-nums text-ink">{confirm}</dd></div>
           <div><dt className="text-sm text-body">с идентификацией</dt><dd className="mt-1 text-3xl font-medium tabular-nums text-ink">{ident}</dd></div>
         </dl>
       </div>
-      <div className="lift rounded-3xl border border-border bg-white p-5 sm:p-6" onMouseLeave={() => setHover(null)}>
+      <div className={CARD + " p-5 sm:p-6"} onMouseLeave={() => setHover(null)}>
         <div className="mb-4 flex h-6 items-center justify-between text-sm">
           <span className="text-ink">{active ? <><span className="font-mono text-xs text-brand">{active.scenario_id}</span> · {scenarioNames.ru[active.scenario_id]}</> : <span className="text-body">Наведите на сценарий</span>}</span>
           {active && <span className="text-xs text-body">{CAT[active.category]?.label}{active.priority === "urgent" ? " · срочный" : ""}</span>}
@@ -61,6 +63,7 @@ export function Scenarios() {
           ))}
           <span className="inline-flex items-center gap-1.5 px-2"><span className="size-1.5 rounded-full bg-ink" />срочный</span>
         </div>
+      </div>
       </div>
     </section>
   );

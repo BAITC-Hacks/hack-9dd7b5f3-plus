@@ -21,16 +21,16 @@ export function Hero() {
   );
 }
 
-/** Blurred blue horizon, stepped like a skyline; full-bleed and flowing straight into the first band. */
+/** Blurred blue horizon, stepped like a skyline; full-bleed, no hard edges, flows into the first band. */
 export function Horizon() {
   return (
-    <div aria-hidden className="relative z-10 mt-14 h-[230px] overflow-hidden sm:mt-16 sm:h-[280px]">
-      <div className="absolute inset-x-[-4%] bottom-[-60px] flex h-[420px] items-end blur-xl">
+    <div aria-hidden className="relative z-10 mt-10 h-[300px] overflow-hidden sm:mt-12 sm:h-[340px]" style={{ maskImage: "linear-gradient(to bottom, transparent 0%, #000 34%)", WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 34%)" }}>
+      <div className="absolute inset-x-[-4%] bottom-[-70px] flex h-[300px] items-end blur-2xl">
         {[58, 44, 68, 52, 78, 40, 64, 56, 72, 48, 66, 42, 60, 50].map((h, i) => (
-          <div key={i} className="sky-col flex-1" style={{ animationDelay: `${i * 0.45}s`, height: `${h}%`, background: "linear-gradient(to bottom, rgba(47,106,209,0.04) 0%, #2f6ad1 30%, #2a5ebb 100%)" }} />
+          <div key={i} className="sky-col flex-1" style={{ animationDelay: `${i * 0.45}s`, height: `${h}%`, background: "linear-gradient(to bottom, rgba(47,106,209,0) 0%, #2f6ad1 38%, #2a5ebb 100%)" }} />
         ))}
       </div>
-      <div className="absolute inset-x-0 bottom-0 h-14" style={{ background: "linear-gradient(to bottom, rgba(42,94,187,0), #2a5ebb 70%)" }} />
+      <div className="absolute inset-x-0 bottom-0 h-16" style={{ background: "linear-gradient(to bottom, rgba(42,94,187,0), #2a5ebb 75%)" }} />
     </div>
   );
 }

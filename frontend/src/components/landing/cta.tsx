@@ -4,7 +4,7 @@ import { PlusDitherPanel } from "./visuals";
 /** Final block: dithered blue marble (Speko-style), a paper card in the middle. */
 export function Cta() {
   return (
-    <section className="relative z-10 mx-auto w-full max-w-[1200px] px-5 pb-20 sm:px-8 lg:pb-28">
+    <section className="relative z-10 mx-auto w-full max-w-[1200px] px-5 pb-20 pt-4 sm:px-8 lg:pb-24">
       <div className="relative h-[560px] overflow-hidden rounded-3xl border border-border bg-white">
         <PlusDitherPanel imageSrc="/landing/marble.svg" className="!h-full !w-full" />
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-5">
