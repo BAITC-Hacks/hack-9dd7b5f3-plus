@@ -140,8 +140,16 @@ func Load() Config {
 	openaiKey := env("OPENAI_API_KEY", "")
 	elevenKey := env("ELEVENLABS_API_KEY", "")
 
-	llmProvider := strings.ToLower(env("LLM_PROVIDER", "mock"))
 	llmKey := env("LLM_API_KEY", openaiKey)
+	llmProvider := strings.ToLower(env("LLM_PROVIDER", ""))
+	if llmProvider == "" {
+		// auto: use the LLM router whenever a key is available
+		if llmKey != "" {
+			llmProvider = "openai"
+		} else {
+			llmProvider = "mock"
+		}
+	}
 	if llmProvider == "openai" && llmKey == "" {
 		// Without a key the OpenAI-compatible client cannot work; fall back to mock so
 		// the app still starts, and say so loudly in the config endpoint.

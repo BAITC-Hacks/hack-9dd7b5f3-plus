@@ -97,13 +97,13 @@ cd frontend && npm ci && npm run dev       # http://localhost:3000 (API at <host
 Ports busy? `BACKEND_PORT=8090 FRONTEND_PORT=3001 docker compose up --build` (then open :3001 and set `NEXT_PUBLIC_API_URL=http://localhost:8090` for the frontend build).
 
 ### Recommended keys for the full experience
-`OPENAI_API_KEY` (router `gpt-4.1-mini`, STT `gpt-4o-mini-transcribe`, TTS `gpt-4o-mini-tts`) **and/or** `ELEVENLABS_API_KEY` (realtime STT with partial transcripts — the lowest-latency path — and Flash v2.5 TTS). With both set the defaults are: LLM OpenAI, STT ElevenLabs realtime, TTS ElevenLabs. Set `LLM_PROVIDER=openai` to enable the LLM router.
+`OPENAI_API_KEY` (router `gpt-4.1-mini`, STT `gpt-4o-mini-transcribe`, TTS `gpt-4o-mini-tts`) **and/or** `ELEVENLABS_API_KEY` (realtime STT with partial transcripts — the lowest-latency path — and Flash v2.5 TTS). With both set the defaults are: LLM OpenAI, STT ElevenLabs realtime, TTS ElevenLabs (the LLM router turns on automatically once `OPENAI_API_KEY` or `LLM_API_KEY` is set).
 
 ## 8. Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `LLM_PROVIDER` | `mock` | `mock` (lexical, keyless) or `openai` (any OpenAI-compatible endpoint) |
+| `LLM_PROVIDER` | auto | empty = `openai` when a key is set, else `mock` (lexical, keyless); can be set explicitly |
 | `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | OpenAI / `OPENAI_API_KEY` / `gpt-4.1-mini` | router model; e.g. Groq `https://api.groq.com/openai/v1` + `llama-3.3-70b-versatile`, Ollama `http://localhost:11434/v1` |
 | `STT_PROVIDER` | auto | `browser` · `mock` · `elevenlabs_realtime` · `elevenlabs` · `openai` (also geko Seta / whisper servers via `STT_BASE_URL`) |
 | `STT_MODEL`, `STT_LANGUAGE`, `STT_SECONDARY_LANGUAGES` | per provider | model id, language hint (empty = auto), extra languages for realtime |

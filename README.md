@@ -99,13 +99,13 @@ cd frontend && npm ci && npm run dev       # http://localhost:3000 (API на <ho
 Порты заняты? `BACKEND_PORT=8090 FRONTEND_PORT=3001 docker compose up --build` (затем откройте :3001, а для сборки фронтенда задайте `NEXT_PUBLIC_API_URL=http://localhost:8090`).
 
 ### Рекомендуемые ключи для полного режима
-`OPENAI_API_KEY` (роутер `gpt-4.1-mini`, STT `gpt-4o-mini-transcribe`, TTS `gpt-4o-mini-tts`) **и/или** `ELEVENLABS_API_KEY` (realtime-STT с промежуточными транскриптами — самый быстрый путь — и TTS Flash v2.5). При обоих ключах по умолчанию: LLM — OpenAI, STT — ElevenLabs realtime, TTS — ElevenLabs. Для включения LLM-роутера задайте `LLM_PROVIDER=openai`.
+`OPENAI_API_KEY` (роутер `gpt-4.1-mini`, STT `gpt-4o-mini-transcribe`, TTS `gpt-4o-mini-tts`) **и/или** `ELEVENLABS_API_KEY` (realtime-STT с промежуточными транскриптами — самый быстрый путь — и TTS Flash v2.5). При обоих ключах по умолчанию: LLM — OpenAI, STT — ElevenLabs realtime, TTS — ElevenLabs (LLM-роутер включается автоматически, как только задан `OPENAI_API_KEY` или `LLM_API_KEY`).
 
 ## 8. Переменные окружения
 
 | Переменная | По умолчанию | Назначение |
 |---|---|---|
-| `LLM_PROVIDER` | `mock` | `mock` (лексический, без ключей) или `openai` (любой OpenAI-совместимый эндпоинт) |
+| `LLM_PROVIDER` | авто | пусто = `openai`, если задан ключ, иначе `mock` (лексический, без ключей); можно задать явно |
 | `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | OpenAI / `OPENAI_API_KEY` / `gpt-4.1-mini` | модель роутера; например Groq `https://api.groq.com/openai/v1` + `llama-3.3-70b-versatile`, Ollama `http://localhost:11434/v1` |
 | `LLM_PROMPT_EXAMPLES` | `1` | примеров на язык в кэшируемом промпте (1 ≈ 9–11k токенов) |
 | `STT_PROVIDER` | авто | `browser` · `mock` · `elevenlabs_realtime` · `elevenlabs` · `openai` (также geko Seta / whisper-серверы через `STT_BASE_URL`) |
