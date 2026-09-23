@@ -60,26 +60,27 @@ Team **Plus** · HackAlem AI 2026 · Track 09 «Communications» · Case **Halyk
 | The organizers ask | Short answer | Details |
 |---|---|---|
 | **What does it solve?** | Voice robots mis-route live speech — topic switches, requests between two scenarios, Russian↔Kazakh switching inside a phrase — because the scenario is picked by an encoder intent classifier. Bagyt picks it with an LLM layer over the dialog context, asks or hands off when unsure, and shows the supervisor why. | [§1](#1-problem-and-users) |
-| **How do I run it?** | **Live: [bagyt.plus](https://bagyt.plus)** — just open it: nothing to install, and no keys needed (they live on the server). Locally without keys: `docker compose up --build` → http://localhost:3000/admin (engine «демо»). Locally with the LLM router and ElevenLabs voice: your keys in `core-llm/.env` (OpenRouter) and `.env` (ElevenLabs), then `NEXT_PUBLIC_API_MODE=core docker compose --profile llm --profile voice up --build`. Without Docker: `cd frontend && npm ci && npm run dev`. | [§7](#7-install-and-run) |
+| **How do I run it?** | **Live: [bagyt.plus](https://bagyt.plus)** — just open it: nothing to install, no login, no keys (they live on the server). Locally without keys: `docker compose up --build` → http://localhost:3000/admin (engine «демо»). Locally with the LLM router and ElevenLabs voice: the `.env` files from our [Google Drive folder](https://drive.google.com/drive/folders/1AVWWYkxWrxboPzv-ARIlz7GoK1xr-4oZ?usp=sharing) (or your own keys) in `core-llm/.env` (OpenRouter) and `.env` (ElevenLabs), then `NEXT_PUBLIC_API_MODE=core docker compose --profile llm --profile voice up --build`. Without Docker: `cd frontend && npm ci && npm run dev`. | [§7](#7-install-and-run) |
 | **Which technologies?** | Next.js 16 · React 19 · TypeScript · Tailwind 4 · Python LLM core on **OpenRouter** (Gemini 2.5 Flash-Lite) · Go 1.26 voice service on **ElevenLabs** (Scribe v2 STT, Flash v2.5 / v3 conversational TTS) · browser Web Speech API as the keyless fallback | [§5](#5-technologies) |
 | **How do I verify it?** | A 10-step walkthrough in the web app (RU, KZ, mixed, multi-intent, topic return, confirmation, clarify → handoff), the same phrases in «LLM» mode, the official `evaluate.py` and the unit tests | [§8](#8-how-to-verify) |
 
 ## Try it online
 
-<!-- TODO(team): fill the four ⏳ cells before 18:00. Demo accounts only — never put API keys here; they stay in the server's environment. -->
+<!-- Never put API keys in this file: they live in the server's private env files and in the team's Drive folder. -->
 
 | | |
 |---|---|
 | 🌐 **Live app** | **[bagyt.plus](https://bagyt.plus)** |
-| 🔑 **Jury access** | Login: ⏳ · Password: ⏳ — or *"no login required"* |
-| 🎬 **Demo video** (3 min) | ⏳ link |
+| 🔑 **Jury access** | **Open access — no login, no password.** The call screen (`/call`) and the supervisor console («Аналитика», `/admin`) are open to everyone |
+| 🎬 **Demo video** (3 min) | **[Google Drive folder](https://drive.google.com/drive/folders/1AVWWYkxWrxboPzv-ARIlz7GoK1xr-4oZ?usp=sharing)** |
+| 🔐 **Keys for a local run** | The `.env` files (OpenRouter, ElevenLabs) are in the same **[Google Drive folder](https://drive.google.com/drive/folders/1AVWWYkxWrxboPzv-ARIlz7GoK1xr-4oZ?usp=sharing)**, shared for the jury — never in this repo. Put them in place ([§7.6](#76-environment-variables)) and run `NEXT_PUBLIC_API_MODE=core docker compose --profile llm --profile voice up --build` |
 | 🧪 **Test clients** | Say or type a phone when the robot asks: `+77010000007` Sergey Popov (claim under review) · `+77010000001` Arman Tulegenov (OGPO + CASCO) · `+77010000003` Yerlan Omarov (policy to renew) — all synthetic, [§8.3](#83-test-clients) |
 
-**About API keys.** None are in this repository, on purpose. The live app runs with our OpenRouter and ElevenLabs keys stored as environment variables on the host, so nothing is needed on your side. Locally, «Мок» works with no keys at all, and «LLM» with voice needs your own keys in the env files ([§7.6](#76-environment-variables)).
+**About API keys.** None are in this repository, on purpose. **[bagyt.plus](https://bagyt.plus)** runs with our OpenRouter and ElevenLabs keys in private env files on the server ([§7.5](#75-deployed-version)), so nothing is needed on your side. For a full local run, take the `.env` files from the **[Google Drive folder](https://drive.google.com/drive/folders/1AVWWYkxWrxboPzv-ARIlz7GoK1xr-4oZ?usp=sharing)** next to the demo video; without them, «Мок» works with no keys at all.
 
 **Test it in 60 seconds:**
 
-1. Open **[bagyt.plus](https://bagyt.plus)** → **«Аналитика»** (the conversation on the left, the robot's reasoning on the right). Log in with the jury access above if asked.
+1. Open **[bagyt.plus](https://bagyt.plus)** → **«Аналитика»** (the conversation on the left, the robot's reasoning on the right). No login needed.
 2. The live app keeps the OpenRouter and ElevenLabs keys on the server — you need no keys of your own. Turn the replies' sound on with the speaker icon next to the text field.
 3. Click the mic, say **«Хочу продлить ОГПО и добавить сына»** and click again to send — or type it. Then try **«Кеше аварияға түстім, но я не виноват, виновник у вас застрахован»**.
 4. After each phrase, read the right column: the scenarios with confidence, why, the rejected alternatives, what the robot did and how many milliseconds each stage took.
@@ -190,7 +191,7 @@ Legend: ✅ works on `main` · 🚧 in progress, not on `main` yet · 📋 plann
 | PostgreSQL persistence of turns and traces | 📋 | — |
 | One command: `docker compose up --build` (web app, keyless); `--profile llm` adds the `core-llm` service, `--profile voice` the ElevenLabs voice service | ✅ | [`docker-compose.yml`](docker-compose.yml), [`frontend/Dockerfile`](frontend/Dockerfile), [`core-llm/Dockerfile`](core-llm/Dockerfile), [`voice/Dockerfile`](voice/Dockerfile) |
 | Tests: the `core-llm` HTTP adapter and greetings; the frontend's core adapter and dialog engine; the voice service against fake ElevenLabs servers (no credits) | ✅ | [`core-llm/test_server.py`](core-llm/test_server.py), [`frontend/scripts/test-core.cjs`](frontend/scripts/test-core.cjs) (`npm test`), `voice/` (`go test ./...`) |
-| Deployment (Railway) | ⏳ | ⏳ |
+| Deployment: **[bagyt.plus](https://bagyt.plus)** on a VPS — Nginx with Let's Encrypt HTTPS in front of the full Compose stack (`--profile server`); keys in private server env files | ✅ | [`deploy/`](deploy/), [§7.5](#75-deployed-version) |
 | Phone channel: Asterisk AudioSocket (a Kazakh SIP number) and Twilio Media Streams transports in the voice service, with a setup guide | ✅ code · ⏳ live number | [`voice/transport/`](voice/transport/), [`voice/deploy/README.md`](voice/deploy/README.md) |
 | Emotion detection and tone adaptation | ❌ cut | — |
 
@@ -496,7 +497,7 @@ Kept per session and sent to the UI after every turn (`state` event):
 | Storage | PostgreSQL | — | Turns, traces, statistics | 📋 |
 | Evaluation | Python 3 — official [`data/evaluate.py`](data/evaluate.py); TypeScript scripts run with `tsx` | — | Dev-set accuracy, sample-dialog replay | ✅ |
 | Tests | `node:test` + the TypeScript compiler (`npm test`) · Python `unittest` · `go test` with fake ElevenLabs servers | — | Core adapter, dialog engine, the core's HTTP adapter, the voice service | ✅ |
-| Infrastructure | Docker Compose (images `node:22-bookworm-slim`, `python:3.13-slim`, Go for `voice/`) · Railway | — | One-command run · hosting | ✅ · ⏳ |
+| Infrastructure | Docker Compose (images `node:22-bookworm-slim`, `python:3.13-slim`, Go for `voice/`) · a VPS with Nginx + Let's Encrypt for bagyt.plus | — | One-command run · hosting | ✅ · ✅ |
 
 Every third-party component, model, dataset and API with its license: [THIRD_PARTY.md](THIRD_PARTY.md).
 
@@ -632,6 +633,8 @@ npm run dev        # starts in «Мок» when there is no frontend/.env.local
 Voice in «Мок» is the browser's own (Web Speech in Chrome / Edge, `speechSynthesis`). For ElevenLabs voice — also the way around browsers that can't reach Google's speech service (Arc, Brave, Yandex, restricted networks) — run the `voice` profile from [§7.2](#72-llm-mode--the-real-router-in-the-web-app). The recognizer follows the mode: the browser's Web Speech in «Мок», ElevenLabs in «LLM».
 
 ### 7.2 LLM mode — the real router in the web app
+
+The ready `.env` files are in our [Google Drive folder](https://drive.google.com/drive/folders/1AVWWYkxWrxboPzv-ARIlz7GoK1xr-4oZ?usp=sharing) next to the demo video — copy `core-llm/.env` and the root `.env` from there, or create them from the examples below.
 
 With Docker — the router and ElevenLabs voice:
 
@@ -793,7 +796,7 @@ One env file per component; each ships as a keyless example. Secrets live only i
 
 ## 8. How to verify
 
-> Prefer to watch? **Demo video:** ⏳ link (3 min). Prefer to click? **[bagyt.plus](https://bagyt.plus)** — jury access is in [Try it online](#try-it-online). Everything below also works locally.
+> Prefer to watch? The **demo video** (3 min) is in our **[Google Drive folder](https://drive.google.com/drive/folders/1AVWWYkxWrxboPzv-ARIlz7GoK1xr-4oZ?usp=sharing)**. Prefer to click? **[bagyt.plus](https://bagyt.plus)** — open access, no login. Everything below also works locally.
 
 ### 8.1 Setup — 30 seconds
 
@@ -1121,7 +1124,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 | ElevenLabs — Scribe v2 (batch and Realtime), Flash v2.5, v3 conversational | Speech recognition and voice replies in «LLM» mode; the streaming gateway and the phone channel in `voice/` — [§5.2](#52-elevenlabs--speech-in-and-out) | ✅ | `ELEVENLABS_API_KEY` in the root `.env` |
 | OpenAI / NVIDIA Build / any OpenAI-compatible API | LLM access for the Go backend | 🚧 | `OPENAI_API_KEY` / `NVIDIA_API_KEY` / `LLM_API_KEY` |
 | geko.sh — Seta, Tokay | KZ / RU speech, alternative | 📋 | `GEKO_API_KEY` |
-| Railway | Hosting | ⏳ | — |
+| VPS with Nginx + Let's Encrypt | Hosting bagyt.plus | ✅ | — |
 | Google Fonts via `next/font` | Geist fonts, self-hosted by Next.js at build time | ✅ | none |
 
 ### 10.3 Privacy and safety
@@ -1203,7 +1206,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 **Scope today**
 
-- **«LLM» mode needs an OpenRouter key** — or the deployed version ⏳. Without a key everything runs in «Мок» with the keyword baseline, and the LLM layer is visible through its code, prompt, tests and reported results.
+- **«LLM» mode needs keys** — use [bagyt.plus](https://bagyt.plus), or the `.env` files from our [Google Drive folder](https://drive.google.com/drive/folders/1AVWWYkxWrxboPzv-ARIlz7GoK1xr-4oZ?usp=sharing). Without a key everything runs in «Мок» with the keyword baseline, and the LLM layer is visible through its code, prompt, tests and reported results.
 - **Only routing calls the LLM.** Slots, actions and replies come from the deterministic demo executor in the browser. The LLM's catalog index is hand-made from `scenarios.json`, so editing the catalog also means editing `scenarios.index.txt`.
 - **No silent fallback:** if `core-llm` is down or the key is wrong, «LLM» mode shows an error instead of quietly switching to the mock.
 - **Both dev-set scores are in-sample** — the mock's cues and the LLM prompt were refined on the dev set ([§9.1](#91-routing-accuracy-on-the-dev-set)). The LLM numbers are reported by its author and cannot yet be re-scored without a key, because `core-llm/reports/` is gitignored ⏳.
@@ -1235,7 +1238,7 @@ Kit description: [`data/README.md`](data/README.md) (EN) · [RU](data/README.ru.
 
 | Horizon | Items |
 |---|---|
-| **Before 18:00 today** | Jury access on bagyt.plus (keys as host variables) · the demo video · commit the LLM predictions for keyless re-scoring · run the dev set in «LLM» mode · fill every ⏳ in [§9](#9-results) |
+| **Before 18:00 today** | A smoke test of bagyt.plus · the demo video · commit the LLM predictions for keyless re-scoring · run the dev set in «LLM» mode · fill every ⏳ in [§9](#9-results) |
 | **Next** | Connect the voice service's streaming `/ws/voice` gateway to the web app — live captions, push-to-talk commit, streamed audio, towards ~1.1 s end to end · the same routing inside the Go turn API · fast path for `fast_path_eligible` scenarios with a measured gain · speculative routing on partial transcripts · generate `scenarios.index.txt` from `scenarios.json` automatically · PostgreSQL history and supervisor error statistics over time · a catalog editor for non-developers · geko.sh for Kazakh · a phone channel (Vapi + Twilio or LiveKit SIP) |
 | **Beyond** | Other contact centers — banking, telecom: the catalog is data, so a new domain is a new catalog index plus an evaluation set, not a new model |
 
@@ -1315,7 +1318,7 @@ Photos from the day are at the [top of this README](#from-the-hackathon-floor).
 
 | Where | What to fill | How |
 |---|---|---|
-| [Try it online](#try-it-online), [§8](#8-how-to-verify) | Jury access, demo video | Paste them, plus the date of a smoke test on bagyt.plus. Demo accounts only — never API keys |
+| [§9.5](#95-engineering-checks) | Smoke test of bagyt.plus | Date and what was checked (§8.2 steps 1–3, voice V1) |
 | Top callout, [§2](#2-what-is-implemented), [§4.6](#46-three-modes-one-contract), [§8.5](#85-case-requirements--where-to-check-them) | Go backend, streaming voice in the web app, deployment | Flip 🚧 → ✅ once they are on `main`; add file paths |
 | [§7.1](#71-quick-start--keyless-about-two-minutes), [§7.2](#72-llm-mode--the-real-router-in-the-web-app) | Docker Compose, both profiles | Verify from a clean clone |
 | [§9.1](#91-routing-accuracy-on-the-dev-set) | LLM independent re-run | Commit the predictions file and re-score with `evaluate.py`, or run `python3 core-llm/router.py --eval` |
@@ -1329,7 +1332,7 @@ Photos from the day are at the [top of this README](#from-the-hackathon-floor).
 
 **Before 18:00**
 
-- [ ] [Try it online](#try-it-online): jury access and demo video filled in; bagyt.plus clicked through once
+- [ ] bagyt.plus clicked through once; the Google Drive folder (demo video + `.env`) opens for the organizers
 - [ ] `grep -n "⏳" README.md` — every item filled, or deliberately kept as a stated limitation
 - [ ] Clean clone → [§7.1](#71-quick-start--keyless-about-two-minutes) → the [§8.2](#82-walkthrough--10-scenarios) walkthrough works
 - [ ] Env examples match [§7.6](#76-environment-variables); no secrets in git history
