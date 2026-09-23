@@ -23,7 +23,8 @@ export function wipeTo(router: ReturnType<typeof useRouter>, href: string, from:
   requestAnimationFrame(() => { el.style.transform = `translate(-50%, -50%) scale(${(far * 2) / d + 1})`; });
   try { sessionStorage.setItem("bagyt:enter", "1"); } catch { /* noop */ }
   window.setTimeout(() => router.push(href), 520);
-  window.setTimeout(() => el.remove(), 1600);
+  // the wipe stays until the next page mounts (EnterReveal removes it); safety timeout for slow dev compiles
+  window.setTimeout(() => el.remove(), 8000);
 }
 
 export function CtaButton({ href, children, tone = "brand", className }: { href: "/call" | "/admin" | "/"; children: React.ReactNode; tone?: Tone; className?: string }) {

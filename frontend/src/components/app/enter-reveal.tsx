@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 export function EnterReveal() {
   const [on, setOn] = useState(false);
   useEffect(() => {
+    document.querySelectorAll(".page-wipe").forEach((el) => el.remove());
     try {
       if (sessionStorage.getItem("bagyt:enter") === "1") {
         sessionStorage.removeItem("bagyt:enter");
