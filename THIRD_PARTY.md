@@ -18,6 +18,8 @@
 | OpenAI API | Commercial API terms | https://platform.openai.com | Optional LLM, STT, TTS, Realtime |
 | OpenRouter API | OpenRouter service terms | https://openrouter.ai/terms | Optional OpenAI-compatible routing gateway; locally verified with openai/gpt-4.1-mini |
 | GPT-4.1 mini | OpenAI API terms | https://developers.openai.com/api/docs/models/gpt-4.1-mini | Configurable initial router model; no bundled weights |
+| Gemini 2.5 Flash-Lite (`google/gemini-2.5-flash-lite` via OpenRouter) | Google Gemini API terms via OpenRouter | https://ai.google.dev/gemini-api/terms | core-llm: default scenario-routing model; API only, no bundled weights |
+| Models benchmarked by core-llm/router.py --bench (Gemini 3.1/3.5/3.8 flash-lite/flash, GPT-4.1 nano, GPT-5.4 nano, GPT-5.6 luna, gpt-oss-120b, Grok 4.3, Qwen 3.7 flash, DeepSeek V4 flash, Llama 3.3 70B, Claude Haiku 4.5, Ministral 14B, GLM 5.3 flash, MiMo 2.6 flash) | Respective provider API terms via OpenRouter | https://openrouter.ai/models | Measurement only (core-llm/README.md table); not used at runtime |
 | gpt-4o-mini-transcribe, gpt-4o-mini-tts, gpt-live-transcribe | OpenAI API terms | https://developers.openai.com/api/docs/guides/audio | Configurable speech models; no bundled weights |
 | NVIDIA Build / NIM | NVIDIA service terms | https://build.nvidia.com | Optional OpenAI-compatible routing |
 | Llama 3.3 70B Instruct | Llama 3.3 Community License | https://www.llama.com/llama3_3/license/ | Optional NVIDIA default model; no bundled weights |
