@@ -1,0 +1,12 @@
+# Public entrypoint on the demo server: automatic HTTPS (Let's Encrypt) for bagyt.plus.
+bagyt.plus, www.bagyt.plus {
+	reverse_proxy frontend:3000
+}
+
+api.bagyt.plus {
+	reverse_proxy backend:8080
+}
+
+voice.bagyt.plus {
+	reverse_proxy voice:8090
+}
