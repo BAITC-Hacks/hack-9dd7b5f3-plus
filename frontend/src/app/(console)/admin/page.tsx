@@ -28,9 +28,9 @@ export default function AdminPage() {
     <div className="mx-auto w-full max-w-[1200px] space-y-5 px-4 py-6 sm:px-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-medium">{t("Консоль супервизора")}</h1>
+          <h1 className="text-xl font-medium">{t("Аналитика")}</h1>
           <p className="mt-1 font-mono text-xs text-muted-foreground">Voice Agent ID: {VOICE_AGENT_ID}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t("Каждая реплика: что понял робот, почему, что сделал и за сколько.")}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t("Что понял робот, что сделал и как быстро — по каждой реплике.")}</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => setShowJson((v) => !v)} disabled={!json}>{showJson ? t("Скрыть JSON") : t("JSON последней реплики")}</Button>
       </header>

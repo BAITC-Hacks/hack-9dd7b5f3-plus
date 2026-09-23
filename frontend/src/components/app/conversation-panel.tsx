@@ -40,7 +40,7 @@ function Bubble({ m }: { m: Message }) {
 
 const STATUS_TEXT = {
   idle: "Нажмите на микрофон и говорите",
-  listening: "Слушаю… нажмите на микрофон ещё раз, чтобы отправить",
+  listening: "Слушаю… говорите, отвечу после паузы",
   thinking: "Думаю…",
   speaking: "Отвечаю",
 } as const;
@@ -94,7 +94,8 @@ export function ConversationPanel({ className, compact = false }: { className?: 
             size={compact ? "icon-lg" : "icon-xl"}
             aria-label={listening ? t("Отправить") : t("Говорить")}
             aria-pressed={listening}
-            className={cn("shrink-0 rounded-full", listening && "animate-pulse")}
+            className={cn("shrink-0 rounded-full transition-shadow duration-100")}
+            style={listening ? { boxShadow: `0 0 0 ${4 + Math.round(s.level * 16)}px rgba(47,106,209,0.28)` } : undefined}
             onClick={() => void toggleVoice()}
             disabled={thinking}
           >

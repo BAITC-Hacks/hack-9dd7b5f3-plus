@@ -13,6 +13,8 @@ export function EnterReveal() {
     try { flagged = sessionStorage.getItem("bagyt:enter") === "1"; if (flagged) sessionStorage.removeItem("bagyt:enter"); } catch { /* noop */ }
     document.querySelectorAll(".wave-stack").forEach((el) => el.remove());
     if (!flagged) return;
+    document.body.dataset.enter = "1";
+    const clear = window.setTimeout(() => { delete document.body.dataset.enter; }, 1900);
     const stack = buildWaveStack("covering");
     const waves = [...stack.querySelectorAll<HTMLElement>(".wave")]; // blue, white, black
     waves.forEach((w, i) => {
@@ -23,7 +25,7 @@ export function EnterReveal() {
     });
     requestAnimationFrame(() => requestAnimationFrame(() => waves.forEach((w) => w.classList.add("out"))));
     const t = window.setTimeout(() => stack.remove(), 1900);
-    return () => { window.clearTimeout(t); stack.remove(); };
+    return () => { window.clearTimeout(t); window.clearTimeout(clear); stack.remove(); delete document.body.dataset.enter; };
   }, []);
   return null;
 }

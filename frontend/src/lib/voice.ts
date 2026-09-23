@@ -233,17 +233,70 @@ export interface Recorder {
   abort(): void;
 }
 
-export async function startRecording(): Promise<Recorder> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const release = () => stream.getTracks().forEach((t) => t.stop());
+export interface RecorderOptions {
+  /** 0..1 microphone level, ~20 times per second. */
+  onLevel?(v: number): void;
+  onSpeechStart?(): void;
+  /** Fired once when the speaker pauses for `silenceMs` after having spoken (or after `maxMs`). */
+  onSilence?(): void;
+  /** Everything recorded so far (a valid file), every `partialEveryMs` while speaking — for live transcripts. */
+  onPartial?(blob: Blob): void;
+  silenceMs?: number;
+  maxMs?: number;
+  partialEveryMs?: number;
+}
+
+export async function startRecording(opts: RecorderOptions = {}): Promise<Recorder> {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
   let rec: MediaRecorder;
   try {
     const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"].find((type) => MediaRecorder.isTypeSupported(type));
     rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     rec.start(250);
-  } catch (error) { release(); throw error; }
+  } catch (error) { stream.getTracks().forEach((t) => t.stop()); throw error; }
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+
+  // --- voice activity detection (RMS over the time-domain signal, noise floor calibrated in the first ~300 ms)
+  const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const ac = new AC();
+  const analyser = ac.createAnalyser();
+  analyser.fftSize = 1024;
+  ac.createMediaStreamSource(stream).connect(analyser);
+  const buf = new Uint8Array(analyser.fftSize);
+  const silenceMs = opts.silenceMs ?? 900;
+  const maxMs = opts.maxMs ?? 20000;
+  const startedAt = Date.now();
+  let frames = 0, noise = 1, speaking = false, lastSpeech = 0, silenced = false;
+  const tick = window.setInterval(() => {
+    analyser.getByteTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+    const rms = Math.sqrt(sum / buf.length);
+    frames++;
+    if (frames <= 6) noise = Math.min(noise, Math.max(0.003, rms));
+    const thr = Math.max(0.015, noise * 3);
+    opts.onLevel?.(Math.min(1, rms / 0.2));
+    const now = Date.now();
+    if (rms > thr) {
+      if (!speaking) { speaking = true; opts.onSpeechStart?.(); }
+      lastSpeech = now;
+    } else if (speaking && now - lastSpeech > silenceMs && !silenced) {
+      silenced = true; opts.onSilence?.();
+    }
+    if (now - startedAt > maxMs && !silenced) { silenced = true; opts.onSilence?.(); }
+  }, 50);
+  const partial = window.setInterval(() => {
+    if (!opts.onPartial || !chunks.length) return;
+    if (speaking || Date.now() - lastSpeech < 1500) opts.onPartial(new Blob(chunks, { type: rec.mimeType || chunks[0]?.type || "audio/webm" }));
+  }, opts.partialEveryMs ?? 2200);
+
+  const release = () => {
+    window.clearInterval(tick);
+    window.clearInterval(partial);
+    stream.getTracks().forEach((t) => t.stop());
+    ac.close().catch(() => undefined);
+  };
   return {
     abort() {
       rec.ondataavailable = null;
@@ -251,7 +304,7 @@ export async function startRecording(): Promise<Recorder> {
       release();
     },
     stop: () => new Promise((resolve, reject) => {
-      const endedAt = Date.now();
+      const endedAt = lastSpeech || Date.now();
       rec.onerror = () => { release(); reject(new Error("Не удалось сохранить запись микрофона")); };
       rec.onstop = async () => {
         release();
@@ -269,6 +322,17 @@ export async function startRecording(): Promise<Recorder> {
       else rec.stop();
     }),
   };
+}
+
+/** Live transcript of a partial recording (whole file so far) via /api/stt. */
+export async function transcribeBlob(blob: Blob, language: "ru" | "kk"): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", blob, "partial.webm");
+  fd.append("language", language);
+  const r = await fetch("/api/stt", { method: "POST", body: fd });
+  if (!r.ok) return "";
+  const j = (await r.json().catch(() => ({}))) as { text?: string };
+  return (j.text ?? "").trim();
 }
 
 /* ------------------------------ server STT (fallback) ------------------------------ */

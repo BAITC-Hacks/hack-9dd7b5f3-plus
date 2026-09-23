@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 import { createSession, DEFAULT_MODE, runTurn, type ApiMode } from "./api";
 import type { ActionCall, Candidate, DialogState, LatencyMs, PolicyVerdict, SpeechLang, RouterDecision, Stage, Trace, TurnEvent } from "./contract";
 import { newDialogState } from "./mock/engine";
-import { playBase64, speak, speakElevenLabs, startListening, startRecording, stopSpeaking, sttSupported, transcribeOnServer, releaseSavedAudio, type SavedAudio, type Listener, type Recorder } from "./voice";
+import { playBase64, speak, speakElevenLabs, startListening, startRecording, stopSpeaking, sttSupported, transcribeBlob, transcribeOnServer, releaseSavedAudio, type SavedAudio, type Listener, type Recorder } from "./voice";
 
 export interface Message {
   id: string;
@@ -57,6 +57,7 @@ export interface ConversationState {
   sttAvailable: boolean;
   error: string | null;
   notice: string | null; // transient hint ("ничего не расслышала")
+  level: number; // microphone level 0..1 while listening
 }
 
 let state: ConversationState = {
@@ -74,6 +75,7 @@ let state: ConversationState = {
   sttAvailable: false,
   error: null,
   notice: null,
+  level: 0,
 };
 
 const listeners = new Set<() => void>();
@@ -117,6 +119,11 @@ export function setMode(mode: ApiMode) {
 }
 
 export function setSttLang(lang: "ru-RU" | "kk-KZ") { set({ sttLang: lang }); }
+/** Interface language → speech recognition language and the robot's reply language for a fresh dialog. */
+export function setPreferredLanguage(lang: "ru" | "kk") {
+  const sttLang = lang === "kk" ? "kk-KZ" : "ru-RU";
+  set((s) => ({ sttLang, dialog: s.dialog.turn === 0 ? { ...s.dialog, language: lang } : s.dialog }));
+}
 export function setSttProvider(p: "browser" | "server") { if (busy || captureStarting || state.status === "thinking") return; listener?.abort(); listener = null; recorder?.abort(); recorder = null; set({ sttProvider: p, error: null, notice: null, status: "idle", interim: "" }); }
 export function setTts(on: boolean) { if (!on) stopSpeaking(); set({ tts: on }); }
 
@@ -151,8 +158,21 @@ export async function startVoice() {
     }
     if (state.mode === "real" || state.sttProvider === "server") {
       try {
-        recorder = await startRecording();
-        set({ status: "listening", interim: "", notice: "Говорите. Нажмите на микрофон ещё раз, когда закончите." });
+        let partialInFlight = false;
+        let lastLevel = 0;
+        recorder = await startRecording({
+          onLevel: (v) => { if (Math.abs(v - lastLevel) > 0.04) { lastLevel = v; set({ level: v }); } },
+          onSpeechStart: () => set({ notice: null }),
+          onSilence: () => { void stopVoice(); },
+          onPartial: (blob) => {
+            if (partialInFlight) return;
+            partialInFlight = true;
+            transcribeBlob(blob, state.sttLang === "kk-KZ" ? "kk" : "ru")
+              .then((text) => { if (text && state.status === "listening") set({ interim: text }); })
+              .finally(() => { partialInFlight = false; });
+          },
+        });
+        set({ status: "listening", interim: "", level: 0, notice: "Говорите — я слушаю и отвечу, когда вы закончите." });
       } catch {
         set({ error: "Нет доступа к микрофону. Разрешите его в адресной строке." });
       }
@@ -190,7 +210,7 @@ export async function startVoice() {
 export async function stopVoice() {
   if (recorder) {
     const r = recorder; recorder = null;
-    set({ status: "thinking", notice: null });
+    set({ status: "thinking", notice: null, level: 0 });
     busy = true;
     try {
       const { audio_base64, mime, endedAt } = await r.stop();

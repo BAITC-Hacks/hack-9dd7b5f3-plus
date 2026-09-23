@@ -401,3 +401,10 @@
 .wave-body { position: absolute; inset: 0; }
 @keyframes waveRoll { from { transform: translate(0, -98%); } to { transform: translate(-6.9%, -98%); } }
 @media (prefers-reduced-motion: reduce) { .wave { transition-duration: 0.01s; } .wave svg { animation: none; } }
+
+/* ── Platform entrance (runs while the last wave lifts) ── */
+@keyframes platformIn { from { opacity: 0; transform: translateY(26px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes platformHeader { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+body[data-enter="1"] .platform-main { animation: platformIn 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both; }
+body[data-enter="1"] .platform-header { animation: platformHeader 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both; }
+@media (prefers-reduced-motion: reduce) { body[data-enter="1"] .platform-main, body[data-enter="1"] .platform-header { animation: none; } }
