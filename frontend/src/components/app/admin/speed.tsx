@@ -1,4 +1,5 @@
 "use client";
+import { useUiLanguage, translate as t } from "@/lib/ui-language";
 /** «Скорость»: per-stage latency waterfall with the 1.5 s target. */
 import type { LatencyMs, Stage } from "@/lib/contract";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ const ROWS: { stage: Stage; label: string; color: string }[] = [
 ];
 
 export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean }) {
+  useUiLanguage();
   const total = latency.total;
   const sum = ROWS.reduce((a, r) => a + (latency[r.stage] ?? 0), 0);
   const scale = Math.max(TARGET_MS, total ?? 0, sum) * 1.1;
@@ -23,8 +25,8 @@ export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean
 
   return (
     <Section
-      title="Скорость"
-      hint="от конца реплики до первого звука ответа"
+      title={t("Скорость")}
+      hint={t("от конца реплики до первого звука ответа")}
       right={
         hasAny ? (
           <span className={cn("text-lg font-medium tabular-nums", over ? "text-warning-foreground" : "text-success-foreground")}>
@@ -34,7 +36,7 @@ export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean
       }
     >
       {!hasAny ? (
-        <div className="py-2 text-sm text-muted-foreground">Появится после первой реплики.</div>
+        <div className="py-2 text-sm text-muted-foreground">{t("Появится после первой реплики.")}</div>
       ) : (
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 z-10" style={{ left: `calc(112px + (100% - 112px - 56px) * ${TARGET_MS / scale})` }}>
@@ -47,7 +49,7 @@ export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean
               const width = typeof ms === "number" ? (ms / scale) * 100 : 0;
               return (
                 <div key={stage} className="flex items-center gap-2 text-sm">
-                  <span className="w-[104px] shrink-0 text-muted-foreground">{label}</span>
+                  <span className="w-[104px] shrink-0 text-muted-foreground">{t(label)}</span>
                   <div className="relative h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[.05]">
                     <div className={cn("absolute inset-y-0 rounded-full transition-[width,left] duration-300", color)} style={{ left: `${left}%`, width: `${Math.max(width, typeof ms === "number" && ms > 0 ? 0.8 : 0)}%` }} />
                   </div>
@@ -56,7 +58,7 @@ export function SpeedCard({ latency, live }: { latency: LatencyMs; live: boolean
               );
             })}
           </div>
-          <div className="mt-2 text-xs text-muted-foreground">Пунктир — ориентир {fmtMs(TARGET_MS)} мс (+2 балла жюри). В режиме LLM учитывается запрос к ядру и сети.</div>
+          <div className="mt-2 text-xs text-muted-foreground">{t("Пунктир — ориентир")}{fmtMs(TARGET_MS)}{t("мс (+2 балла жюри). В режиме LLM учитывается запрос к ядру и сети.")}</div>
         </div>
       )}
     </Section>

@@ -1,4 +1,5 @@
 "use client";
+import { useUiLanguage, translate as t } from "@/lib/ui-language";
 /**
  * Shared conversation widget: chat feed + microphone (click to start, pause or click to send) + text input.
  * Used by /call (client) and /admin (supervisor, left column).
@@ -15,6 +16,7 @@ import { sendText, setTts, toggleVoice, useConversation, type Message } from "@/
 const LANG_LABEL: Record<string, string> = { ru: "RU", kk: "KK", mixed: "RU+KK" };
 
 export function LangBadge({ lang, className }: { lang?: string; className?: string }) {
+  useUiLanguage();
   if (!lang) return null;
   const variant = lang === "mixed" ? "info" : lang === "kk" ? "success" : "secondary";
   return (
@@ -25,6 +27,7 @@ export function LangBadge({ lang, className }: { lang?: string; className?: stri
 }
 
 function Bubble({ m }: { m: Message }) {
+  useUiLanguage();
   const isBot = m.role === "bot";
   return (
     <div className={cn("flex w-full", isBot ? "justify-start" : "justify-end")}>
@@ -43,6 +46,7 @@ const STATUS_TEXT = {
 } as const;
 
 export function ConversationPanel({ className, compact = false }: { className?: string; compact?: boolean }) {
+  useUiLanguage();
   const s = useConversation();
   const [text, setText] = useState("");
   const feedRef = useRef<HTMLDivElement>(null);
@@ -66,8 +70,8 @@ export function ConversationPanel({ className, compact = false }: { className?: 
       <div ref={feedRef} className="flex-1 min-h-0 space-y-2.5 overflow-y-auto px-4 py-4 sm:px-5">
         {s.messages.length === 0 && !s.interim && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-            <div className="text-[15px]">Скажите, что случилось</div>
-            <div className="max-w-xs text-sm text-muted-foreground">По-русски, по-казахски или вперемешку. Например: «Хочу продлить полис» или «Кеше аварияға түстім».</div>
+            <div className="text-[15px]">{t("Скажите, что случилось")}</div>
+            <div className="max-w-xs text-sm text-muted-foreground">{t("По-русски, по-казахски или вперемешку. Например: «Хочу продлить полис» или «Кеше аварияға түстім».")}</div>
           </div>
         )}
         {s.messages.map((m) => <Bubble key={m.id} m={m} />)}
@@ -77,7 +81,7 @@ export function ConversationPanel({ className, compact = false }: { className?: 
           </div>
         )}
         {thinking && !s.live?.responseText && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="size-1.5 animate-pulse rounded-full bg-brand" /> думаю…</div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="size-1.5 animate-pulse rounded-full bg-brand" />{t("думаю…")}</div>
         )}
       </div>
 
@@ -88,7 +92,7 @@ export function ConversationPanel({ className, compact = false }: { className?: 
           <Button
             variant={listening ? "destructive" : "default"}
             size={compact ? "icon-lg" : "icon-xl"}
-            aria-label={listening ? "Отправить" : "Говорить"}
+            aria-label={listening ? t("Отправить") : t("Говорить")}
             aria-pressed={listening}
             className={cn("shrink-0 rounded-full", listening && "animate-pulse")}
             onClick={() => void toggleVoice()}
@@ -97,19 +101,19 @@ export function ConversationPanel({ className, compact = false }: { className?: 
             {listening ? <Square /> : <Mic />}
           </Button>
           <Input
-            placeholder="Или напишите текстом"
+            placeholder={t("Или напишите текстом")}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
             disabled={thinking || listening}
             className="flex-1"
           />
-          <Button variant="secondary" size="icon" aria-label="Отправить" onClick={submit} disabled={!text.trim() || thinking}><SendHorizontal /></Button>
-          <Button variant="ghost" size="icon" aria-label={s.tts ? "Выключить озвучку" : "Включить озвучку"} onClick={() => setTts(!s.tts)}>{s.tts ? <Volume2 /> : <VolumeX />}</Button>
+          <Button variant="secondary" size="icon" aria-label={t("Отправить")} onClick={submit} disabled={!text.trim() || thinking}><SendHorizontal /></Button>
+          <Button variant="ghost" size="icon" aria-label={s.tts ? t("Выключить озвучку") : t("Включить озвучку")} onClick={() => setTts(!s.tts)}>{s.tts ? <Volume2 /> : <VolumeX />}</Button>
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span className={cn(listening && "text-foreground")}>{STATUS_TEXT[s.status]}</span>
-          {s.sessionId && s.sttProvider === "browser" && !s.sttAvailable && <span>Голос работает в Chrome</span>}
+          <span className={cn(listening && "text-foreground")}>{t(STATUS_TEXT[s.status])}</span>
+          {s.sessionId && s.sttProvider === "browser" && !s.sttAvailable && <span>{t("Голос работает в Chrome")}</span>}
         </div>
       </div>
     </div>

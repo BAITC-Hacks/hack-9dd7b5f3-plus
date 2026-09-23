@@ -1,4 +1,5 @@
 "use client";
+import { useUiLanguage, translate as t } from "@/lib/ui-language";
 /** «Журнал»: one row per finished turn. */
 import { LangBadge } from "@/components/app/conversation-panel";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,21 +9,22 @@ import { cn } from "@/lib/utils";
 import { fmtMs, fmtPct, PolicyBadge, Section } from "./shared";
 
 export function TurnLog({ traces }: { traces: Trace[] }) {
+  const language = useUiLanguage();
   return (
-    <Section title="Журнал реплик" hint="жёлтым — уверенность ниже 75%" bodyClassName="px-0 pb-0">
+    <Section title={t("Журнал реплик")} hint={t("жёлтым — уверенность ниже 75%")} bodyClassName="px-0 pb-0">
       {traces.length === 0 ? (
-        <div className="px-4 pb-4 text-sm text-muted-foreground">Пока пусто. Каждая реплика появится здесь со сценарием, уверенностью и временем ответа.</div>
+        <div className="px-4 pb-4 text-sm text-muted-foreground">{t("Пока пусто. Каждая реплика появится здесь со сценарием, уверенностью и временем ответа.")}</div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-10">#</TableHead>
-              <TableHead>Реплика</TableHead>
-              <TableHead>Язык</TableHead>
-              <TableHead>Сценарий</TableHead>
-              <TableHead className="text-right">Уверенность</TableHead>
-              <TableHead>Что сделал</TableHead>
-              <TableHead className="text-right">мс</TableHead>
+              <TableHead>{t("Реплика")}</TableHead>
+              <TableHead>{t("Язык")}</TableHead>
+              <TableHead>{t("Сценарий")}</TableHead>
+              <TableHead className="text-right">{t("Уверенность")}</TableHead>
+              <TableHead>{t("Что сделал")}</TableHead>
+              <TableHead className="text-right">{t("мс")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -37,7 +39,7 @@ export function TurnLog({ traces }: { traces: Trace[] }) {
                   <TableCell>
                     {top ? (
                       <div className="flex flex-col">
-                        <span>{scenarioLabel(top.scenario_id, "ru")}{t.scenarios.length > 1 && <span className="text-muted-foreground"> +{t.scenarios.length - 1}</span>}</span>
+                        <span>{scenarioLabel(top.scenario_id, language)}{t.scenarios.length > 1 && <span className="text-muted-foreground"> +{t.scenarios.length - 1}</span>}</span>
                         <span className="font-mono text-xs text-muted-foreground">{top.scenario_id}</span>
                       </div>
                     ) : "—"}

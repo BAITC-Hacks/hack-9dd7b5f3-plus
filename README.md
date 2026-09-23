@@ -569,6 +569,15 @@ Measured with real providers ([§9.7](#97-voice-research-speech-to-text-text-to-
 
 ## 7. Install and run
 
+Current platform header contains only Call/Console navigation and the RU/ҚАЗ interface language switch.
+Interface language is saved locally and does not change speech recognition or reply language.
+Runtime mode/STT selectors and the evaluation card are no longer shown in the platform.
+Choose `NEXT_PUBLIC_API_MODE=mock|core` before building (for example,
+`NEXT_PUBLIC_API_MODE=core docker compose --profile server up --build -d`).
+Older screenshots/instructions mentioning header mode controls or the quality card describe the earlier UI;
+CLI evaluation commands remain available.
+
+
 ### Server stack in Docker
 
 Requires Docker Compose **v2.24+**. All server components now have images:

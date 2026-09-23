@@ -1,4 +1,5 @@
 "use client";
+import { useUiLanguage, translate as uiText } from "@/lib/ui-language";
 import { agentReason, VOICE_AGENT_ID } from "@/lib/voice-agent";
 /** Supervisor console — shared helpers. Minimal: sentence-case labels, numbers in mono. */
 import type React from "react";
@@ -65,18 +66,20 @@ const POLICY_VARIANT: Record<PolicyAction, "success" | "info" | "warning" | "err
 };
 
 export function PolicyBadge({ action, size = "default" }: { action?: PolicyAction | null; size?: "sm" | "default" | "lg" }) {
+  useUiLanguage();
   if (!action) return <span className="text-muted-foreground">—</span>;
-  return <Badge variant={POLICY_VARIANT[action]} size={size}>{POLICY_LABEL[action]}</Badge>;
+  return <Badge variant={POLICY_VARIANT[action]} size={size}>{uiText(POLICY_LABEL[action])}</Badge>;
 }
 
 /** Plain card with a small title. */
 export function Section({ title, hint, right, children, className, bodyClassName }: { title: string; hint?: string; right?: React.ReactNode; children: React.ReactNode; className?: string; bodyClassName?: string }) {
+  useUiLanguage();
   return (
     <section className={cn("rounded-xl border border-border bg-card", className)}>
       <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
         <div className="min-w-0">
-          <div className="text-sm font-medium">{title}</div>
-          {hint && <div className="truncate text-xs text-muted-foreground">{hint}</div>}
+          <div className="text-sm font-medium">{uiText(title)}</div>
+          {hint && <div className="truncate text-xs text-muted-foreground">{uiText(hint)}</div>}
         </div>
         {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
       </div>
@@ -96,9 +99,10 @@ export function Bar({ value, fill = "bg-s6", className }: { value: number; fill?
 }
 
 export function Row({ k, children }: { k: string; children: React.ReactNode }) {
+  useUiLanguage();
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-border py-2 text-sm last:border-b-0">
-      <span className="shrink-0 text-muted-foreground">{k}</span>
+      <span className="shrink-0 text-muted-foreground">{uiText(k)}</span>
       <span className="min-w-0 truncate text-right">{children}</span>
     </div>
   );
@@ -109,9 +113,10 @@ export function Dash() {
 }
 
 export function Metric({ label, value, unit, hint, warn }: { label: string; value: string; unit?: string; hint?: string; warn?: boolean }) {
+  useUiLanguage();
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3.5">
-      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-xs text-muted-foreground">{uiText(label)}</div>
       <div className={cn("mt-1 text-2xl font-medium tabular-nums", warn && "text-warning-foreground")}>
         {value}{unit && <span className="ml-1 text-sm font-normal text-muted-foreground">{unit}</span>}
       </div>

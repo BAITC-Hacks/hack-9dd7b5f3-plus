@@ -1,4 +1,5 @@
 "use client";
+import { useUiLanguage, translate as t } from "@/lib/ui-language";
 /** «Ход диалога»: what the robot did, whom it talks to, what it waits for, which actions ran. */
 import { Badge } from "@/components/ui/badge";
 import type { DialogState } from "@/lib/contract";
@@ -12,6 +13,7 @@ function fmtVal(v: unknown): string {
 }
 
 export function DialogCard({ view, dialog }: { view: TurnView; dialog: DialogState }) {
+  const language = useUiLanguage();
   const v = view.verdict;
   const slots = Object.entries(dialog.slots).filter(([k]) => !k.startsWith("__"));
   const waiting = dialog.awaiting
@@ -21,17 +23,17 @@ export function DialogCard({ view, dialog }: { view: TurnView; dialog: DialogSta
     : null;
 
   return (
-    <Section title="Ход диалога" right={<PolicyBadge action={v?.action} />}>
+    <Section title={t("Ход диалога")} right={<PolicyBadge action={v?.action} />}>
       {v?.reason && <div className="mb-2 text-xs text-muted-foreground">{v.reason}</div>}
-      <Row k="Клиент">{dialog.client_name ? `${dialog.client_name} · ${dialog.client_id}` : <span className="text-muted-foreground">не определён</span>}</Row>
-      <Row k="Язык ответа">{dialog.language === "kk" ? "казахский" : "русский"}</Row>
-      <Row k="Сейчас">{dialog.active_scenario ? scenarioLabel(dialog.active_scenario, "ru") : <Dash />}</Row>
-      <Row k="Отложено">{dialog.stack.length ? dialog.stack.map((s) => scenarioLabel(s, "ru")).join(" → ") : <Dash />}</Row>
-      <Row k="Ждёт от клиента">{waiting ?? <Dash />}</Row>
+      <Row k={t("Клиент")}>{dialog.client_name ? `${dialog.client_name} · ${dialog.client_id}` : <span className="text-muted-foreground">{t("не определён")}</span>}</Row>
+      <Row k={t("Язык ответа")}>{dialog.language === "kk" ? t("казахский") : t("русский")}</Row>
+      <Row k={t("Сейчас")}>{dialog.active_scenario ? scenarioLabel(dialog.active_scenario, language) : <Dash />}</Row>
+      <Row k={t("Отложено")}>{dialog.stack.length ? dialog.stack.map((s) => scenarioLabel(s, language)).join(" → ") : <Dash />}</Row>
+      <Row k={t("Ждёт от клиента")}>{waiting ?? <Dash />}</Row>
 
-      <div className="mt-3 text-xs text-muted-foreground">Что уже известно</div>
+      <div className="mt-3 text-xs text-muted-foreground">{t("Что уже известно")}</div>
       {slots.length === 0 ? (
-        <div className="py-1 text-sm text-muted-foreground">пока ничего</div>
+        <div className="py-1 text-sm text-muted-foreground">{t("пока ничего")}</div>
       ) : (
         <div className="mt-1 flex flex-wrap gap-1.5">
           {slots.map(([k, val]) => (
@@ -42,9 +44,9 @@ export function DialogCard({ view, dialog }: { view: TurnView; dialog: DialogSta
         </div>
       )}
 
-      <div className="mt-3 text-xs text-muted-foreground">Действия в системе</div>
+      <div className="mt-3 text-xs text-muted-foreground">{t("Действия в системе")}</div>
       {view.actions.length === 0 ? (
-        <div className="py-1 text-sm text-muted-foreground">в этом ходе не требовались</div>
+        <div className="py-1 text-sm text-muted-foreground">{t("в этом ходе не требовались")}</div>
       ) : (
         <ul className="mt-1 space-y-1">
           {view.actions.map((a, i) => (

@@ -2,11 +2,9 @@
 /** Platform top bar: brand, two sections, runtime controls. */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogoMark, Wordmark } from "@/components/brand";
+import { useEffect } from "react";
 import { EnterReveal } from "@/components/app/enter-reveal";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { resetConversation, setMode, setSttLang, setSttProvider, setTts, useConversation } from "@/lib/store";
+import { restoreUiLanguage, setUiLanguage, useUiLanguage, translate as t } from "@/lib/ui-language";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -38,36 +36,26 @@ function Seg<T extends string>({ value, options, onChange, label }: { value: T; 
 
 export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const s = useConversation();
+  const language = useUiLanguage();
+  useEffect(() => { restoreUiLanguage(); }, []);
 
   return (
     <>
       <EnterReveal />
       <header className="sticky top-0 z-30 border-b border-border bg-background">
         <div className="mx-auto flex h-14 w-full max-w-[1200px] items-center gap-5 px-4 sm:px-8">
-          <Link href="/" className="flex shrink-0 items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <LogoMark className="size-6" dark />
-            <Wordmark className="text-[15px]" />
-          </Link>
-          <nav aria-label="Разделы" className="flex items-center gap-1">
+          <nav aria-label={t("Разделы")} className="flex items-center gap-1">
             {NAV.map((n) => {
               const active = pathname === n.href || pathname.startsWith(n.href + "/");
               return (
                 <Link key={n.href} href={n.href} aria-current={active ? "page" : undefined} className={cn("rounded-md px-2.5 py-1 text-sm transition-colors", active ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                  {n.label}
+                  {t(n.label)}
                 </Link>
               );
             })}
           </nav>
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
-            <Seg label="Данные" value={s.mode} options={[{ value: "mock", label: "Мок" }, { value: "core", label: "LLM" }, { value: "real", label: "Бэкенд" }] as const} onChange={(m) => setMode(m)} />
-            <Seg label="Язык речи" value={s.sttLang} options={[{ value: "ru-RU", label: "RU" }, { value: "kk-KZ", label: "KK" }] as const} onChange={(l) => setSttLang(l)} />
-            {s.mode !== "real" && <Seg label="Распознавание" value={s.sttProvider} options={[{ value: "browser", label: "Chrome" }, { value: "server", label: "ElevenLabs" }] as const} onChange={(p) => setSttProvider(p)} />}
-            <label className="hidden cursor-pointer items-center gap-2 md:flex">
-              <span className="text-xs text-muted-foreground">Озвучка</span>
-              <Switch checked={s.tts} onCheckedChange={(v) => setTts(v)} />
-            </label>
-            <Button variant="secondary" size="sm" onClick={() => resetConversation()}>Новый диалог</Button>
+            <Seg label={t("Язык интерфейса")} value={language} options={[{ value: "ru", label: "RU" }, { value: "kk", label: "ҚАЗ" }] as const} onChange={setUiLanguage} />
           </div>
         </div>
       </header>
