@@ -2,6 +2,8 @@
 /** Platform top bar: brand, two sections, runtime controls. */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoMark, Wordmark } from "@/components/brand";
+import { EnterReveal } from "@/components/app/enter-reveal";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { resetConversation, setMode, setSttLang, setSttProvider, setTts, useConversation } from "@/lib/store";
@@ -40,11 +42,12 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <EnterReveal />
       <header className="sticky top-0 z-30 border-b border-border bg-background">
         <div className="mx-auto flex h-14 w-full max-w-[1200px] items-center gap-5 px-4 sm:px-8">
           <Link href="/" className="flex shrink-0 items-center gap-2 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span aria-hidden className="block size-2.5 rounded-[2px] bg-brand" />
-            <span className="text-[15px] font-medium">Bagyt</span>
+            <LogoMark className="size-6" dark />
+            <Wordmark className="text-[15px]" />
           </Link>
           <nav aria-label="Разделы" className="flex items-center gap-1">
             {NAV.map((n) => {

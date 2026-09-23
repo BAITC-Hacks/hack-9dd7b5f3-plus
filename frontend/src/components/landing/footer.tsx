@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PlusMark } from "./header";
+import { LogoMark, Wordmark } from "@/components/brand";
 
 const COLS = [
   { h: "Продукт", items: [["Симулятор звонка", "/call"], ["Консоль супервизора", "/admin"], ["Лендинг", "/"]] },
@@ -12,7 +12,7 @@ export function Footer() {
     <footer className="relative z-10 border-t border-border bg-paper">
       <div className="mx-auto grid w-full max-w-[1200px] gap-10 px-5 py-14 sm:px-8 md:grid-cols-[minmax(0,5fr)_repeat(3,minmax(0,2fr))]">
         <div>
-          <div className="flex items-center gap-2 text-ink"><span className="grid size-6 place-items-center rounded-md bg-brand text-white"><PlusMark className="size-3" /></span><span className="font-medium">Bagyt</span></div>
+          <div className="flex items-center gap-2 text-ink"><LogoMark className="size-6" /><Wordmark className="text-[15px]" /></div>
           <p className="mt-3 max-w-[32ch] text-sm leading-relaxed text-body">Голосовой робот контакт-центра с LLM-слоем выбора сценария. Русский и казахский.</p>
         </div>
         {COLS.map((c) => (

@@ -264,6 +264,7 @@
 
 /* ── Speko extras: colors as Tailwind utilities (bg-brand, text-ink, bg-s3, text-ok …) ── */
 @theme inline {
+  --font-logo: var(--font-unbounded), var(--font-geist), ui-sans-serif, sans-serif;
   --color-brand: var(--brand);
   --color-brand-hi: var(--brand-hi);
   --color-paper: var(--paper);
@@ -373,3 +374,20 @@
 @media (prefers-reduced-motion: reduce) { .sky-col, .px-twinkle { animation: none; } .reveal { opacity: 1; transform: none; transition: none; } }
 .lift { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.35s, box-shadow 0.35s; }
 .lift:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--brand) 40%, var(--hairline)); box-shadow: 0 24px 60px -36px rgba(47, 106, 209, 0.35); }
+
+/* ── Dot-matrix headline: drifting dots, cursor reveals solid glyphs ── */
+.dot-wrap { position: relative; display: inline-block; --mx: -9999px; --my: -9999px; }
+@keyframes dotdrift { to { background-position: 7px 7px; } }
+.dot-drift { animation: dotdrift 5s linear infinite; }
+.dot-solid {
+  position: absolute; inset: 0; color: var(--brand); pointer-events: none;
+  -webkit-mask-image: radial-gradient(170px circle at var(--mx) var(--my), #000 0%, rgba(0,0,0,0.85) 35%, transparent 72%);
+  mask-image: radial-gradient(170px circle at var(--mx) var(--my), #000 0%, rgba(0,0,0,0.85) 35%, transparent 72%);
+}
+@media (prefers-reduced-motion: reduce) { .dot-drift { animation: none; } }
+
+/* ── Page transition: a circle grows from the CTA, the next page reveals from it ── */
+.page-wipe { position: fixed; z-index: 100; border-radius: 9999px; background: var(--brand); pointer-events: none; transform: translate(-50%, -50%) scale(0); transition: transform 0.55s cubic-bezier(0.785, 0.135, 0.15, 0.86); }
+.page-wipe.is-on { transform: translate(-50%, -50%) scale(1); }
+@keyframes enterReveal { from { clip-path: circle(160% at 50% 50%); } to { clip-path: circle(0% at 50% 50%); } }
+.enter-reveal { position: fixed; inset: 0; z-index: 100; background: var(--brand); pointer-events: none; animation: enterReveal 0.65s cubic-bezier(0.785, 0.135, 0.15, 0.86) forwards; }
