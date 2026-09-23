@@ -34,3 +34,5 @@
 - Official evaluator consumes exported predictions; confirmed all 104 records are processed. Mock primary accuracy 0.577 is explicitly an infrastructure check, not an LLM benchmark.
 - Verified browser flow, Docker deployment, sample WAV serving and PostgreSQL persistence across backend restart. Go race/vet, frontend lint/build and Python tests pass. Details in docs/VALIDATION.md.
 - No API keys available for real model/speech validation, no Railway configuration. Remaining external verification is clearly documented, with exact commands.
+
+- Final clean-checkout check passed: fresh Compose build, PostgreSQL, 40+3 official catalog, SC30 request, CORS, frontend and all three served WAVs. Verification stack removed; main localhost stack remains running.

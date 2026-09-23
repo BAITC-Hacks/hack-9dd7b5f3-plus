@@ -10,6 +10,7 @@ Verified locally on the implementation branch:
 - Browser walkthrough: submitted a Russian payment query, observed SC30 and stage trace; inspected the 43 catalog entries and the metric screen. Mock calls are excluded from real LLM p50/p95.
 - WAV fixture served successfully over HTTP; ffprobe verified PCM16, mono, 16 kHz (first sample ~4.95 seconds).
 - Official evaluator integration: generated predictions for all 104 dev utterances and ran unchanged data/evaluate.py. **Mock-only** primary accuracy = 0.577, full match = 0.558, multi-intent recall = 0.308. These numbers test evaluator plumbing, not model quality. No optimization of the mock against the dev labels was performed.
+- Clean checkout: cloned committed source into a separate verification directory, copied .env.example, changed only host ports/origins to avoid colliding with the running demo, and ran Docker Compose from that checkout. Confirmed PostgreSQL, 40+3 catalog, SC30 route, CORS, frontend HTML and all three WAV downloads. Temporary verification containers/volume were then removed; primary demo remains running.
 - Original files under data/ remain unchanged; backend/data/official contains identical copies of five runtime JSON files, verified with SHA256. Evaluation labels are not copied into the runtime image.
 
 Not verified without external configuration:
