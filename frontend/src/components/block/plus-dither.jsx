@@ -3,14 +3,14 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-const FC = 80;
-const FR = 60;
+const FC = 128;
+const FR = 88;
 const FN = FC * FR;
 const CC = 110;
 const EDGE_LO = 36;
 const EDGE_HI = 130;
 const EDGES = ["+", ".", "+", ",", "-"];
-const BRIGHTS = [..."PLUS+PLUS+"];
+const BRIGHTS = [..."+++P+++L+++U+++S"];
 const ALL_CHARS = [...EDGES, ...BRIGHTS];
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const TL = 320;
@@ -409,7 +409,7 @@ export function PlusDither({
         gl.uniform1i(uTrailN, trail.length);
         gl.uniform2f(uRes, W, H);
         gl.uniform1i(uPhase, phase);
-        gl.clearColor(0.98, 0.976, 0.965, 1);
+        gl.clearColor(1, 1, 1, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         canvas.style.opacity = "1";

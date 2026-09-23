@@ -344,8 +344,8 @@
 .dot-text {
   color: transparent;
   -webkit-text-fill-color: transparent;
-  background-image: radial-gradient(circle, var(--brand) 1.25px, transparent 1.6px);
-  background-size: 6px 6px;
+  background-image: radial-gradient(circle, var(--brand) 1.9px, transparent 2.3px);
+  background-size: 7px 7px;
   background-position: 0 0;
   -webkit-background-clip: text;
   background-clip: text;
@@ -353,8 +353,8 @@
 .dither-cloud {
   -webkit-mask-image: radial-gradient(circle, #000 1px, transparent 1.45px);
   mask-image: radial-gradient(circle, #000 1px, transparent 1.45px);
-  -webkit-mask-size: 6px 6px;
-  mask-size: 6px 6px;
+  -webkit-mask-size: 5px 5px;
+  mask-size: 5px 5px;
 }
 .dither-cloud-lg {
   -webkit-mask-image: radial-gradient(circle, #000 1.6px, transparent 2.1px);

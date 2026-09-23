@@ -3,7 +3,7 @@ import { EdgeClouds } from "@/components/landing/clouds";
 import { Cta } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
 import { Header } from "@/components/landing/header";
-import { Hero } from "@/components/landing/hero";
+import { Hero, Horizon } from "@/components/landing/hero";
 import { Product } from "@/components/landing/product";
 import { Scenarios } from "@/components/landing/scenarios";
 import { TraceSection } from "@/components/landing/trace";
@@ -15,6 +15,7 @@ export default function Home() {
       <Header />
       <main className="flex-1">
         <Hero />
+        <Horizon />
         <Band id="console" title="Консоль" text="Живая трассировка каждой реплики: сценарий, уверенность, причина, альтернативы, действия и время по этапам." />
         <Product />
         <Band id="scenarios" title="Каталог" text="Сорок сценариев страховой компании и три системных намерения. Роутер знает о них ровно то, что написано в каталоге." />
