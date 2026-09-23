@@ -1,6 +1,7 @@
 <div align="center">
 
 # Bagyt · Voice Router
+**[▶ Live demo: bagyt.plus](https://bagyt.plus)*
 
 *Бағыт — "direction, route" in Kazakh*
 
