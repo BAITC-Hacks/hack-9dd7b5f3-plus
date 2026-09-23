@@ -1,4 +1,38 @@
 services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-plus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-plus}
+      POSTGRES_DB: ${POSTGRES_DB:-plus}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: ${DATABASE_URL:-postgres://plus:plus@db:5432/plus?sslmode=disable}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   frontend:
     build:
       context: ./frontend
@@ -11,11 +45,15 @@ services:
       VOICE_TTS_URL: http://voice:8090
       VOICE_STT_URL: http://voice:8090
   core-llm:
-    profiles: [llm]
+    profiles: [llm, server]
     build: ./core-llm
-    env_file: ./core-llm/.env
+    restart: unless-stopped
+    env_file:
+      - path: ./core-llm/.env
+        required: false
     environment:
       CORE_LLM_HOST: 0.0.0.0
+      CORE_LLM_PORT: "8090"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/healthz')"]
       interval: 10s
@@ -23,7 +61,8 @@ services:
       retries: 3
 
   voice:
-    profiles: [voice]
+    restart: unless-stopped
+    profiles: [voice, server]
     build:
       context: .
       dockerfile: voice/Dockerfile
@@ -38,3 +77,12 @@ services:
       VOICE_AUDIOSOCKET_ADDR: ""
       VOICE_PUBLIC_URL: ""
       VOICE_HTTP_ADDR: ":8090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres-data:

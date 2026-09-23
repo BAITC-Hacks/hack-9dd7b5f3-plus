@@ -45,3 +45,5 @@ Every dependency, model, API, dataset, template or UI kit we use must be listed 
 | Vapi / Twilio / LiveKit SIP (stretch) | Vendor platforms | https://vapi.ai · https://twilio.com · https://livekit.io | Phone channel, only if implemented |
 
 AI coding assistants used during development: OpenAI Codex, Claude.
+
+| Official Go, Alpine and PostgreSQL Docker images | BSD-3-Clause / Alpine package licenses / PostgreSQL License | https://hub.docker.com/_/golang · https://hub.docker.com/_/alpine · https://hub.docker.com/_/postgres | Backend multi-stage build, runtime, and local database |

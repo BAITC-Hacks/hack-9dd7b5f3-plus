@@ -197,3 +197,16 @@ Resetting the conversation or reloading the page clears these in-memory recordin
 Mock mode has browser speech and a transcript, but no downloadable recording (browser TTS cannot export audio).
 English-only greetings such as “Hello” / “Hi” / “Good morning” return “Hello, how can I help you?”;
 this does not add English translations of the 40 insurance scenarios. TTS accepts `lang: en` in addition to ru/kk.
+
+### Docker server stack
+
+Root Compose now includes PostgreSQL 17 (`postgres-data` persistent volume) and the Go `backend` by default,
+alongside keyless frontend mock mode. `--profile server` enables both `core-llm` and `voice`;
+the existing `llm`/`voice` profiles remain supported. Backend-only launch:
+`docker compose --profile server up --build -d --wait db backend core-llm voice`.
+The Go API exposes `GET /healthz` and the legacy `GET /health` with `{"status":"ok"}`.
+It remains a skeleton: no session/turn endpoints or persistence have been added.
+Backend listens on localhost:${BACKEND_PORT:-8080}; the other server services remain internal.
+Each server service has a healthcheck and `restart: unless-stopped`.
+Backend waits for the database healthcheck. The full real dialog still uses frontend `core` mode.
+Provider keys are supplied at runtime; they are not copied into images. See README section 7 for setup.

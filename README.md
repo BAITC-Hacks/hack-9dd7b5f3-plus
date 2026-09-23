@@ -454,7 +454,7 @@ Kept per session and sent to the UI after every turn (`state` event):
 │   ├── router.py                Router class · CLI · --eval · --dialogs · --bench
 │   ├── server.py                private HTTP adapter: GET /healthz, POST /api/route (port 8090)
 │   └── test_server.py           unit tests for the adapter
-├── backend/                     Go service (net/http): GET /health today, turn API in progress
+├── backend/                     Go service (net/http): GET /healthz + /health, Dockerfile; turn API in progress
 ├── docker-compose.yml           web app (keyless) + core-llm (profile "llm")
 ├── data/                        official starter kit (read-only) + our predictions_mock.json
 ├── docs/                        case, analysis, PRD, SPEC, API contract, tasks, pitch, progress, research, design
@@ -504,6 +504,43 @@ Every third-party component, model, dataset and API with its license: [THIRD_PAR
 ---
 
 ## 7. Install and run
+
+### Server stack in Docker
+
+Requires Docker Compose **v2.24+**. All server components now have images:
+`backend` (Go API skeleton), `db` (PostgreSQL 17), `core-llm` (Python router), and `voice` (ElevenLabs STT/TTS).
+The Go service currently exposes `/healthz` and the compatibility alias `/health`; its turn API and database persistence are not implemented yet. The working dialog uses frontend **core** mode.
+
+For a fresh clone, copy `.env.example` to `.env` and `core-llm/.env.example` to `core-llm/.env`.
+Put `ELEVENLABS_API_KEY` in the root `.env` and `OPENROUTER_API_KEY` in `core-llm/.env`.
+Existing local env files should be edited, not overwritten.
+
+```bash
+# All server components, without starting frontend:
+docker compose --profile server up --build -d --wait db backend core-llm voice
+
+# Full application, including frontend in LLM mode:
+NEXT_PUBLIC_API_MODE=core docker compose --profile server up --build -d --wait
+
+# Status and logs:
+docker compose --profile server ps
+docker compose --profile server logs --tail=100 backend core-llm voice
+curl --fail http://localhost:8080/healthz
+
+# Stop the complete stack, preserving database files:
+docker compose --profile server down
+```
+
+Backend is bound to `127.0.0.1:8080` (`BACKEND_PORT` overrides it). PostgreSQL, core-llm and voice
+are only reachable inside the Compose network; frontend proxies speech and routing requests.
+Health checks cover all four server services. Backend starts after PostgreSQL is ready.
+Database files live in the named `postgres-data` volume; `down` preserves them.
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` configure a **new** volume; if changed,
+update `DATABASE_URL` too. Existing volumes keep their initialized users/passwords.
+
+Without keys, use the default `docker compose up --build`: frontend mock mode + Go health service + PostgreSQL.
+The `server` profile (or the separate `llm` and `voice` profiles) enables integrations requiring provider keys.
+Docker health checks verify running processes, not provider quota or credentials.
 
 ### 7.1 Quick start — keyless, about two minutes
 
