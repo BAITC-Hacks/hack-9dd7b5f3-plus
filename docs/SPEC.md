@@ -179,3 +179,13 @@ Response: `{text, language, ms, provider}`. Empty transcripts prompt retry; upst
 sanitized; limit 20 MiB and timeout 30s. Browser request timeout is 35s. `TurnRequest.stt_ms`
 records the measured recognition latency in the trace. Recording is cancelled on reset/provider
 switch, and further input is blocked while transcription is running. Partial STT/VAD is not enabled.
+
+### Greeting handler (core / mock)
+
+A greeting without a request is `SYS_GREETING` (`status: greeting`, policy action `greeting`).
+The LLM prompt classifies the intent; the frontend replies exactly «Здравствуйте, чем могу помочь?»
+in Russian or «Сәлеметсіз бе, қалай көмектесе аламын?» in Kazakh, using the existing TTS path.
+It preserves the active scenario, pending slot/confirmation and queue, without incrementing the unclear-turn counter.
+To verify on `/call` in LLM or mock mode: send «Здравствуйте» and «Сәлеметсіз бе»;
+then send «Здравствуйте, хочу продлить полис» — the latter must route to SC27, not greeting.
+The official starter dataset is unchanged; this is an application system intent.

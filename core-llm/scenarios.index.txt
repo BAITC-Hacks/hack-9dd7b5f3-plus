@@ -58,3 +58,5 @@ DISAMBIGUATION — the confusable groups
 - Abroad: planning a trip → SC06. Already abroad and sick or injured → SC15. Injured at home under an accident policy → SC16.
 - Where: office and hours → SC33. Where inspections are done → SC20. Which clinics → SC23.
 - Out of scope (loans, life insurance, weather, jobs) → SYS_OUT_OF_SCOPE. Vague, no concrete need → SYS_UNCLEAR.
+
+SYS_GREETING | Greeting only, no request | здравствуйте; привет; добрый день | сәлеметсіз бе; сәлем; қайырлы күн | ≠ greeting plus request → requested SC; vague insurance need → SYS_UNCLEAR

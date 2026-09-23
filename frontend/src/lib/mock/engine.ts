@@ -116,7 +116,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
     const isId = ID_SLOTS.has(state.awaiting.slot);
     const contentWords = splitParts(text).join(" ").split(/\s+/).length;
     const looksLikeNewIntent = !isId && top && !isSystemIntent(top.scenario_id) && top.confidence >= 0.85 && top.scenario_id !== state.active_scenario && contentWords >= 4;
-    if (parsed !== null && !looksLikeNewIntent && (!input.route || (decision.route_status === "route" && top?.scenario_id === state.active_scenario))) {
+    if (decision.route_status !== "greeting" && parsed !== null && !looksLikeNewIntent && (!input.route || (decision.route_status === "route" && top?.scenario_id === state.active_scenario))) {
       decision = {
         ...decision,
         is_continuation: true,
@@ -161,7 +161,9 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
   const mergedSlots = { ...decision.slots };
   for (const [k, v] of Object.entries(mergedSlots)) if (v !== undefined && v !== null && v !== "") state.slots[k] = v;
 
-  if (verdict.action === "goodbye") {
+  if (verdict.action === "greeting") {
+    text_out = systemIntentById("SYS_GREETING")!.response[lang];
+  } else if (verdict.action === "goodbye") {
     text_out = systemIntentById("SYS_GOODBYE")!.response[lang];
     state.ended = true;
     state.awaiting = null;
@@ -271,6 +273,7 @@ function pickReplyLanguage(state: DialogState, text: string): ReplyLang {
   if (SWITCH_TO_RU.test(text)) return "ru";
   if (SWITCH_TO_KK.test(text)) return "kk";
   const stripped = text.replace(GREETINGS, " ").replace(/(огпо|каско|дмс|полис[а-я]*|saqta)/gi, " ");
+  if (!/[\p{L}\p{N}]/u.test(stripped)) return dominantLanguage(text);
   const lang = detectLanguage(stripped);
   const dominant = dominantLanguage(stripped);
   if (state.turn <= 1 || !state.language) return dominant;
@@ -283,6 +286,7 @@ function pickReplyLanguage(state: DialogState, text: string): ReplyLang {
 function decide(state: DialogState, d: RouterDecision, kind: "route" | "yes" | "no" | "goodbye"): PolicyVerdict {
   const top = d.scenarios[0];
   const base = { stack: state.stack, low_conf_streak: state.low_conf_streak };
+  if (d.route_status === "greeting" || top?.scenario_id === "SYS_GREETING") return { action: "greeting", scenario_id: "SYS_GREETING", reason: d.reason, ...base };
   if (kind === "goodbye" || d.route_status === "goodbye") return { action: "goodbye", scenario_id: "SYS_GOODBYE", reason: "client ends the call", ...base };
   if (kind === "yes" || kind === "no") return { action: "continue", scenario_id: state.active_scenario, reason: kind === "yes" ? "confirmation received → execute" : "client declined → cancel preview", ...base };
   if (!top) return { action: "clarify", scenario_id: null, reason: "no candidates", ...base };

@@ -38,11 +38,11 @@ export interface RouterDecision {
   model?: string; // e.g. "mock" | "gpt-4.1-mini"
   tier?: "fast" | "full";
   /** Authoritative policy from core-llm; absent for the lexical mock. */
-  route_status?: "route" | "clarify" | "handoff" | "out_of_scope" | "goodbye";
+  route_status?: "route" | "clarify" | "handoff" | "out_of_scope" | "goodbye" | "greeting";
 }
 
 /** Decision policy verdict (README "Политика принятия решений"). */
-export type PolicyAction = "run" | "continue" | "clarify" | "handoff" | "out_of_scope" | "goodbye";
+export type PolicyAction = "run" | "continue" | "clarify" | "handoff" | "out_of_scope" | "goodbye" | "greeting";
 
 export interface PolicyVerdict {
   action: PolicyAction;

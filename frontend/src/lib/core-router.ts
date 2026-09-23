@@ -5,7 +5,7 @@ import { extractSlots, NO, YES, splitParts, type MockRouteResult } from "./mock/
 type Entry = { id: string; pct: number; name: string };
 export interface CoreResult {
   primary: string | null;
-  status: "route" | "clarify" | "handoff" | "out_of_scope" | "goodbye";
+  status: "route" | "clarify" | "handoff" | "out_of_scope" | "goodbye" | "greeting";
   intents: Entry[];
   alternatives: Entry[];
   scenarios: Entry[];

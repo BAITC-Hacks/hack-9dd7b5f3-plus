@@ -62,6 +62,7 @@ res["primary"], res["predicted"], res["status"], res["scenarios"], res["language
 | первая пара ≥ `ROUTER_SECOND_THRESHOLD` (20) | `primary` |
 | primary ≥ `ROUTER_THRESHOLD` (60) | `status=route`; остальные бизнес-пары ≥ 20 — дополнительные намерения (`intents`, `predicted`) |
 | primary < 60 или `SYS_UNCLEAR` | `status=clarify`; `predicted=[primary]`, остальные пары — варианты для уточняющего вопроса |
+| `SYS_GREETING` | `greeting`; только приветствие без запроса, локализованный ответ формирует frontend |
 | `SYS_OUT_OF_SCOPE` / `SYS_GOODBYE` / `SC37` | `out_of_scope` / `goodbye` / `handoff` |
 
 `predicted` — ровно то, что ждёт `data/evaluate.py` (`{"U001": ["SC01"], "U081": ["SC27", "SC04"]}`).

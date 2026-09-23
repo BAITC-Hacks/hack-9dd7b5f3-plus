@@ -193,3 +193,30 @@ test("microphone recorder supports MP4 and releases tracks after stop or cancell
   cancelled.abort();
   assert.equal(released, 2);
 });
+
+test("greetings reply in RU/KK and preserve a pending scenario in core and mock", async () => {
+  for (const core of [false, true]) {
+    for (const [text, reply] of [["Здравствуйте!", "Здравствуйте, чем могу помочь?"], ["Сәлеметсіз бе!", "Сәлеметсіз бе, қалай көмектесе аламын?"]]) {
+      const state = newDialogState("greeting");
+      state.active_scenario = "SC27";
+      state.awaiting = { kind: "slot", slot: "customer_name" };
+      state.stack = ["SC04"];
+      state.low_conf_streak = 1;
+      const before = JSON.parse(JSON.stringify(state));
+      let trace;
+      if (core) trace = await turn(state, text, result([["SYS_GREETING", 100]], "greeting"));
+      else for await (const event of runMockTurn(state, { text, t0: Date.now(), speed: 0 })) {
+        if (event.type === "turn.done") trace = event.trace;
+      }
+      assert.equal(trace.policy.action, "greeting");
+      assert.equal(trace.response_text, reply);
+      for (const key of ["active_scenario", "awaiting", "stack", "slots", "low_conf_streak", "ended"]) assert.deepEqual(state[key], before[key], key);
+    }
+  }
+});
+
+test("greeting with a request is routed normally; vague insurance need still clarifies", () => {
+  const { mockRoute } = require("../src/lib/mock/router.ts");
+  assert.equal(mockRoute("Здравствуйте, хочу продлить полис", { awaiting: false }).decision.scenarios[0].scenario_id, "SC27");
+  assert.equal(mockRoute("Здравствуйте, я по поводу страховки", { awaiting: false }).decision.scenarios[0].scenario_id, "SYS_UNCLEAR");
+});

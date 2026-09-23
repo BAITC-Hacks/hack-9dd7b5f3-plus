@@ -424,6 +424,11 @@ export interface MockRouteResult {
 export function mockRoute(text: string, ctx: { awaiting: boolean }): MockRouteResult {
   const language = detectLanguage(text);
   const trimmed = text.trim();
+  if (/^(?:(?:здравствуйте|здравствуй|привет|добрый день|доброе утро|добрый вечер|сәлеметсіз бе|сәлеметсіздер ме|сәлем|қайырлы күн|қайырлы таң|қайырлы кеш)[\s,.!?]*)+$/i.test(trimmed)) {
+    const candidate = { scenario_id: "SYS_GREETING", confidence: 1 };
+    return { kind: "route", parts: [trimmed], urgent: false, snapshots: [[candidate]],
+      decision: { ...emptyDecision(language, false, "greeting without a request"), scenarios: [candidate], route_status: "greeting" } };
+  }
 
   if (ctx.awaiting && NO.test(trimmed) && tokenize(trimmed).length <= 6) {
     return { kind: "no", parts: [trimmed], urgent: false, snapshots: [], decision: emptyDecision(language, true, "confirmation: no") };

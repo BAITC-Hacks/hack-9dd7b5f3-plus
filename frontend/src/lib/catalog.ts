@@ -97,7 +97,12 @@ export interface Payment {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const scenarios: Scenario[] = (scenariosJson as any).scenarios;
-export const systemIntents: SystemIntent[] = (scenariosJson as any).system_intents;
+export const systemIntents: SystemIntent[] = [...(scenariosJson as any).system_intents, {
+  id: "SYS_GREETING",
+  description: "Greeting without a substantive request",
+  behavior: "Greet in the client's language and preserve dialog context",
+  response: { ru: "Здравствуйте, чем могу помочь?", kk: "Сәлеметсіз бе, қалай көмектесе аламын?" },
+}];
 export const slots: Slot[] = (slotsJson as any).slots;
 export const kb: any = kbJson;
 export const backend: { clients: Client[]; policies: Policy[]; claims: Claim[]; payments: Payment[] } = backendJson as any;
@@ -129,6 +134,7 @@ export function scenarioLabel(id: ScenarioId, lang: ReplyLang = "ru"): string {
     const map: Record<string, { ru: string; kk: string }> = {
       SYS_OUT_OF_SCOPE: { ru: "Вне компетенции", kk: "Құзырет шегінен тыс" },
       SYS_UNCLEAR: { ru: "Уточнение", kk: "Нақтылау" },
+      SYS_GREETING: { ru: "Приветствие", kk: "Сәлемдесу" },
       SYS_GOODBYE: { ru: "Завершение", kk: "Аяқтау" },
     };
     return map[id]?.[lang] ?? id;

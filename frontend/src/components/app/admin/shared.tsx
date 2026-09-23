@@ -57,9 +57,10 @@ export const POLICY_LABEL: Record<PolicyAction, string> = {
   handoff: "Передал оператору",
   out_of_scope: "Не наша тема",
   goodbye: "Попрощался",
+  greeting: "Поздоровался",
 };
 const POLICY_VARIANT: Record<PolicyAction, "success" | "info" | "warning" | "error" | "secondary"> = {
-  run: "success", continue: "info", clarify: "warning", handoff: "error", out_of_scope: "secondary", goodbye: "secondary",
+  run: "success", continue: "info", clarify: "warning", handoff: "error", out_of_scope: "secondary", goodbye: "secondary", greeting: "info",
 };
 
 export function PolicyBadge({ action, size = "default" }: { action?: PolicyAction | null; size?: "sm" | "default" | "lg" }) {
