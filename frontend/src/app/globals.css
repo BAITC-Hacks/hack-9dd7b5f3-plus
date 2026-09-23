@@ -5,7 +5,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-hanken), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono);
   --animate-skeleton: skeleton 2s -1s infinite linear;
   --animate-caret-blink: 1s ease-out infinite caret-blink;
@@ -13,7 +13,7 @@
   --animate-toast-success-even: toast-success-even 0.32s cubic-bezier(0.5, 1, 0.89, 1);
   --animate-toast-error-odd: toast-error-odd 0.28s cubic-bezier(0.5, 1, 0.89, 1);
   --animate-toast-error-even: toast-error-even 0.28s cubic-bezier(0.5, 1, 0.89, 1);
-  --font-heading: var(--font-hanken), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -139,7 +139,7 @@
 
 :root {
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-heading: var(--font-hanken), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   /* ── Speko brand · "Technical paper" (light, landing) ── */
   --brand: #2f6ad1;
   --brand-hi: #2a5ebb;
@@ -332,3 +332,10 @@
 }
 
 ::selection { background: var(--brand-a20); }
+
+/* ── Platform (dark console): calm, sentence-case, regular weight ── */
+.dark body, .dark { font-weight: 400; }
+.dark .marker { font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; text-transform: none; }
+.dark .marker-dot::before { display: none; }
+.dark .h-display { font-weight: 500; letter-spacing: -0.01em; }
+.dark [data-slot="badge"] { font-weight: 400; }

@@ -460,7 +460,7 @@ export function mockRoute(text: string, ctx: { awaiting: boolean }): MockRouteRe
   // tail intents that hide inside another request: "…продлить в рассрочку?" → + SC31
   if (/(рассрочк|бөліп төле)/i.test(trimmed) && !seen.has("SC31") && chosen.length && chosen[0].scenario_id !== "SC31") {
     seen.add("SC31");
-    chosen.push({ scenario_id: "SC31", confidence: 0.8, reason: "Payment methods and installments: tail cue \"рассрочка\"" });
+    chosen.push({ scenario_id: "SC31", confidence: 0.8, reason: "Способы оплаты и рассрочка — в конце реплики есть «рассрочка»" });
   }
 
   // urgent first, then mention order
@@ -517,6 +517,6 @@ function emptyDecision(language: Lang, cont: boolean, reason: string): RouterDec
 function reasonFor(id: ScenarioId, part: string): string {
   const s = scenarios.find((x) => x.scenario_id === id);
   const cues = CUES.filter(([re, sid]) => sid === id && re.test(part)).map(([re]) => re.source.split("|")[0].replace(/[()^$]/g, ""));
-  const cue = cues[0] ? `cue "${cues[0]}"` : "lexical match with examples";
-  return `${s?.name ?? id}: ${cue}`;
+  const cue = cues[0] ? `в реплике есть признак «${cues[0]}»` : "похоже на примеры этого сценария из каталога";
+  return `${s ? s.name : id} — ${cue}`;
 }

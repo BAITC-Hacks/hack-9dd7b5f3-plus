@@ -11,6 +11,7 @@
 | `GET` | `/api/session/{id}/trace` | → `Trace[]` |
 | `GET` | `/api/supervisor/stats` | → `SupervisorStats` |
 | `GET` | `/api/scenarios` | → `scenarios.json` (catalog; later editable) |
+| `POST` | `/api/eval/run` | — → `EvalResult`: the `data/evaluate.py` metrics computed server-side on `dev_utterances.json` — `{ groups:[{key,n,primary,full}], intent_recall, errors:[{id,text,expected,got,lang,type}], mean_ms, model }` (shown on /admin → «Качество маршрутизации») |
 | `GET` | `/health` | → `{ status: "ok", mode: "mock" \| "real" }` |
 
 CORS: allow `NEXT_PUBLIC_API_URL`'s origin (`CORS_ORIGINS`). SSE headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, flush after every event.

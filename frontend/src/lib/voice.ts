@@ -1,6 +1,7 @@
 /**
  * Browser voice I/O.
- *  - STT: Web Speech API (Chrome: ru-RU / kk-KZ), interim results for the live transcript.
+ *  - STT: Web Speech API (Chrome / Edge: ru-RU, kk-KZ). One utterance per start(): the browser
+ *    stops on its own after a pause and delivers the final transcript.
  *  - TTS: speechSynthesis (mock mode) or <audio> from base64 (real backend).
  *  - Recorder: MediaRecorder → base64 webm/opus for the real backend's STT.
  */
@@ -19,10 +20,19 @@ export interface Listener {
   abort(): void;
 }
 
+const ERROR_TEXT: Record<string, string> = {
+  "not-allowed": "Нет доступа к микрофону. Разрешите его в адресной строке и попробуйте ещё раз.",
+  "service-not-allowed": "Браузер запретил распознавание речи. Откройте страницу в Chrome.",
+  "audio-capture": "Микрофон не найден. Проверьте устройство ввода.",
+  network: "Нет связи с сервисом распознавания. Проверьте интернет или напишите текстом.",
+  "language-not-supported": "Этот язык не поддерживается распознаванием в вашем браузере.",
+};
+
 export function startListening(opts: {
   lang: "ru-RU" | "kk-KZ";
   onInterim(text: string): void;
   onFinal(text: string, endedAt: number): void;
+  onEmpty(): void;
   onError(msg: string): void;
   onEnd(): void;
 }): Listener | null {
@@ -31,12 +41,13 @@ export function startListening(opts: {
   const rec: SR = new Ctor();
   rec.lang = opts.lang;
   rec.interimResults = true;
-  rec.continuous = true;
+  rec.continuous = false; // one phrase → auto-stop on silence
   rec.maxAlternatives = 1;
   let finalText = "";
   let interim = "";
   let stoppedAt = 0;
   let delivered = false;
+  let errored = false;
   rec.onresult = (e: any) => {
     interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -47,21 +58,24 @@ export function startListening(opts: {
     opts.onInterim((finalText + interim).trim());
   };
   rec.onerror = (e: any) => {
-    if (e.error === "no-speech" || e.error === "aborted") return;
-    opts.onError(String(e.error ?? "stt error"));
+    const code = String(e?.error ?? "");
+    if (code === "aborted" || code === "no-speech") return;
+    errored = true;
+    opts.onError(ERROR_TEXT[code] ?? `Ошибка распознавания: ${code}`);
   };
   rec.onend = () => {
     const text = (finalText + interim).trim();
-    if (!delivered && text) {
+    if (!delivered && !errored) {
       delivered = true;
-      opts.onFinal(text, stoppedAt || Date.now());
+      if (text) opts.onFinal(text, stoppedAt || Date.now());
+      else opts.onEmpty();
     }
     opts.onEnd();
   };
   try {
     rec.start();
   } catch (err) {
-    opts.onError(String(err));
+    opts.onError("Не удалось запустить распознавание: " + String(err));
     return null;
   }
   return {
@@ -72,31 +86,26 @@ export function startListening(opts: {
 
 /* ------------------------------ TTS ------------------------------ */
 
-let currentUtterance: SpeechSynthesisUtterance | null = null;
 let currentAudio: HTMLAudioElement | null = null;
 
 export function stopSpeaking() {
   if (typeof window === "undefined") return;
   try { window.speechSynthesis?.cancel(); } catch { /* noop */ }
-  currentUtterance = null;
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
 }
 
 function pickVoice(lang: ReplyLang): SpeechSynthesisVoice | undefined {
   const voices = window.speechSynthesis.getVoices();
   const want = lang === "kk" ? ["kk-KZ", "kk"] : ["ru-RU", "ru"];
-  // the dataset's bot speaks in the feminine first person ("отправила", "жібердім") → prefer a female voice
   const female = /(milena|anna|alena|irina|katya|tatyana|svetlana|zhanar|aigul|female|женск)/i;
   for (const w of want) {
     const pool = voices.filter((x) => x.lang.toLowerCase().startsWith(w.toLowerCase()));
     const v = pool.find((x) => female.test(x.name)) ?? pool.find((x) => /google|premium|enhanced/i.test(x.name)) ?? pool[0];
     if (v) return v;
   }
-  // Kazakh voices are rare — fall back to Russian (still Cyrillic) rather than English
   return voices.find((x) => x.lang.toLowerCase().startsWith("ru")) ?? voices[0];
 }
 
-/** Speak with the browser; resolves with ms-to-first-audio (from call time). */
 export function speak(text: string, lang: ReplyLang, opts?: { onStart?(): void; onEnd?(): void }): Promise<number> {
   return new Promise((resolve) => {
     if (typeof window === "undefined" || !window.speechSynthesis) { resolve(0); return; }
@@ -111,9 +120,7 @@ export function speak(text: string, lang: ReplyLang, opts?: { onStart?(): void; 
     u.onstart = () => { started = true; opts?.onStart?.(); resolve(Math.round(performance.now() - t0)); };
     u.onend = () => { opts?.onEnd?.(); if (!started) resolve(0); };
     u.onerror = () => { opts?.onEnd?.(); resolve(0); };
-    currentUtterance = u;
     window.speechSynthesis.speak(u);
-    // Safari sometimes never fires onstart for short texts
     setTimeout(() => { if (!started) resolve(Math.round(performance.now() - t0)); }, 1500);
   });
 }

@@ -52,6 +52,7 @@ export interface ConversationState {
   tts: boolean;
   sttAvailable: boolean;
   error: string | null;
+  notice: string | null; // transient hint ("ничего не расслышала")
 }
 
 let state: ConversationState = {
@@ -67,6 +68,7 @@ let state: ConversationState = {
   tts: true,
   sttAvailable: false,
   error: null,
+  notice: null,
 };
 
 const listeners = new Set<() => void>();
@@ -101,7 +103,7 @@ export async function ensureSession(): Promise<string> {
 
 export function setMode(mode: ApiMode) {
   stopSpeaking();
-  set({ mode, sessionId: null, messages: [], traces: [], live: null, status: "idle", error: null, dialog: newDialogState("—") });
+  set({ mode, sessionId: null, messages: [], traces: [], live: null, status: "idle", error: null, notice: null, dialog: newDialogState("—") });
 }
 
 export function setSttLang(lang: "ru-RU" | "kk-KZ") { set({ sttLang: lang }); }
@@ -111,35 +113,51 @@ export function resetConversation() {
   stopSpeaking();
   listener?.abort();
   listener = null;
-  set({ sessionId: null, messages: [], traces: [], live: null, status: "idle", interim: "", error: null, dialog: newDialogState("—") });
+  set({ sessionId: null, messages: [], traces: [], live: null, status: "idle", interim: "", error: null, notice: null, dialog: newDialogState("—") });
+}
+
+/** Click once to start, click again (or just pause) to send. */
+export async function toggleVoice() {
+  if (state.status === "listening") { await stopVoice(); return; }
+  await startVoice();
 }
 
 export async function startVoice() {
   if (busy || state.status === "listening") return;
   stopSpeaking();
-  await ensureSession();
-  set({ sttAvailable: sttSupported() });
+  set({ error: null, notice: null, sttAvailable: sttSupported() });
+  try {
+    await ensureSession();
+  } catch (e) {
+    set({ error: "Не удалось создать сессию: " + String(e) });
+    return;
+  }
   if (state.mode === "real") {
     try {
       recorder = await startRecording();
-      set({ status: "listening", interim: "", error: null });
-    } catch (e) {
-      set({ error: "Микрофон недоступен: " + String(e) });
+      set({ status: "listening", interim: "" });
+    } catch {
+      set({ error: "Нет доступа к микрофону. Разрешите его в адресной строке." });
     }
+    return;
+  }
+  if (!sttSupported()) {
+    set({ error: "Распознавание речи работает в Chrome или Edge. Здесь можно написать текстом." });
     return;
   }
   listener = startListening({
     lang: state.sttLang,
     onInterim: (t) => set({ interim: t }),
     onFinal: (text, endedAt) => { void sendText(text, endedAt); },
-    onError: (m) => set({ error: `STT: ${m}`, status: "idle" }),
+    onEmpty: () => set({ notice: "Ничего не расслышала. Нажмите на микрофон и скажите ещё раз." }),
+    onError: (m) => set({ error: m, status: "idle", interim: "" }),
     onEnd: () => { listener = null; set((s) => ({ status: s.status === "listening" ? "idle" : s.status, interim: "" })); },
   });
   if (!listener) {
-    set({ error: "Браузер не поддерживает распознавание речи — используйте Chrome или текстовый ввод.", status: "idle" });
+    set({ error: "Не удалось включить микрофон. Попробуйте в Chrome.", status: "idle" });
     return;
   }
-  set({ status: "listening", interim: "", error: null });
+  set({ status: "listening", interim: "" });
 }
 
 export async function stopVoice() {
@@ -172,6 +190,7 @@ async function runOne(req: { text?: string; audio_base64?: string; audio_mime?: 
     status: "thinking",
     interim: "",
     error: null,
+    notice: null,
     live,
     messages: [...s.messages, { id: clientMsgId, role: "client", text: req.text ?? "…", turn }],
   }));
