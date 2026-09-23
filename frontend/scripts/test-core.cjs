@@ -69,7 +69,7 @@ const { POST: ttsProxy } = require("../src/app/api/tts/route.ts");
 const { speakElevenLabs, stopSpeaking } = require("../src/lib/voice.ts");
 
 test("TTS proxy forwards RU/KZ text as MP3 and does not expose credentials", async (t) => {
-  for (const lang of ["ru", "kk"]) {
+  for (const lang of ["ru", "kk", "en"]) {
     t.mock.method(globalThis, "fetch", async (url, init) => {
       assert.ok(String(url).endsWith("/api/voice/tts"));
       assert.deepEqual(JSON.parse(init.body), { text: "Тест", lang, format: "mp3_22050_32" });
@@ -196,7 +196,7 @@ test("microphone recorder supports MP4 and releases tracks after stop or cancell
 
 test("greetings reply in RU/KK and preserve a pending scenario in core and mock", async () => {
   for (const core of [false, true]) {
-    for (const [text, reply] of [["Здравствуйте!", "Здравствуйте, чем могу помочь?"], ["Сәлеметсіз бе!", "Сәлеметсіз бе, қалай көмектесе аламын?"]]) {
+    for (const [text, reply] of [["Здравствуйте!", "Здравствуйте, чем могу помочь?"], ["Сәлеметсіз бе!", "Сәлеметсіз бе, қалай көмектесе аламын?"], ["Hello!", "Hello, how can I help you?"]]) {
       const state = newDialogState("greeting");
       state.active_scenario = "SC27";
       state.awaiting = { kind: "slot", slot: "customer_name" };
@@ -219,4 +219,34 @@ test("greeting with a request is routed normally; vague insurance need still cla
   const { mockRoute } = require("../src/lib/mock/router.ts");
   assert.equal(mockRoute("Здравствуйте, хочу продлить полис", { awaiting: false }).decision.scenarios[0].scenario_id, "SC27");
   assert.equal(mockRoute("Здравствуйте, я по поводу страховки", { awaiting: false }).decision.scenarios[0].scenario_id, "SYS_UNCLEAR");
+});
+
+test("saved MP3 replays without synthesis and survives stop until explicitly released", async (t) => {
+  const { replayAudio, releaseSavedAudio } = require("../src/lib/voice.ts");
+  const originalWindow = globalThis.window;
+  const originalAudio = globalThis.Audio;
+  globalThis.window = { speechSynthesis: { cancel() {} } };
+  let plays = 0, requests = 0, revokes = 0;
+  globalThis.Audio = class {
+    constructor(url) { this.src = url; }
+    play() { plays++; this.onplaying?.(); return Promise.resolve(); }
+    pause() {}
+    removeAttribute() {}
+    load() {}
+  };
+  t.after(() => { stopSpeaking(); globalThis.window = originalWindow; globalThis.Audio = originalAudio; });
+  t.mock.method(globalThis, "fetch", async () => { requests++; return new Response(new Uint8Array([1, 2]), { headers: { "content-type": "audio/mpeg" } }); });
+  t.mock.method(URL, "revokeObjectURL", () => { revokes++; });
+  let saved;
+  await speakElevenLabs("Hello", "en", { autoplay: false, onAudio: (value) => { saved = value; } });
+  assert.equal(plays, 0);
+  assert.ok(saved.blob.size > 0);
+  await replayAudio(saved);
+  stopSpeaking();
+  await replayAudio(saved);
+  assert.equal(plays, 2);
+  assert.equal(requests, 1);
+  assert.equal(revokes, 0);
+  releaseSavedAudio(saved);
+  assert.equal(revokes, 1);
 });

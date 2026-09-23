@@ -10,6 +10,8 @@ import type { Candidate, Lang, RouterDecision, RoutedScenario, ScenarioId } from
 import { AS_OF_DATE } from "../contract";
 import { PRIORITY_RANK, scenarios, slotByNameOf } from "../catalog";
 
+export const ENGLISH_GREETING = /^(?:(?:hello|hi|hey|good morning|good afternoon|good evening)[\s,.!?]*)+$/i;
+
 /* ------------------------------ language ------------------------------ */
 
 const KK_LETTERS = /[әіңғүұқөһ]/i;
@@ -424,7 +426,7 @@ export interface MockRouteResult {
 export function mockRoute(text: string, ctx: { awaiting: boolean }): MockRouteResult {
   const language = detectLanguage(text);
   const trimmed = text.trim();
-  if (/^(?:(?:здравствуйте|здравствуй|привет|добрый день|доброе утро|добрый вечер|сәлеметсіз бе|сәлеметсіздер ме|сәлем|қайырлы күн|қайырлы таң|қайырлы кеш)[\s,.!?]*)+$/i.test(trimmed)) {
+  if (ENGLISH_GREETING.test(trimmed) || /^(?:(?:здравствуйте|здравствуй|привет|добрый день|доброе утро|добрый вечер|сәлеметсіз бе|сәлеметсіздер ме|сәлем|қайырлы күн|қайырлы таң|қайырлы кеш)[\s,.!?]*)+$/i.test(trimmed)) {
     const candidate = { scenario_id: "SYS_GREETING", confidence: 1 };
     return { kind: "route", parts: [trimmed], urgent: false, snapshots: [[candidate]],
       decision: { ...emptyDecision(language, false, "greeting without a request"), scenarios: [candidate], route_status: "greeting" } };

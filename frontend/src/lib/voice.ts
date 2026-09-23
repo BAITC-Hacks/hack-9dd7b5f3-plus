@@ -5,7 +5,7 @@
  *  - TTS: ElevenLabs via /api/tts; speechSynthesis for keyless mock/fallback.
  *  - Recorder: MediaRecorder → base64 webm/opus for the real backend's STT.
  */
-import type { ReplyLang } from "./contract";
+import type { SpeechLang } from "./contract";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type SR = any;
@@ -86,6 +86,26 @@ export function startListening(opts: {
 
 /* ------------------------------ TTS ------------------------------ */
 
+export interface SavedAudio { element: HTMLAudioElement; url: string; blob?: Blob }
+
+export function releaseSavedAudio(saved: SavedAudio) {
+  saved.element.pause();
+  saved.element.removeAttribute("src");
+  saved.element.load();
+  if (saved.url.startsWith("blob:")) URL.revokeObjectURL(saved.url);
+}
+
+export function seekAudio(saved: SavedAudio, seconds: number) {
+  saved.element.currentTime = seconds;
+}
+
+export async function replayAudio(saved: SavedAudio) {
+  stopSpeaking();
+  currentAudio = saved.element;
+  if (saved.element.ended) saved.element.currentTime = 0;
+  await saved.element.play();
+}
+
 let currentAudio: HTMLAudioElement | null = null;
 let pendingTts: AbortController | null = null;
 let disposeAudio: (() => void) | null = null;
@@ -101,9 +121,9 @@ export function stopSpeaking() {
 }
 
 /** Fetch server-generated MP3 and play it; resolves at actual playback start.
- * Stopping/resetting cancels pending synthesis and releases the blob URL.
+ * Stopping cancels pending synthesis. With onAudio, the conversation owns the blob URL until reset.
  */
-export async function speakElevenLabs(text: string, lang: ReplyLang, opts?: { onStart?(): void; onEnd?(): void }): Promise<number> {
+export async function speakElevenLabs(text: string, lang: SpeechLang, opts?: { onStart?(): void; onEnd?(): void; onAudio?(saved: SavedAudio): void; autoplay?: boolean }): Promise<number> {
   stopSpeaking();
   const controller = new AbortController();
   pendingTts = controller;
@@ -124,6 +144,8 @@ export async function speakElevenLabs(text: string, lang: ReplyLang, opts?: { on
     return await new Promise<number>((resolve, reject) => {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
+      opts?.onAudio?.({ element: audio, url, blob });
+      if (opts?.autoplay === false) { pendingTts = null; opts.onEnd?.(); resolve(0); return; }
       currentAudio = audio;
       let finished = false;
       const cleanup = () => {
@@ -131,8 +153,8 @@ export async function speakElevenLabs(text: string, lang: ReplyLang, opts?: { on
         finished = true;
         clearTimeout(timer);
         audio.pause();
-        audio.onplaying = audio.onended = audio.onerror = null;
-        URL.revokeObjectURL(url);
+        audio.onplaying = audio.onended = audio.onerror = audio.onpause = null;
+        if (!opts?.onAudio) URL.revokeObjectURL(url);
         if (currentAudio === audio) currentAudio = null;
         if (disposeAudio === cleanup) disposeAudio = null;
         if (pendingTts === controller) pendingTts = null;
@@ -147,6 +169,7 @@ export async function speakElevenLabs(text: string, lang: ReplyLang, opts?: { on
       disposeAudio = cleanup;
       audio.onplaying = () => { clearTimeout(timer); opts?.onStart?.(); resolve(Math.round(performance.now() - t0)); };
       audio.onended = cleanup;
+      audio.onpause = cleanup;
       audio.onerror = fail;
       audio.play().catch(fail);
     });
@@ -157,9 +180,9 @@ export async function speakElevenLabs(text: string, lang: ReplyLang, opts?: { on
   }
 }
 
-function pickVoice(lang: ReplyLang): SpeechSynthesisVoice | undefined {
+function pickVoice(lang: SpeechLang): SpeechSynthesisVoice | undefined {
   const voices = window.speechSynthesis.getVoices();
-  const want = lang === "kk" ? ["kk-KZ", "kk"] : ["ru-RU", "ru"];
+  const want = lang === "en" ? ["en-US", "en"] : lang === "kk" ? ["kk-KZ", "kk"] : ["ru-RU", "ru"];
   const female = /(milena|anna|alena|irina|katya|tatyana|svetlana|zhanar|aigul|female|женск)/i;
   for (const w of want) {
     const pool = voices.filter((x) => x.lang.toLowerCase().startsWith(w.toLowerCase()));
@@ -169,13 +192,13 @@ function pickVoice(lang: ReplyLang): SpeechSynthesisVoice | undefined {
   return voices.find((x) => x.lang.toLowerCase().startsWith("ru")) ?? voices[0];
 }
 
-export function speak(text: string, lang: ReplyLang, opts?: { onStart?(): void; onEnd?(): void }): Promise<number> {
+export function speak(text: string, lang: SpeechLang, opts?: { onStart?(): void; onEnd?(): void }): Promise<number> {
   return new Promise((resolve) => {
     if (typeof window === "undefined" || !window.speechSynthesis) { resolve(0); return; }
     stopSpeaking();
     const u = new SpeechSynthesisUtterance(text);
     const t0 = performance.now();
-    u.lang = lang === "kk" ? "kk-KZ" : "ru-RU";
+    u.lang = lang === "en" ? "en-US" : lang === "kk" ? "kk-KZ" : "ru-RU";
     const v = pickVoice(lang);
     if (v) u.voice = v;
     u.rate = 1.02;
@@ -188,10 +211,12 @@ export function speak(text: string, lang: ReplyLang, opts?: { onStart?(): void; 
   });
 }
 
-export function playBase64(audio_base64: string, mime = "audio/mpeg", opts?: { onStart?(): void; onEnd?(): void }): Promise<number> {
+export function playBase64(audio_base64: string, mime = "audio/mpeg", opts?: { onStart?(): void; onEnd?(): void; onAudio?(saved: SavedAudio): void; autoplay?: boolean }): Promise<number> {
   return new Promise((resolve) => {
     stopSpeaking();
     const a = new Audio(`data:${mime};base64,${audio_base64}`);
+    opts?.onAudio?.({ element: a, url: a.src });
+    if (opts?.autoplay === false) { opts.onEnd?.(); resolve(0); return; }
     const t0 = performance.now();
     a.onplaying = () => { opts?.onStart?.(); resolve(Math.round(performance.now() - t0)); };
     a.onended = () => opts?.onEnd?.();

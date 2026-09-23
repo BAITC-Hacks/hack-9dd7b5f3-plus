@@ -211,7 +211,7 @@ func (s *Server) tts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	l := lang.Lang(req.Lang)
-	if l != lang.RU && l != lang.KK {
+	if l != lang.RU && l != lang.KK && req.Lang != "en" {
 		l = (&lang.Policy{}).Choose(req.Text, "").Reply
 	}
 	format := req.Format
@@ -224,10 +224,17 @@ func (s *Server) tts(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
+	// English greetings reuse the Russian voice/model with English pronunciation.
+	if req.Lang == "en" {
+		l = lang.RU
+	}
 	model := s.TTS.Model(l)
 	treq := elevenlabs.TTSRequest{VoiceID: s.TTS.Voice(l), Model: model, Text: req.Text, OutputFormat: format}
 	if l == lang.RU && !strings.HasPrefix(model, "eleven_v3") {
 		treq.Language = "ru"
+		if req.Lang == "en" {
+			treq.Language = "en"
+		}
 	}
 	start := time.Now()
 	if wav {

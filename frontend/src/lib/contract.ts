@@ -10,6 +10,7 @@
 
 export type Lang = "ru" | "kk" | "mixed";
 export type ReplyLang = "ru" | "kk";
+export type SpeechLang = ReplyLang | "en";
 
 export type ScenarioId = string; // "SC01".."SC40" | "SYS_OUT_OF_SCOPE" | "SYS_UNCLEAR" | "SYS_GOODBYE"
 
@@ -98,7 +99,7 @@ export interface Trace {
   // extras (not in README, useful for the supervisor)
   policy: PolicyVerdict;
   response_text: string;
-  response_lang: ReplyLang;
+  response_lang: SpeechLang;
   model?: string;
   tier?: "fast" | "full";
   candidates_history?: Candidate[][]; // live confidence snapshots, in order
@@ -120,7 +121,7 @@ export type TurnEvent =
   | { type: "action"; call: ActionCall }
   | { type: "state"; state: DialogState }
   | { type: "response.delta"; text: string }
-  | { type: "response.final"; text: string; language: ReplyLang; ms: number }
+  | { type: "response.final"; text: string; language: SpeechLang; ms: number }
   /** Real backend: base64 audio (audio/mpeg or audio/wav). Mock: `browser_tts: true` → speak via speechSynthesis. */
   | { type: "tts.audio"; audio_base64?: string; mime?: string; browser_tts?: boolean; ms_first_audio: number }
   | { type: "turn.done"; trace: Trace; latency_ms: LatencyMs }

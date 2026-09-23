@@ -3,6 +3,7 @@
  * Shared conversation widget: chat feed + microphone (click to start, pause or click to send) + text input.
  * Used by /call (client) and /admin (supervisor, left column).
  */
+import { AudioMessage } from "./audio-message";
 import { Mic, SendHorizontal, Square, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ function Bubble({ m }: { m: Message }) {
   return (
     <div className={cn("flex w-full", isBot ? "justify-start" : "justify-end")}>
       <div className={cn("max-w-[80%] rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed", isBot ? "bg-card text-card-foreground" : "bg-primary text-primary-foreground")}>
-        <div className={cn(m.streaming && "after:ml-0.5 after:inline-block after:h-3.5 after:w-[2px] after:animate-pulse after:bg-current after:align-middle")}>{m.text}</div>
+        {isBot ? <AudioMessage message={m} /> : <div className={cn(m.streaming && "after:ml-0.5 after:inline-block after:h-3.5 after:w-[2px] after:animate-pulse after:bg-current after:align-middle")}>{m.text}</div>}
       </div>
     </div>
   );

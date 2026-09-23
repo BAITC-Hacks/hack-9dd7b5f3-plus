@@ -59,4 +59,4 @@ DISAMBIGUATION — the confusable groups
 - Where: office and hours → SC33. Where inspections are done → SC20. Which clinics → SC23.
 - Out of scope (loans, life insurance, weather, jobs) → SYS_OUT_OF_SCOPE. Vague, no concrete need → SYS_UNCLEAR.
 
-SYS_GREETING | Greeting only, no request | здравствуйте; привет; добрый день | сәлеметсіз бе; сәлем; қайырлы күн | ≠ greeting plus request → requested SC; vague insurance need → SYS_UNCLEAR
+SYS_GREETING | Greeting only, no request (also English: hello, hi, good morning) | здравствуйте; привет; добрый день | сәлеметсіз бе; сәлем; қайырлы күн | ≠ greeting plus request → requested SC; vague insurance need → SYS_UNCLEAR

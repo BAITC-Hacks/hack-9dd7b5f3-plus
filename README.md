@@ -1197,3 +1197,11 @@ It preserves the active scenario, pending slot/confirmation and queue, without i
 To verify on `/call` in LLM or mock mode: send «Здравствуйте» and «Сәлеметсіз бе»;
 then send «Здравствуйте, хочу продлить полис» — the latter must route to SC27, not greeting.
 The official starter dataset is unchanged; this is an application system intent.
+
+Audio replies in `/call` and `/admin` now retain the generated MP3 for the current conversation:
+play/pause, seekable waveform computed from the recording, elapsed/duration and download.
+The transcript appears below the player. Muting disables autoplay but still creates the recording.
+Resetting the conversation or reloading the page clears these in-memory recordings; download to keep a file.
+Mock mode has browser speech and a transcript, but no downloadable recording (browser TTS cannot export audio).
+English-only greetings such as “Hello” / “Hi” / “Good morning” return “Hello, how can I help you?”;
+this does not add English translations of the 40 insurance scenarios. TTS accepts `lang: en` in addition to ru/kk.

@@ -2,13 +2,13 @@
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  let input: { text: string; lang: "ru" | "kk" };
+  let input: { text: string; lang: "ru" | "kk" | "en" };
   try {
     const raw = await request.text();
     if (Buffer.byteLength(raw) > 24_000) return Response.json({ error: "Слишком длинный ответ для озвучки" }, { status: 413 });
     input = JSON.parse(raw);
-    if (!input || typeof input.text !== "string" || !input.text.trim() || input.text.length > 6000 || !["ru", "kk"].includes(input.lang)) {
-      return Response.json({ error: "Ожидались text и lang: ru или kk" }, { status: 400 });
+    if (!input || typeof input.text !== "string" || !input.text.trim() || input.text.length > 6000 || !["ru", "kk", "en"].includes(input.lang)) {
+      return Response.json({ error: "Ожидались text и lang: ru, kk или en" }, { status: 400 });
     }
   } catch {
     return Response.json({ error: "Некорректный запрос TTS" }, { status: 400 });

@@ -167,3 +167,5 @@ To import from `backend/`: add `require hackathon/voice v0.0.0` and `replace hac
 - `go test ./...` — unit tests with fake ElevenLabs servers (STT session, both TTS sockets, HTTP TTS, token), chunker, audio, lang, config.
 - `VOICE_LIVE=1 go test ./elevenlabs/ -run Live -v` — live smoke tests against ElevenLabs with the key from `.env`.
 - `go run ./cmd/voicedemo tts && go run ./cmd/voicedemo stt` — live demos with measurements in [demos/RESULTS.md](demos/RESULTS.md).
+
+HTTP TTS also accepts `lang: en` for English greetings, using the RU-configured voice/model with English pronunciation. STT language configuration is unchanged.

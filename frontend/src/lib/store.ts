@@ -5,9 +5,9 @@
  */
 import { useSyncExternalStore } from "react";
 import { createSession, DEFAULT_MODE, runTurn, type ApiMode } from "./api";
-import type { ActionCall, Candidate, DialogState, LatencyMs, PolicyVerdict, ReplyLang, RouterDecision, Stage, Trace, TurnEvent } from "./contract";
+import type { ActionCall, Candidate, DialogState, LatencyMs, PolicyVerdict, SpeechLang, RouterDecision, Stage, Trace, TurnEvent } from "./contract";
 import { newDialogState } from "./mock/engine";
-import { playBase64, speak, speakElevenLabs, startListening, startRecording, stopSpeaking, sttSupported, transcribeOnServer, type Listener, type Recorder } from "./voice";
+import { playBase64, speak, speakElevenLabs, startListening, startRecording, stopSpeaking, sttSupported, transcribeOnServer, releaseSavedAudio, type SavedAudio, type Listener, type Recorder } from "./voice";
 
 export interface Message {
   id: string;
@@ -16,6 +16,8 @@ export interface Message {
   lang?: string;
   turn: number;
   streaming?: boolean;
+  audio?: SavedAudio;
+  audioState?: "loading" | "ready" | "unavailable";
 }
 
 export type Status = "idle" | "listening" | "thinking" | "speaking";
@@ -105,9 +107,12 @@ export async function ensureSession(): Promise<string> {
   return session_id;
 }
 
+function releaseMessageAudio() { for (const m of state.messages) if (m.audio) releaseSavedAudio(m.audio); }
+
 export function setMode(mode: ApiMode) {
   if (busy || captureStarting || state.status === "thinking" || state.status === "listening") return;
   stopSpeaking();
+  releaseMessageAudio();
   set({ mode, sttProvider: mode === "mock" ? "browser" : "server", sessionId: null, messages: [], traces: [], live: null, status: "idle", error: null, notice: null, dialog: newDialogState("—") });
 }
 
@@ -118,6 +123,7 @@ export function setTts(on: boolean) { if (!on) stopSpeaking(); set({ tts: on });
 export function resetConversation() {
   if (busy || captureStarting || state.status === "thinking") return;
   stopSpeaking();
+  releaseMessageAudio();
   recorder?.abort();
   recorder = null;
   listener?.abort();
@@ -231,7 +237,7 @@ async function runOne(req: { text?: string; audio_base64?: string; audio_mime?: 
     const patchLive = (p: Partial<LiveTurn> | ((l: LiveTurn) => Partial<LiveTurn>)) =>
       set((s) => (s.live ? { live: { ...s.live, ...(typeof p === "function" ? p(s.live) : p) } } : {}));
 
-    let responseLang: ReplyLang = state.dialog.language;
+    let responseLang: SpeechLang = state.dialog.language;
     let finalText = "";
     let ttsPayload: { audio_base64?: string; mime?: string; browser_tts?: boolean } | null = null;
     let trace: Trace | null = null;
@@ -303,20 +309,30 @@ async function runOne(req: { text?: string; audio_base64?: string; audio_mime?: 
 
     // TTS + end-to-end latency (end of speech → first audio)
     let firstAudioMs = 0;
-    if (state.tts && finalText) {
-      set({ status: "speaking" });
-      const onEnd = () => set((s) => (s.status === "speaking" ? { status: "idle" } : {}));
-      if (ttsPayload?.audio_base64) firstAudioMs = await playBase64(ttsPayload.audio_base64, ttsPayload.mime, { onEnd });
-      else if (state.mode !== "mock") {
-        try {
-          firstAudioMs = await speakElevenLabs(finalText, responseLang, { onEnd });
-        } catch (error) {
-          set({ notice: `${error instanceof Error ? error.message : "Ошибка ElevenLabs"} Использую голос браузера.`, status: "speaking" });
-          firstAudioMs = await speak(finalText, responseLang, { onEnd });
-        }
-      } else firstAudioMs = await speak(finalText, responseLang, { onEnd });
+    const patchAudio = (patch: Partial<Message>) => set((s) => ({ messages: s.messages.map((m) => m.id === botMsgId ? { ...m, ...patch } : m) }));
+    const onEnd = () => set((s) => (s.status === "speaking" ? { status: "idle" } : {}));
+    if (finalText && state.mode !== "mock" && !ttsPayload?.audio_base64) {
+      patchAudio({ audioState: "loading" });
+      if (state.tts) set({ status: "speaking" });
+      try {
+        firstAudioMs = await speakElevenLabs(finalText, responseLang, { onEnd, autoplay: state.tts,
+          onAudio: (audio) => patchAudio({ audio, audioState: "ready" }) });
+        // Cancellation before synthesis completed leaves a usable transcript.
+        if (!state.messages.find((m) => m.id === botMsgId)?.audio) patchAudio({ audioState: "unavailable" });
+      } catch (error) {
+        patchAudio({ audioState: state.messages.find((m) => m.id === botMsgId)?.audio ? "ready" : "unavailable" });
+        set({ notice: error instanceof Error ? error.message : "Ошибка озвучки", status: "idle" });
+      }
+      if (!state.tts) set({ status: "idle" });
+    } else if (ttsPayload?.audio_base64) {
+      if (state.tts) set({ status: "speaking" });
+      firstAudioMs = await playBase64(ttsPayload.audio_base64, ttsPayload.mime, { onEnd, autoplay: state.tts,
+        onAudio: (audio) => patchAudio({ audio, audioState: "ready" }) });
+      if (!state.tts) set({ status: "idle" });
     } else {
-      set({ status: "idle" });
+      patchAudio({ audioState: "unavailable" });
+      if (state.tts && finalText) { set({ status: "speaking" }); firstAudioMs = await speak(finalText, responseLang, { onEnd }); }
+      else set({ status: "idle" });
     }
     const e2e = Math.max(0, Date.now() - req.client_t0);
     if (trace) {

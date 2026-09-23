@@ -22,7 +22,7 @@ import {
 } from "../contract";
 import { backend, isSystemIntent, scenarioById, scenarioLabel, slotByNameOf, systemIntentById, type Scenario } from "../catalog";
 import { fmtMoney, isIrreversible, maskEmail, runAction } from "./actions";
-import { detectLanguage, dominantLanguage, mockRoute, NO, parseSlotAnswer, splitParts, YES, type MockRouteResult } from "./router";
+import { ENGLISH_GREETING, detectLanguage, dominantLanguage, mockRoute, NO, parseSlotAnswer, splitParts, YES, type MockRouteResult } from "./router";
 
 /** Slots whose answer is an identifier — a bare answer is ALWAYS a continuation, never a new intent. */
 const ID_SLOTS = new Set(["phone", "iin", "policy_number", "claim_number", "vehicle_plate", "culprit_vehicle_plate", "new_driver_iin", "drivers_iin", "email", "callback_time", "preferred_date", "incident_date", "payment_date"]);
@@ -158,11 +158,12 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
   let text_out = "";
   const chain: string[] = [];
   const lang = state.language;
+  const responseLang = verdict.action === "greeting" && ENGLISH_GREETING.test(text.trim()) ? "en" : lang;
   const mergedSlots = { ...decision.slots };
   for (const [k, v] of Object.entries(mergedSlots)) if (v !== undefined && v !== null && v !== "") state.slots[k] = v;
 
   if (verdict.action === "greeting") {
-    text_out = systemIntentById("SYS_GREETING")!.response[lang];
+    text_out = responseLang === "en" ? "Hello, how can I help you?" : systemIntentById("SYS_GREETING")!.response[lang];
   } else if (verdict.action === "goodbye") {
     text_out = systemIntentById("SYS_GOODBYE")!.response[lang];
     state.ended = true;
@@ -229,7 +230,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
     yield { type: "response.delta", text: c };
   }
   lat.response = now() - tResp;
-  yield { type: "response.final", text: text_out, language: lang, ms: lat.response };
+  yield { type: "response.final", text: text_out, language: responseLang, ms: lat.response };
 
   // --- tts
   const total = now() - start;
@@ -249,7 +250,7 @@ export async function* runMockTurn(state: DialogState, input: { text: string; t0
     latency_ms: lat,
     policy: verdict,
     response_text: text_out,
-    response_lang: lang,
+    response_lang: responseLang,
     model: decision.model,
     tier: decision.tier,
     candidates_history: history,

@@ -40,3 +40,5 @@ phone (KZ SIP → Asterisk) ──AudioSocket──┘      │
 - Keep `ELEVENLABS_STT_LANGUAGE=kk`: auto-detect transcribes Kazakh as Turkish (measured, see `demos/RESULTS.md`).
 - Tests: `cd voice && go test ./...` (offline). Live: `VOICE_LIVE=1 go test ./elevenlabs/ -run Live -v`, `go run ./cmd/voicedemo tts|stt`.
 - Run the gateway: `cd voice && go run ./cmd/voice` → http://localhost:8090 (voice test page).
+
+HTTP TTS also accepts `lang: en` for English greetings, using the RU-configured voice/model with English pronunciation. STT language configuration is unchanged.
