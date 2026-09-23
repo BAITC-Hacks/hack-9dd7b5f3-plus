@@ -1,35 +1,33 @@
-# Third-party components (disclosure per rules §5.4.4)
+# Third-party components and data
 
-Every dependency, model, API, dataset, template or UI kit we use must be listed here. When something moves from "Planned" to actually used in code, move its row to "In use".
+| Компонент | Лицензия / условия | Ссылка | Применение |
+|---|---|---|---|
+| Go 1.26.5 | BSD-3-Clause | https://go.dev/LICENSE | Backend runtime / standard library |
+| chi v5 | MIT | https://github.com/go-chi/chi | HTTP router / recovery |
+| pgx v5, pgpassfile, pgservicefile, puddle | MIT | https://github.com/jackc/pgx | PostgreSQL client and supporting packages |
+| golang.org/x/sync, golang.org/x/text | BSD-3-Clause | https://pkg.go.dev/golang.org/x | pgx transitive dependencies |
+| PostgreSQL 17 | PostgreSQL License | https://www.postgresql.org/about/licence/ | Session persistence |
+| Next.js 16.3.6 | MIT | https://nextjs.org | Frontend App Router |
+| React / React DOM 19 | MIT | https://react.dev | UI runtime |
+| TypeScript, @types/node, @types/react, @types/react-dom | Apache-2.0 / MIT (types) | https://www.typescriptlang.org | Static typing |
+| Tailwind CSS 4, @tailwindcss/postcss | MIT | https://tailwindcss.com | CSS build pipeline |
+| ESLint, eslint-config-next | MIT | https://eslint.org | Frontend checks |
+| Lucide React | ISC | https://lucide.dev/license | Interface icons |
+| Node.js 24 | MIT and bundled component licenses | https://nodejs.org | Frontend build/runtime |
+| Alpine Linux container base | Multiple free software licenses | https://alpinelinux.org | Minimal Docker runtime |
+| OpenAI API | Commercial API terms | https://platform.openai.com | Optional LLM, STT, TTS, Realtime |
+| GPT-4.1 mini | OpenAI API terms | https://developers.openai.com/api/docs/models/gpt-4.1-mini | Configurable initial router model; no bundled weights |
+| gpt-4o-mini-transcribe, gpt-4o-mini-tts, gpt-live-transcribe | OpenAI API terms | https://developers.openai.com/api/docs/guides/audio | Configurable speech models; no bundled weights |
+| NVIDIA Build / NIM | NVIDIA service terms | https://build.nvidia.com | Optional OpenAI-compatible routing |
+| Llama 3.3 70B Instruct | Llama 3.3 Community License | https://www.llama.com/llama3_3/license/ | Optional NVIDIA default model; no bundled weights |
+| Web Speech / WebRTC / Web Audio | Browser/platform implementation terms | https://developer.mozilla.org/en-US/docs/Web/API | Browser speech fallback, transport and playback; not vendored |
+| macOS Milena synthetic voice | Apple macOS software license; generated sample speech | https://www.apple.com/legal/sla/ | Three artificial Russian audio test fixtures; no voice model distributed |
+| FFmpeg | LGPL-2.1-or-later / GPL depending on local build | https://ffmpeg.org/legal.html | Optional local conversion of generated samples to PCM WAV; not linked/distributed |
+| Python 3 standard library | PSF License | https://docs.python.org/3/license.html | Evaluation and fixture generation scripts |
+| Synthetic catalog, text cases and audio scripts | Original Team Plus work under hackathon repo terms | backend/data/demo, samples, scripts | Demonstration data; not organizer data |
 
-## In use
+Versions and all transitives are pinned by frontend/package-lock.json and backend/go.sum. UI is original CSS/components using Lucide; no shadcn/ObsidianUI or external templates were added. Organizer starter-kit datasets were not present and have not been represented as available. Any additional local/hosted LLM selected later must be disclosed here with its license/terms.
 
-| Component | License | Link | Used for |
-|-----------|---------|------|----------|
-| Voice Router starter kit (`data/`: scenarios, slots, actions, knowledge base, mock backend, dialogs, dev utterances, `evaluate.py`) | Provided by the organizer / Halyk Bank for HackAlem AI | https://drive.google.com/file/d/1sHE56gXnzdscHz5lMcNbwd1VsJIVLFUv | Synthetic scenarios, dialogs, facts; official evaluation script |
-| Next.js | MIT | https://nextjs.org | Frontend framework |
-| Tailwind CSS | MIT | https://tailwindcss.com | Styling |
-| Go (stdlib `net/http`) | BSD-3-Clause | https://go.dev | Backend service |
+AI coding assistance during this implementation: OpenAI Codex. No AI authorship trailers added to git commits.
 
-## Planned (from `docs/SPEC.md` / `docs/research/DEEP_RESEARCH_REPORT.md` — confirm when integrated)
-
-| Component | License / terms | Link | Used for |
-|-----------|-----------------|------|----------|
-| shadcn/ui | MIT | https://ui.shadcn.com | UI primitives |
-| ObsidianUI | MIT | https://www.obsidianui.dev | UI components / blocks |
-| Motion | MIT | https://motion.dev | Animations (ObsidianUI dependency) |
-| chi | MIT | https://github.com/go-chi/chi | Go HTTP router |
-| pgx | MIT | https://github.com/jackc/pgx | Postgres driver |
-| PostgreSQL | PostgreSQL License | https://www.postgresql.org | Database |
-| geko.sh — Seta-1.0 (`seta-kk-ru-v2`) STT, Tokay-1.0 (`tokay-kk-v1`) TTS | Commercial API (key not in repo) | https://geko.sh | KZ/RU code-switching STT; Kazakh TTS |
-| ElevenLabs — Scribe v2 Realtime (STT), Flash v2.5 (TTS) | Commercial API (key not in repo) | https://elevenlabs.io | Streaming STT / TTS, fallback to geko |
-| OpenAI API — `gpt-4.1-nano` / `gpt-4.1-mini` / `gpt-4o`, `text-embedding-3-small` | Commercial API | https://platform.openai.com | Router LLM (JSON), reply generation, low-confidence escalation, shortlist embeddings |
-| NVIDIA Build (NIM) API | Commercial API | https://build.nvidia.com | Alternative LLM provider |
-| Silero VAD | MIT | https://github.com/snakers4/silero-vad | End-of-utterance detection / barge-in |
-| Speko (optional, not on the KZ/RU path) | Commercial API | https://speko.ai | Voice provider routing — optional only |
-| Design references (Speko brand + console, 1609SAT `DESIGN.md`) | Provided by their authors for this project | `docs/design/` | UI styling reference |
-| Railway | Vendor platform | https://railway.app | Deployment |
-| Docker / Docker Compose | Apache-2.0 | https://www.docker.com | Local orchestration |
-| Vapi / Twilio / LiveKit SIP (stretch) | Vendor platforms | https://vapi.ai · https://twilio.com · https://livekit.io | Phone channel, only if implemented |
-
-AI coding assistants used during development: OpenAI Codex, Claude.
+| Organizer Voice Router / Saqta starter kit | HackAlem case usage terms (synthetic, supplied by organizers) | data/README.md | Original 40 scenarios, 3 system intents, facts, synthetic clients and reference evaluator; integration in progress |

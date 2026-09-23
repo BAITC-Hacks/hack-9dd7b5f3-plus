@@ -15,7 +15,14 @@ dist/
 # build artifacts
 /backend/server
 /backend/cmd/server/server
-
 # OS
 Thumbs.db
 __MACOSX/
+.env.*
+!.env.example
+backend/api
+backend/server
+reports/*
+!reports/.gitkeep
+__pycache__/
+*.pyc

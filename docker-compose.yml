@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: plus
+      POSTGRES_PASSWORD: plus
+      POSTGRES_DB: plus
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plus -d plus"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  backend:
+    build: ./backend
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://plus:plus@db:5432/plus?sslmode=disable
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_MODEL: ${NVIDIA_MODEL:-meta/llama-3.3-70b-instruct}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_JSON_SCHEMA: ${LLM_JSON_SCHEMA:-true}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-8s}
+      SPEECH_PROVIDER: ${SPEECH_PROVIDER:-browser}
+      STT_MODEL: ${STT_MODEL:-gpt-4o-mini-transcribe}
+      TTS_MODEL: ${TTS_MODEL:-gpt-4o-mini-tts}
+      TTS_VOICE: ${TTS_VOICE:-coral}
+      REALTIME_MODEL: ${REALTIME_MODEL:-gpt-live-transcribe}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      DATA_DIR: /app/data
+    volumes:
+      - ${DATA_PATH:-./backend/data/demo}:/app/data:ro
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  postgres-data:

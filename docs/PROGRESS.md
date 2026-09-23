@@ -17,3 +17,12 @@
 
 ## 17:00–18:00
 - 
+
+## 2026-09-23 · Voice Router implementation checkpoint
+
+- Replaced empty case/product/spec placeholders with the supplied Halyk Bank Voice Router case and implemented architecture/API contracts.
+- Added Go catalog/LLM routing, strict output validation, retry/deadline, explicit handoff, session persistence, live NDJSON traces and speech adapters.
+- Added Next.js simulator, catalog/history/metrics screens, WebRTC input, PCM output and audio upload.
+- Added Compose/Dockerfiles, three synthetic Russian WAV files, text/audio evaluation tooling and startup/test documentation.
+- Verified: Go race tests; Python evaluation utility tests; frontend lint and production build; Docker Compose builds and starts PostgreSQL/backend/frontend.
+- Pending live checks: browser walkthrough, persistence restart, clean checkout verification. External blockers: official starter kit/evaluate.py and API credentials not supplied; no real-model accuracy/latency or cloud deployment claims.
