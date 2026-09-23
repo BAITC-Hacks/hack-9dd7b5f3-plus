@@ -36,7 +36,7 @@ function Bubble({ m }: { m: Message }) {
 
 const STATUS_TEXT = {
   idle: "Нажмите на микрофон и говорите",
-  listening: "Слушаю… сделайте паузу или нажмите ещё раз, чтобы отправить",
+  listening: "Слушаю… нажмите на микрофон ещё раз, чтобы отправить",
   thinking: "Думаю…",
   speaking: "Отвечаю",
 } as const;

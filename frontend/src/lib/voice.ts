@@ -167,3 +167,19 @@ export async function startRecording(): Promise<Recorder> {
       }),
   };
 }
+
+/* ------------------------------ server STT (fallback) ------------------------------ */
+
+/** Send a recording to /api/stt (Next route → OpenAI). Resolves with the transcript. */
+export async function transcribeOnServer(audio_base64: string, mime: string, language: "ru" | "kk"): Promise<{ text: string; ms: number }> {
+  const bin = atob(audio_base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const fd = new FormData();
+  fd.append("file", new Blob([bytes], { type: mime }), "audio.webm");
+  fd.append("language", language);
+  const r = await fetch("/api/stt", { method: "POST", body: fd });
+  const j = (await r.json().catch(() => ({}))) as { text?: string; ms?: number; error?: string };
+  if (!r.ok) throw new Error(j.error ?? `STT: HTTP ${r.status}`);
+  return { text: j.text ?? "", ms: j.ms ?? 0 };
+}

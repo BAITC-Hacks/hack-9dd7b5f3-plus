@@ -12,6 +12,15 @@ npm run dev        # http://localhost:3000
 
 No keys needed: `NEXT_PUBLIC_API_MODE=mock` (default) runs the whole pipeline in the browser — STT via the Web Speech API (Chrome; `ru-RU` / `kk-KZ`), a lexical mock router + dialog engine over the starter kit in `src/data/`, TTS via `speechSynthesis`. Switch to the Go backend with `NEXT_PUBLIC_API_MODE=real` and `NEXT_PUBLIC_API_URL=http://localhost:8080` (contract: [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md), types: `src/lib/contract.ts`).
 
+## Voice without Google
+
+Chrome's Web Speech API sends audio to Google. If that fails (Arc/Brave/Yandex browsers, restricted venue network) the app shows «Нет связи с сервисом распознавания» and switches to server-side recognition through `POST /api/stt` (Next route → OpenAI transcription). Enable it once:
+
+```bash
+cp .env.local.example .env.local   # put your OPENAI_API_KEY there, restart npm run dev
+```
+The toggle «Распознавание: Chrome / Сервер» is in the top bar. TTS stays in the browser.
+
 ## Routes
 
 | Route | Surface | What |

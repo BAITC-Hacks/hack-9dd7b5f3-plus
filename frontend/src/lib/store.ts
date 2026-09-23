@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 import { createSession, DEFAULT_MODE, runTurn, type ApiMode } from "./api";
 import type { ActionCall, Candidate, DialogState, LatencyMs, PolicyVerdict, ReplyLang, RouterDecision, Stage, Trace, TurnEvent } from "./contract";
 import { newDialogState } from "./mock/engine";
-import { playBase64, speak, startListening, startRecording, stopSpeaking, sttSupported, type Listener, type Recorder } from "./voice";
+import { playBase64, speak, startListening, startRecording, stopSpeaking, sttSupported, transcribeOnServer, type Listener, type Recorder } from "./voice";
 
 export interface Message {
   id: string;
@@ -49,6 +49,8 @@ export interface ConversationState {
   status: Status;
   interim: string;
   sttLang: "ru-RU" | "kk-KZ";
+  /** browser = Chrome Web Speech (Google); server = /api/stt (OpenAI). */
+  sttProvider: "browser" | "server";
   tts: boolean;
   sttAvailable: boolean;
   error: string | null;
@@ -65,6 +67,7 @@ let state: ConversationState = {
   status: "idle",
   interim: "",
   sttLang: "ru-RU",
+  sttProvider: "browser",
   tts: true,
   sttAvailable: false,
   error: null,
@@ -107,6 +110,7 @@ export function setMode(mode: ApiMode) {
 }
 
 export function setSttLang(lang: "ru-RU" | "kk-KZ") { set({ sttLang: lang }); }
+export function setSttProvider(p: "browser" | "server") { listener?.abort(); listener = null; set({ sttProvider: p, error: null, notice: null, status: "idle", interim: "" }); }
 export function setTts(on: boolean) { if (!on) stopSpeaking(); set({ tts: on }); }
 
 export function resetConversation() {
@@ -132,10 +136,10 @@ export async function startVoice() {
     set({ error: "Не удалось создать сессию: " + String(e) });
     return;
   }
-  if (state.mode === "real") {
+  if (state.mode === "real" || state.sttProvider === "server") {
     try {
       recorder = await startRecording();
-      set({ status: "listening", interim: "" });
+      set({ status: "listening", interim: "", notice: "Говорите. Нажмите на микрофон ещё раз, когда закончите." });
     } catch {
       set({ error: "Нет доступа к микрофону. Разрешите его в адресной строке." });
     }
@@ -150,7 +154,14 @@ export async function startVoice() {
     onInterim: (t) => set({ interim: t }),
     onFinal: (text, endedAt) => { void sendText(text, endedAt); },
     onEmpty: () => set({ notice: "Ничего не расслышала. Нажмите на микрофон и скажите ещё раз." }),
-    onError: (m) => set({ error: m, status: "idle", interim: "" }),
+    onError: (m) => {
+      if (/сервисом распознавания/.test(m)) {
+        // Chrome could not reach Google's speech service → switch to server STT
+        set({ sttProvider: "server", status: "idle", interim: "", error: null, notice: "Браузер не дотянулся до сервиса распознавания Google. Переключилась на серверное распознавание — нажмите на микрофон ещё раз." });
+        return;
+      }
+      set({ error: m, status: "idle", interim: "" });
+    },
     onEnd: () => { listener = null; set((s) => ({ status: s.status === "listening" ? "idle" : s.status, interim: "" })); },
   });
   if (!listener) {
@@ -161,11 +172,22 @@ export async function startVoice() {
 }
 
 export async function stopVoice() {
-  if (state.mode === "real" && recorder) {
+  if (recorder) {
     const r = recorder; recorder = null;
-    set({ status: "thinking" });
+    set({ status: "thinking", notice: null });
     const { audio_base64, mime, endedAt } = await r.stop();
-    await runOne({ audio_base64, audio_mime: mime, client_t0: endedAt });
+    if (state.mode === "real") {
+      await runOne({ audio_base64, audio_mime: mime, client_t0: endedAt });
+      return;
+    }
+    try {
+      const { text } = await transcribeOnServer(audio_base64, mime, state.sttLang === "kk-KZ" ? "kk" : "ru");
+      if (!text) { set({ status: "idle", notice: "Ничего не расслышала. Попробуйте ещё раз." }); return; }
+      set({ status: "idle" });
+      await sendText(text, endedAt);
+    } catch (e) {
+      set({ status: "idle", error: String(e instanceof Error ? e.message : e) });
+    }
     return;
   }
   listener?.stop();
