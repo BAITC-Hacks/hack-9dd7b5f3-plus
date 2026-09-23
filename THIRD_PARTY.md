@@ -16,6 +16,7 @@
 | Node.js 24 | MIT and bundled component licenses | https://nodejs.org | Frontend build/runtime |
 | Alpine Linux container base | Multiple free software licenses | https://alpinelinux.org | Minimal Docker runtime |
 | OpenAI API | Commercial API terms | https://platform.openai.com | Optional LLM, STT, TTS, Realtime |
+| OpenRouter API | OpenRouter service terms | https://openrouter.ai/terms | Optional OpenAI-compatible routing gateway; locally verified with openai/gpt-4.1-mini |
 | GPT-4.1 mini | OpenAI API terms | https://developers.openai.com/api/docs/models/gpt-4.1-mini | Configurable initial router model; no bundled weights |
 | gpt-4o-mini-transcribe, gpt-4o-mini-tts, gpt-live-transcribe | OpenAI API terms | https://developers.openai.com/api/docs/guides/audio | Configurable speech models; no bundled weights |
 | NVIDIA Build / NIM | NVIDIA service terms | https://build.nvidia.com | Optional OpenAI-compatible routing |

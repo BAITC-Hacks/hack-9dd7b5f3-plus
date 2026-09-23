@@ -82,6 +82,19 @@ REALTIME_MODEL=gpt-live-transcribe
 
 NVIDIA: `LLM_PROVIDER=nvidia`, `NVIDIA_API_KEY`, `NVIDIA_MODEL`. Если endpoint не поддерживает strict JSON schema, задайте `LLM_JSON_SCHEMA=false`; локальная валидация остаётся обязательной. Речь по-прежнему выбирается независимо через SPEECH_PROVIDER.
 
+OpenRouter для настоящей маршрутизации с браузерным голосом:
+
+```dotenv
+LLM_PROVIDER=openai_compatible
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=your-openrouter-key
+LLM_MODEL=openai/gpt-4.1-mini
+LLM_JSON_SCHEMA=true
+SPEECH_PROVIDER=browser
+```
+
+Сохраните настройки в локальном `.env`, затем выполните `docker compose up -d --force-recreate backend`. Контейнер получит новые переменные; простой `docker compose restart` их не обновляет. Перезагрузите страницу [localhost:3000](http://localhost:3000). В `/healthz` должны появиться `provider: openai_compatible` и выбранная модель. Браузерный микрофон и озвучка зависят от поддержки браузера и установленных голосов; для проверки используйте Chrome. Загрузка аудиофайлов и серверные STT/TTS/Realtime в текущей реализации требуют отдельного `OPENAI_API_KEY` и `SPEECH_PROVIDER=openai`; ключ OpenRouter в `OPENAI_API_KEY` не подходит. [Документация OpenRouter](https://openrouter.ai/docs/quickstart).
+
 Локальный OpenAI-compatible сервер: `LLM_PROVIDER=openai_compatible`, `LLM_BASE_URL=http://host.docker.internal:8000/v1`, `LLM_MODEL=<model>`, `LLM_API_KEY` при необходимости. Модель должна поддерживать chat completions и JSON. Локальный LLM runtime не входит в Compose; его нужно запустить отдельно. ElevenLabs не требуется, интеграция не добавлена.
 
 ## Переменные окружения
@@ -190,7 +203,7 @@ Compose монтирует `./data`. Native Go из `backend/` использу�
 
 ## Ограничения и измерения
 
-- Нет API-ключа для проверки настоящих LLM/STT/TTS: нельзя утверждать точность на 40 сценариях, улучшение baseline или качество живой казахской речи. Локальные tests используют mock HTTP-провайдеры.
+- Настоящий `openai/gpt-4.1-mini` через OpenRouter проверен на 12 собственных текстовых регрессиях: 12/12 основных маршрутов/статусов, 11/12 полных наборов намерений, ошибок API нет; p50 1576 мс, p95 1801 мс. Это короткая проверка подключения и поведения, а не оценка на официальных 104 репликах или тесте жюри. Live STT/TTS/Realtime, качество казахской речи и улучшение baseline ещё не проверены. Подробности: [docs/VALIDATION.md](docs/VALIDATION.md).
 - 500 мс / 1,5 с — отображаемые цели; сеть, объём каталога, output tokens, VAD и провайдер влияют на результат. UI показывает превышение; p50/p95 mock исключены.
 - Самооценка confidence не калибрована. Короткое объяснение не является доказательством правильности; проверяйте по размеченным данным.
 - Шумный микрофон может преждевременно завершить речь или не обнаружить паузу. У VAD фиксированный порог. Максимум 30 секунд записи / 10 реплик.
