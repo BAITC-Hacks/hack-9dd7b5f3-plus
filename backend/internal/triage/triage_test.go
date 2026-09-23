@@ -1,6 +1,9 @@
 package triage
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSpokenToDigits(t *testing.T) {
 	cases := map[string]string{
@@ -15,6 +18,15 @@ func TestSpokenToDigits(t *testing.T) {
 		if s.Entities["phone"] != want {
 			t.Errorf("phone from %q = %q (norm %q), want %q", in, s.Entities["phone"], s.Normalized, want)
 		}
+	}
+}
+
+func TestAmbiguousNumberWords(t *testing.T) {
+	if got := SpokenToDigits("Он не виноват, виновник у вас застрахован"); strings.Contains(got, "10") {
+		t.Errorf("standalone 'он' must not become 10: %q", got)
+	}
+	if got := SpokenToDigits("плюс жеті жеті жүз бір нөл нөл нөл нөл нөл он"); !strings.HasSuffix(got, "10") {
+		t.Errorf("'он' inside a number sequence must convert: %q", got)
 	}
 }
 

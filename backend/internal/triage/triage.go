@@ -26,7 +26,11 @@ type Signals struct {
 	OperatorRequest    bool              `json:"operator_request"`
 	RobotQuestion      bool              `json:"robot_question"`
 	OutOfScopeHints    []string          `json:"out_of_scope_hints"`
+	Tone               string            `json:"tone"` // neutral | upset | urgent
+	ToneMarkers        []string          `json:"tone_markers,omitempty"`
 }
+
+var upsetMarkers = []string{"безобразие", "ужас", "хамил", "хамит", "нагрубил", "груб", "возмущ", "надоело", "сколько можно", "никто не", "не отвечаете", "обман", "верните", "требую", "жалоб", "недоволен", "недовольна", "отвратительн", "кошмар", "ашуланып", "шағым", "неге ешкім", "масқара", "!!"}
 
 var (
 	rePhone   = regexp.MustCompile(`(?:\+?7|8)\d{10}`)
@@ -103,6 +107,19 @@ func Analyze(text string, hasPendingConfirmation bool) Signals {
 			s.RobotQuestion = true
 			break
 		}
+	}
+	for _, m := range upsetMarkers {
+		if strings.Contains(lower, m) {
+			s.ToneMarkers = append(s.ToneMarkers, m)
+		}
+	}
+	switch {
+	case len(s.Urgent) > 0:
+		s.Tone = "urgent"
+	case len(s.ToneMarkers) > 0:
+		s.Tone = "upset"
+	default:
+		s.Tone = "neutral"
 	}
 	words := lang.Tokens(text)
 	if hasPendingConfirmation {

@@ -187,6 +187,9 @@ func BuildMessages(system string, in Input) []llm.Message {
 	if sg.Confirmation != "" {
 		fmt.Fprintf(&b, "- confirmation detected: %s\n", sg.Confirmation)
 	}
+	if sg.Tone != "" && sg.Tone != "neutral" {
+		fmt.Fprintf(&b, "- tone: %s (%s) — adapt: apologize/acknowledge first, shorter sentences, no upselling\n", sg.Tone, strings.Join(sg.ToneMarkers, ", "))
+	}
 	if sg.OperatorRequest {
 		b.WriteString("- client mentions an operator/human\n")
 	}

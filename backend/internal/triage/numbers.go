@@ -45,11 +45,20 @@ func SpokenToDigits(text string) string {
 		}
 		// parse one spoken number group
 		val, consumed := parseGroup(words, i)
+		if consumed == 1 && ambiguousAlone[w] {
+			// "он" (kk: ten / ru: he), "раз" (once), "одна" — only digits when part of a number sequence
+			out = append(out, words[i])
+			i++
+			continue
+		}
 		out = append(out, strconv.Itoa(val))
 		i += consumed
 	}
 	return strings.Join(out, " ")
 }
+
+// ambiguousAlone are number words that are ordinary words on their own.
+var ambiguousAlone = map[string]bool{"он": true, "раз": true, "одна": true, "одно": true, "три": true, "сто": true}
 
 // parseGroup reads a single number (e.g. "семьсот семь", "сто двадцать три",
 // "жеті жүз бір", "сорок пять", "ноль") starting at words[i].
