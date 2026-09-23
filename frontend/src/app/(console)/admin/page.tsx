@@ -10,6 +10,7 @@ import { SpeedCard } from "@/components/app/admin/speed";
 import { TurnLog } from "@/components/app/admin/turn-log";
 import { Button } from "@/components/ui/button";
 import { computeStats } from "@/lib/api";
+import { VOICE_AGENT_ID } from "@/lib/voice-agent";
 import { useConversation } from "@/lib/store";
 
 export default function AdminPage() {
@@ -27,6 +28,7 @@ export default function AdminPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-medium">Консоль супервизора</h1>
+          <p className="mt-1 font-mono text-xs text-muted-foreground">Voice Agent ID: {VOICE_AGENT_ID}</p>
           <p className="mt-0.5 text-sm text-muted-foreground">Каждая реплика: что понял робот, почему, что сделал и за сколько.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => setShowJson((v) => !v)} disabled={!json}>{showJson ? "Скрыть JSON" : "JSON последней реплики"}</Button>

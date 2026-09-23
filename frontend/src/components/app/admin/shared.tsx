@@ -1,4 +1,5 @@
 "use client";
+import { agentReason, VOICE_AGENT_ID } from "@/lib/voice-agent";
 /** Supervisor console — shared helpers. Minimal: sentence-case labels, numbers in mono. */
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
@@ -25,15 +26,15 @@ export interface TurnView {
 
 export function toTurnView(live: LiveTurn | null, lastTrace: Trace | undefined): TurnView {
   if (live) {
-    return { source: "live", turn: live.turn, stage: live.stage, transcript: live.transcript, language: live.language, parts: live.parts, urgent: live.urgent, candidates: live.candidates, decision: live.decision, verdict: live.verdict, actions: live.actions, latency: live.latency, error: live.error };
+    return { source: "live", turn: live.turn, stage: live.stage, transcript: live.transcript, language: live.language, parts: live.parts, urgent: live.urgent, candidates: live.candidates, decision: live.decision ? { ...live.decision, reason: agentReason(live.decision.reason, live.decision.model) } : undefined, verdict: live.verdict ? { ...live.verdict, reason: agentReason(live.verdict.reason, live.decision?.model) } : undefined, actions: live.actions, latency: live.latency, error: live.error };
   }
   if (lastTrace) {
     const t = lastTrace;
     return {
       source: "trace", turn: t.turn, stage: "done", transcript: t.transcript, language: t.language,
       candidates: t.scenarios.map((s) => ({ scenario_id: s.scenario_id, confidence: s.confidence })).concat(t.alternatives),
-      decision: { scenarios: t.scenarios, alternatives: t.alternatives, language: t.language, slots: t.slots, is_continuation: t.policy.action === "continue", reason: t.reason, model: t.model, tier: t.tier },
-      verdict: t.policy,
+      decision: { scenarios: t.scenarios, alternatives: t.alternatives, language: t.language, slots: t.slots, is_continuation: t.policy.action === "continue", reason: agentReason(t.reason, t.model), model: t.model, tier: t.tier },
+      verdict: { ...t.policy, reason: agentReason(t.policy.reason, t.model) },
       actions: t.actions.map((a) => { const [name, mode] = a.split(":"); return { name, mode: (mode as ActionMode) || "read" }; }),
       latency: t.latency_ms,
     };
@@ -121,7 +122,7 @@ export function Metric({ label, value, unit, hint, warn }: { label: string; valu
 
 /** Trace in README format. */
 export function readmeTrace(t: Trace) {
-  return { turn: t.turn, transcript: t.transcript, language: t.language, scenarios: t.scenarios, alternatives: t.alternatives, reason: t.reason, slots: t.slots, actions: t.actions, latency_ms: t.latency_ms };
+  return { agent_id: VOICE_AGENT_ID, turn: t.turn, transcript: t.transcript, language: t.language, scenarios: t.scenarios, alternatives: t.alternatives, reason: agentReason(t.reason, t.model), slots: t.slots, actions: t.actions, latency_ms: t.latency_ms };
 }
 
 /** Human names for mock actions and slots. */

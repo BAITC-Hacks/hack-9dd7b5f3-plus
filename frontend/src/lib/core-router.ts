@@ -1,4 +1,5 @@
 /** Adapter for the Python router. API credentials stay on the Python server. */
+import { VOICE_AGENT_ID } from "./voice-agent";
 import type { DialogState, Lang } from "./contract";
 import { extractSlots, NO, YES, splitParts, type MockRouteResult } from "./mock/router";
 
@@ -32,7 +33,7 @@ export async function requestCoreRoute(text: string, context?: CoreContext): Pro
 
 export function adaptCoreRoute(result: CoreResult, text: string, state: DialogState): MockRouteResult {
   const map = (e: Entry) => ({ scenario_id: e.id, confidence: e.pct / 100 });
-  const reason = `LLM ${result.model}: ${result.scenarios.map((e) => `${e.id} (${e.name}) ${e.pct}%`).join(", ") || "нет уверенного сценария"}. Политика ядра: ${result.status}.`;
+  const reason = `Voice Agent ${VOICE_AGENT_ID}: ${result.scenarios.map((e) => `${e.id} (${e.name}) ${e.pct}%`).join(", ") || "нет уверенного сценария"}. Политика ядра: ${result.status}.`;
   // Confirmations execute only when the model kept the pending scenario and
   // did not identify another request. All other utterances use the LLM decision.
   const confirmation = result.status === "route" && state.awaiting?.kind === "confirmation" && result.primary === state.active_scenario && result.intents.length === 1 && text.split(/\s+/).length <= 6;

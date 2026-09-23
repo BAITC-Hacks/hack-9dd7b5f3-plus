@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { scenarioLabel } from "@/lib/catalog";
 import { devUtterances, runEval, type EvalResult } from "@/lib/eval";
 import type { ApiMode } from "@/lib/api";
+import { VOICE_AGENT_ID } from "@/lib/voice-agent";
 import { cn } from "@/lib/utils";
 import { fmtPct, Section } from "./shared";
 
@@ -68,7 +69,7 @@ export function QualityCard({ mode }: { mode: ApiMode }) {
             </TableBody>
           </Table>
           <div className="flex items-center justify-between border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-            <span>Роутер: {res.model} · {res.mean_ms.toFixed(2)} мс на реплику · ошибок {res.errors.length}</span>
+            <span>Voice Agent ID: {VOICE_AGENT_ID}{mode === "mock" ? " (демо)" : ""} · {res.mean_ms.toFixed(2)} мс на реплику · ошибок {res.errors.length}</span>
             {res.errors.length > 0 && <button type="button" className="hover:text-foreground" onClick={() => setShowErrors((v) => !v)}>{showErrors ? "Скрыть ошибки" : "Показать ошибки"}</button>}
           </div>
           {showErrors && res.errors.length > 0 && (
