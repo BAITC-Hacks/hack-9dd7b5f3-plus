@@ -1,0 +1,14 @@
+{
+  "name": "03_mixed_caller",
+  "lang": "mixed",
+  "text": "Сәлеметсіз бе, кеше аварияға түстім, но я не виноват.",
+  "model": "eleven_v3_conversational",
+  "voice": "EXAVITQu4vr4xnSDxMaL",
+  "format": "pcm_16000",
+  "connect_ms": 189.5,
+  "first_audio_ms": 220.6,
+  "total_ms": 1052.1,
+  "audio_ms": 3600,
+  "chars": 53,
+  "at": "2026-09-23T16:07:02+05:00"
+}

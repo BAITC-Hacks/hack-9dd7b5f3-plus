@@ -1,0 +1,13 @@
+{
+  "name": "01_ru_greeting",
+  "mode": "manual",
+  "format": "pcm_16000",
+  "audio_ms": 3947.4,
+  "first_partial_ms": 2165.5,
+  "final_after_ms": 270.9,
+  "speech_end_ms": 550.7,
+  "text": "Здравствуйте! Я голосовой помощник Сакта. Чем могу помочь?",
+  "language": "ru",
+  "expected": "Здравствуйте! Я голосовой помощник Saqta. Чем могу помочь?",
+  "at": "2026-09-23T16:09:48+05:00"
+}
