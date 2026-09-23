@@ -9,3 +9,9 @@ import _ "embed"
 
 //go:embed index.html
 var Index []byte
+
+// Call is the phone-style page (/call): dialer, ringback, hands-free call
+// screen with live captions. Open it on a phone over HTTPS.
+//
+//go:embed call.html
+var Call []byte

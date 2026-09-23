@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0f1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Saqta · звонок</title>
+<style>
+  :root {
+    --bg1: #0b0f1a; --bg2: #16213f; --text: #eef2f8; --muted: rgba(238,242,248,.62);
+    --btn: rgba(255,255,255,.14); --btn-on: #eef2f8; --accent: #3755ed; --green: #2fbf71; --red: #eb4d4b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+    color: var(--text); background: radial-gradient(120% 80% at 50% 0%, var(--bg2), var(--bg1) 70%);
+    overflow: hidden; user-select: none;
+    padding: env(safe-area-inset-top, 0) 16px env(safe-area-inset-bottom, 0);
+  }
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 36px) 24px calc(env(safe-area-inset-bottom, 0px) + 36px); }
+  .screen.on { display: flex; }
+  .name { font-size: 30px; font-weight: 600; letter-spacing: -.02em; margin-top: 18px; text-align: center; }
+  .sub { font-size: 17px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; text-align: center; min-height: 22px; }
+  .avatar { position: relative; width: 112px; height: 112px; border-radius: 50%; margin-top: 12px;
+    background: linear-gradient(145deg, #4a64f0, #2338b8); display: grid; place-items: center; flex: none; }
+  .avatar svg { width: 56px; height: 56px; }
+  button { flex: none; }
+  .ring { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+  .ring.bot { box-shadow: 0 0 0 calc(var(--lv, 0) * 26px) rgba(55,85,237,.35); transition: box-shadow 80ms linear; }
+  .ring.me { box-shadow: 0 0 0 calc(var(--lv, 0) * 18px) rgba(47,191,113,.28); transition: box-shadow 80ms linear; }
+  .spacer { flex: 1; }
+
+  /* dialer */
+  .number { font-size: 32px; font-weight: 300; letter-spacing: .02em; margin-top: 18px; min-height: 42px; font-variant-numeric: tabular-nums; }
+  .pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px 26px; margin-top: 14px; }
+  .key { width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--btn); color: var(--text);
+    font-size: 30px; font-weight: 400; display: grid; place-items: center; line-height: 1; cursor: pointer; }
+  .key small { display: block; font-size: 9px; letter-spacing: .18em; color: var(--muted); margin-top: 2px; }
+  .key:active { background: rgba(255,255,255,.28); }
+  .call-btn, .end-btn { width: 76px; height: 76px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; margin-top: 22px; }
+  .call-btn { background: var(--green); }
+  .end-btn { background: var(--red); }
+  .call-btn svg, .end-btn svg { width: 34px; height: 34px; fill: #fff; }
+  .end-btn svg { transform: rotate(135deg); }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 14px; text-align: center; max-width: 300px; line-height: 1.4; }
+
+  /* in call */
+  .controls { display: grid; grid-template-columns: repeat(3, 76px); gap: 22px 30px; }
+  .ctl { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; color: var(--text); }
+  .ctl button { width: 76px; height: 76px; border-radius: 50%; border: 0; background: var(--btn); display: grid; place-items: center; cursor: pointer; }
+  .ctl button svg { width: 30px; height: 30px; fill: var(--text); }
+  .ctl button.on { background: var(--btn-on); }
+  .ctl button.on svg { fill: #0b0f1a; }
+  .ctl button.end-btn { background: var(--red); }
+  .ctl button.end-btn svg { fill: #fff; }
+  .captions { width: 100%; max-width: 420px; margin-top: 22px; min-height: 96px; font-size: 15px; line-height: 1.4; }
+  .captions .line { padding: 8px 12px; border-radius: 14px; margin-top: 8px; background: rgba(255,255,255,.08); }
+  .captions .me { background: rgba(47,191,113,.16); margin-left: 36px; }
+  .captions .bot { background: rgba(55,85,237,.22); margin-right: 36px; }
+  .captions .live { opacity: .7; font-style: italic; }
+  .captions.hidden { visibility: hidden; }
+  .pill { margin-top: 10px; font-size: 12px; color: var(--muted); padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08);
+    font-variant-numeric: tabular-nums; min-height: 22px; }
+  .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); transform: translateX(-50%);
+    background: rgba(235,77,75,.95); color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; display: none; max-width: 90vw; }
+  button:focus-visible { outline: 3px solid #9fb0ff; outline-offset: 3px; }
+  @media (max-height: 740px) { .pad { gap: 8px 22px; } .key, .call-btn { width: 62px; height: 62px; } .avatar { width: 84px; height: 84px; } .name { font-size: 26px; margin-top: 10px; } .hint { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .ring { transition: none; } }
+</style>
+</head>
+<body>
+
+<!-- 1. dialer -->
+<section class="screen on" id="dial">
+  <div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#fff" d="M10.5 3h3v7.5H21v3h-7.5V21h-3v-7.5H3v-3h7.5z"/></svg></div>
+  <div class="name">Saqta Insurance</div>
+  <div class="sub">контакт-центр · голосовой помощник</div>
+  <div class="number" id="number">+7 727 000 75 75</div>
+  <div class="pad" id="pad"></div>
+  <button class="call-btn" id="callBtn" aria-label="Позвонить"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></button>
+  <div class="hint">Говорите как в обычном звонке, по-русски или по-казахски. Робот отвечает голосом, его можно перебить.</div>
+</section>
+
+<!-- 2. in call -->
+<section class="screen" id="incall">
+  <div class="avatar" aria-hidden="true">
+    <span class="ring me" id="ringMe"></span><span class="ring bot" id="ringBot"></span>
+    <svg viewBox="0 0 24 24"><path fill="#fff" d="M10.5 3h3v7.5H21v3h-7.5V21h-3v-7.5H3v-3h7.5z"/></svg>
+  </div>
+  <div class="name">Saqta Insurance</div>
+  <div class="sub" id="status">вызов…</div>
+  <div class="pill" id="pill"></div>
+  <div class="captions" id="captions" aria-live="polite"></div>
+  <div class="spacer"></div>
+  <div class="controls">
+    <div class="ctl"><button id="muteBtn" aria-label="Выключить микрофон"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></button>без звука</div>
+    <div class="ctl"><button id="padBtn" aria-label="Клавиатура"><svg viewBox="0 0 24 24"><path d="M6 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM6 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></button>клавиши</div>
+    <div class="ctl"><button id="spkBtn" class="on" aria-label="Динамик"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></button>динамик</div>
+    <div class="ctl"><button id="capBtn" class="on" aria-label="Субтитры"><svg viewBox="0 0 24 24"><path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1zm7 0h-1.5v-.5h-2v3h2V13H18v1a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1z"/></svg></button>субтитры</div>
+    <div class="ctl"><button class="end-btn" id="endBtn" aria-label="Завершить" style="margin-top:0"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></button>завершить</div>
+    <div class="ctl"><button id="stopBtn" aria-label="Перебить робота"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>перебить</div>
+  </div>
+</section>
+
+<!-- 3. ended -->
+<section class="screen" id="ended">
+  <div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#fff" d="M10.5 3h3v7.5H21v3h-7.5V21h-3v-7.5H3v-3h7.5z"/></svg></div>
+  <div class="name">Saqta Insurance</div>
+  <div class="sub" id="endedInfo">звонок завершён</div>
+  <div class="spacer"></div>
+  <button class="call-btn" id="redialBtn" aria-label="Перезвонить"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></button>
+  <div class="hint">перезвонить</div>
+</section>
+
+<div class="toast" id="toast" role="alert"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const S = {
+    ws: null, micStream: null, micCtx: null, micAn: null, playCtx: null, playGain: null, playAn: null,
+    sampleRate: 16000, nextTime: 0, sources: [], muted: false, captions: true, speaker: true,
+    connectedAt: 0, timer: 0, raf: 0, wake: null, ring: null, phase: 'idle', live: null, botLine: null, ended: false,
+  };
+  const qs = new URLSearchParams(location.search);
+  const gw = qs.get('gw') || location.host;
+  const wsURL = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + gw + '/ws/voice';
+
+  // ---------- dialer ----------
+  const KEYS = [['1',''],['2','ABC'],['3','DEF'],['4','GHI'],['5','JKL'],['6','MNO'],['7','PQRS'],['8','TUV'],['9','WXYZ'],['*',''],['0','+'],['#','']];
+  for (const [k, l] of KEYS) {
+    const b = document.createElement('button');
+    b.className = 'key'; b.innerHTML = k + (l ? '<small>' + l + '</small>' : '<small>&nbsp;</small>');
+    b.addEventListener('click', () => { tone(k); const n = $('number'); if (n.textContent.length < 20) n.textContent += k; });
+    $('pad').appendChild(b);
+  }
+  $('number').addEventListener('click', () => { $('number').textContent = ''; });
+
+  function show(id) { for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id); }
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4000); }
+  function status(txt) { $('status').textContent = txt; }
+
+  // DTMF-like key tone and the ringback tone (425 Hz, the CIS standard)
+  function tone(k) {
+    try {
+      const ctx = S.playCtx || (S.keyCtx = S.keyCtx || new (window.AudioContext || window.webkitAudioContext)());
+      const f = { '1': [697, 1209], '2': [697, 1336], '3': [697, 1477], '4': [770, 1209], '5': [770, 1336], '6': [770, 1477], '7': [852, 1209], '8': [852, 1336], '9': [852, 1477], '*': [941, 1209], '0': [941, 1336], '#': [941, 1477] }[k] || [697, 1209];
+      const g = ctx.createGain(); g.gain.value = 0.06; g.connect(ctx.destination);
+      for (const hz of f) { const o = ctx.createOscillator(); o.frequency.value = hz; o.connect(g); o.start(); o.stop(ctx.currentTime + 0.12); }
+    } catch (e) { /* no audio yet */ }
+  }
+  function startRingback() {
+    const ctx = S.playCtx; if (!ctx) return;
+    const g = ctx.createGain(); g.gain.value = 0; g.connect(ctx.destination);
+    const o = ctx.createOscillator(); o.frequency.value = 425; o.connect(g); o.start();
+    const t0 = ctx.currentTime;
+    for (let i = 0; i < 6; i++) { g.gain.setValueAtTime(0.08, t0 + i * 4); g.gain.setValueAtTime(0, t0 + i * 4 + 1); }
+    S.ring = { o, g, firstEnd: t0 + 1.1 };
+    S.nextTime = t0 + 1.25; // the robot "picks up" after the first ring, like a real call
+  }
+  function stopRingback() {
+    if (!S.ring) return;
+    const ctx = S.playCtx, end = ctx ? Math.max(ctx.currentTime, S.ring.firstEnd) : 0;
+    try { S.ring.g.gain.cancelScheduledValues(end); S.ring.g.gain.setValueAtTime(0, end); S.ring.o.stop(end + 0.05); } catch (e) {}
+    S.ring = null;
+  }
+
+  // ---------- mic: 16 kHz PCM16, 40 ms frames (AudioWorklet) ----------
+  function worklet() {
+    class Down extends AudioWorkletProcessor {
+      constructor() { super(); this.ratio = sampleRate / 16000; this.buf = []; this.pos = 0; this.frame = new Int16Array(640); this.n = 0; }
+      process(inputs) {
+        const ch = inputs[0] && inputs[0][0];
+        if (ch) {
+          for (let i = 0; i < ch.length; i++) this.buf.push(ch[i]);
+          while (this.pos + this.ratio <= this.buf.length) {
+            const a = Math.floor(this.pos), b = Math.floor(this.pos + this.ratio), c = Math.max(1, b - a);
+            let s = 0; for (let i = a; i < a + c; i++) s += this.buf[i] || 0;
+            const v = Math.max(-1, Math.min(1, s / c));
+            this.frame[this.n++] = v < 0 ? v * 0x8000 : v * 0x7fff;
+            this.pos += this.ratio;
+            if (this.n === 640) { this.port.postMessage(this.frame.buffer.slice(0)); this.n = 0; }
+          }
+          const d = Math.floor(this.pos); if (d > 0) { this.buf.splice(0, d); this.pos -= d; }
+        }
+        return true;
+      }
+    }
+    registerProcessor('down16k', Down);
+  }
+  const WORKLET = URL.createObjectURL(new Blob(['(' + worklet.toString() + ')()'], { type: 'application/javascript' }));
+  const SILENCE = new Int16Array(640).buffer;
+
+  async function startAudio() {
+    S.playCtx = new (window.AudioContext || window.webkitAudioContext)();
+    await S.playCtx.resume();
+    S.playGain = S.playCtx.createGain(); S.playAn = S.playCtx.createAnalyser(); S.playAn.fftSize = 256;
+    S.playGain.connect(S.playAn); S.playAn.connect(S.playCtx.destination);
+    S.micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    S.micCtx = new (window.AudioContext || window.webkitAudioContext)();
+    await S.micCtx.audioWorklet.addModule(WORKLET);
+    const src = S.micCtx.createMediaStreamSource(S.micStream);
+    const node = new AudioWorkletNode(S.micCtx, 'down16k');
+    S.micAn = S.micCtx.createAnalyser(); S.micAn.fftSize = 256;
+    src.connect(S.micAn);
+    node.port.onmessage = (e) => { if (S.ws && S.ws.readyState === 1) S.ws.send(S.muted ? SILENCE : e.data); };
+    const mute = S.micCtx.createGain(); mute.gain.value = 0;
+    src.connect(node).connect(mute).connect(S.micCtx.destination);
+  }
+
+  // ---------- playback (gapless) ----------
+  function play(buf) {
+    const ctx = S.playCtx; if (!ctx) return;
+    const dv = new DataView(buf), n = buf.byteLength >> 1, f = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const s = dv.getInt16(i * 2, true); f[i] = s < 0 ? s / 0x8000 : s / 0x7fff; }
+    const b = ctx.createBuffer(1, n, S.sampleRate); b.copyToChannel(f, 0);
+    const node = ctx.createBufferSource(); node.buffer = b; node.connect(S.playGain);
+    const at = Math.max(ctx.currentTime + 0.03, S.nextTime); node.start(at); S.nextTime = at + b.duration;
+    S.sources.push(node); node.onended = () => { S.sources = S.sources.filter(x => x !== node); };
+  }
+  function clearPlayback() { for (const s of S.sources.splice(0)) { try { s.stop(); } catch (e) {} } S.nextTime = S.playCtx ? S.playCtx.currentTime : 0; }
+  function botSpeaking() { return S.playCtx && S.playCtx.currentTime < S.nextTime - 0.02; }
+
+  function level(an) {
+    if (!an) return 0;
+    const d = new Uint8Array(an.fftSize); an.getByteTimeDomainData(d);
+    let s = 0; for (let i = 0; i < d.length; i++) { const v = (d[i] - 128) / 128; s += v * v; }
+    return Math.min(1, Math.sqrt(s / d.length) * 4);
+  }
+  function loop() {
+    $('ringBot').style.setProperty('--lv', level(S.playAn).toFixed(3));
+    $('ringMe').style.setProperty('--lv', S.muted ? 0 : level(S.micAn).toFixed(3));
+    if (S.phase === 'live') {
+      const secs = Math.floor((Date.now() - S.connectedAt) / 1000);
+      const t = String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
+      const what = botSpeaking() ? 'говорит' : (S.thinking ? 'думает…' : 'слушает');
+      status(t + ' · ' + what);
+    }
+    S.raf = requestAnimationFrame(loop);
+  }
+
+  // ---------- captions ----------
+  function capLine(cls, text) {
+    const c = $('captions'); const d = document.createElement('div');
+    d.className = 'line ' + cls; d.textContent = text; c.appendChild(d);
+    while (c.children.length > 3) c.removeChild(c.firstChild);
+    return d;
+  }
+  function setLive(text) {
+    if (!S.live) S.live = capLine('me live', text); else S.live.textContent = text;
+  }
+
+  // ---------- call ----------
+  async function call() {
+    S.ended = false; $('captions').innerHTML = ''; $('pill').textContent = ''; S.live = null; S.botLine = null;
+    show('incall'); status('вызов…'); S.phase = 'calling';
+    try { await startAudio(); } catch (e) { toast('Нет доступа к микрофону: ' + e.message + '. Нужен HTTPS и разрешение микрофона.'); return hangup(true); }
+    startRingback();
+    try { if ('wakeLock' in navigator) S.wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    cancelAnimationFrame(S.raf); loop();
+    const ws = new WebSocket(wsURL); ws.binaryType = 'arraybuffer'; S.ws = ws;
+    ws.onopen = () => ws.send(JSON.stringify({ type: 'start', mode: 'vad', greeting: true, lang: '' }));
+    ws.onmessage = (e) => { if (typeof e.data !== 'string') { onAudio(e.data); return; } let m; try { m = JSON.parse(e.data); } catch (x) { return; } onEvent(m); };
+    ws.onerror = () => toast('Не удалось соединиться с сервером');
+    ws.onclose = () => { if (!S.ended) hangup(true); };
+  }
+  function connected() {
+    if (S.phase === 'live') return;
+    stopRingback(); S.phase = 'live'; S.connectedAt = Date.now();
+    if (navigator.vibrate) navigator.vibrate(40);
+  }
+  function onAudio(buf) { connected(); S.thinking = false; play(buf); }
+  function onEvent(m) {
+    switch (m.type) {
+      case 'session.ready': if (m.sample_rate) S.sampleRate = m.sample_rate; setTimeout(connected, 2500); break;
+      case 'tts.start': if (m.sample_rate) S.sampleRate = m.sample_rate; break;
+      case 'stt.partial': setLive(m.text); break;
+      case 'stt.final':
+        if (S.live) { S.live.textContent = m.text; S.live.className = 'line me'; S.live = null; } else capLine('me', m.text);
+        S.thinking = true; S.botLine = null; break;
+      case 'response.delta':
+        if (!S.botLine) S.botLine = capLine('bot', ''); S.botLine.textContent += m.text; break;
+      case 'response.final':
+        if (m.greeting) capLine('bot', m.text);
+        else if (!S.botLine) capLine('bot', m.text);
+        S.botLine = null; break;
+      case 'tts.clear': clearPlayback(); break;
+      case 'voice.metrics': {
+        const l = m.latency_ms || {}; const t = l.total || l.first_sound;
+        if (t) $('pill').textContent = 'ответ через ' + (t / 1000).toFixed(2) + ' с' + (m.metrics && m.metrics.scenario ? ' · ' + m.metrics.scenario : '');
+        break;
+      }
+      case 'session.end': hangup(false); break;
+      case 'error': toast(m.message || 'ошибка'); break;
+    }
+  }
+  function hangup(failed) {
+    if (S.ended) return; S.ended = true;
+    const dur = S.phase === 'live' ? Math.floor((Date.now() - S.connectedAt) / 1000) : 0;
+    try { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ type: 'stop' })); } catch (e) {}
+    try { S.ws && S.ws.close(); } catch (e) {}
+    stopRingback(); clearPlayback();
+    if (S.micStream) S.micStream.getTracks().forEach(t => t.stop());
+    for (const c of [S.micCtx, S.playCtx]) if (c) c.close().catch(() => {});
+    S.micCtx = S.playCtx = S.micAn = S.playAn = null; S.ws = null;
+    if (S.wake) { S.wake.release().catch(() => {}); S.wake = null; }
+    cancelAnimationFrame(S.raf); S.phase = 'idle';
+    $('endedInfo').textContent = failed && !dur ? 'вызов не удался' : 'звонок завершён · ' + String(Math.floor(dur / 60)).padStart(2, '0') + ':' + String(dur % 60).padStart(2, '0');
+    show('ended');
+  }
+
+  $('callBtn').addEventListener('click', call);
+  $('redialBtn').addEventListener('click', call);
+  $('endBtn').addEventListener('click', () => hangup(false));
+  $('muteBtn').addEventListener('click', (e) => { S.muted = !S.muted; e.currentTarget.classList.toggle('on', S.muted); });
+  $('spkBtn').addEventListener('click', (e) => { S.speaker = !S.speaker; e.currentTarget.classList.toggle('on', S.speaker); if (S.playGain) S.playGain.gain.value = S.speaker ? 1 : 0.35; });
+  $('capBtn').addEventListener('click', (e) => { S.captions = !S.captions; e.currentTarget.classList.toggle('on', S.captions); $('captions').classList.toggle('hidden', !S.captions); });
+  $('stopBtn').addEventListener('click', () => { clearPlayback(); if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ type: 'interrupt' })); });
+  $('padBtn').addEventListener('click', () => toast('Клавиши не нужны: просто скажите, что вам нужно'));
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && S.phase !== 'idle' && !S.wake && 'wakeLock' in navigator) { try { S.wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+  });
+})();
+</script>
+</body>
+</html>
