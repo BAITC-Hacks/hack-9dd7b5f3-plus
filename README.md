@@ -1057,7 +1057,7 @@ Measure the web app on `/admin`: «Скорость» after every turn, «Вре
 | Clean clone → §7.1 → §8.2 walkthrough | manual | ⏳ | ⏳ |
 | `docker compose up --build` from a clean clone | manual | ⏳ | ⏳ |
 | `docker compose --profile llm up --build` with a key | manual | ⏳ | ⏳ |
-| Deployed URL smoke test | open the URL, run §8.2 steps 1–3 | ⏳ | ⏳ |
+| Deployed URL smoke test | HTTPS `/admin`: SC27, 95%, audio + trace; public `/api/core-route` RU/KK, `/api/tts`, `/api/stt`; five healthy containers | 2026-09-23 | ✅ |
 
 ### 9.6 Jury live check
 
