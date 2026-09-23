@@ -857,7 +857,7 @@ Use `python3` where `python` is not on the path.
 | Case requirement | Where you see it | Status |
 |---|---|---|
 | **Must-have:** voice interaction in the web — the jury speaks, the robot answers by voice | `/call` or `/admin`: mic → spoken reply (steps 1, 3, V1–V2) | ✅ ElevenLabs STT + TTS in «LLM» · ✅ browser speech in «Мок» |
-| **Must-have:** scenario selection on an LLM layer, not an encoder classifier | «Данные: LLM» in the web app → `/api/core-route` → [`core-llm/`](core-llm/): prompt + catalog index → LLM → policy ([§4.7](#47-why-this-is-not-an-intent-classifier--and-not-hardcoded)) | ✅ needs an OpenRouter key — ⏳ open on the deployed version |
+| **Must-have:** scenario selection on an LLM layer, not an encoder classifier | «LLM» mode in the web app → `/api/core-route` → [`core-llm/`](core-llm/): prompt + catalog index → LLM → policy ([§4.7](#47-why-this-is-not-an-intent-classifier--and-not-hardcoded)) | ✅ needs an OpenRouter key — ⏳ open on the deployed version |
 | **Must-have:** correct selection on the jury's 10 utterances | Dev set: 104/104 for the LLM router (reported, in-sample), 97.1% for the mock ([§9.1](#91-routing-accuracy-on-the-dev-set)) | ⏳ the jury's set |
 | **Must-have:** trace panel after every utterance — scenario, reason, alternatives, per-stage timing | `/admin`: decision card, «Скорость», «JSON последней реплики» | ✅ |
 | **Must-have:** Russian and Kazakh, including mixing inside a phrase | Steps 3, 4 and V2; ElevenLabs Scribe with `kk` for RU, KZ and mixed speech, Kazakh replies by `eleven_v3_conversational` | ✅ (time markers in mixed speech can be misheard, [§13](#13-limitations-and-known-issues)) |
