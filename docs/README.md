@@ -25,6 +25,7 @@
 - [`raw/`](research/raw/) — original Russian sources: `case-analysis.ru.md`, `deep-research-output.ru.md` (English docs above are translations of these).
 
 ## Design — [`design/`](design/)
+- [design/architecture.html](design/architecture.html) — visual architecture: pipeline, latency budget, scenario/language decisions, frontend roles, phone channel, provider picks.
 - [design/README.md](design/README.md) — screens, token summary, open design decisions.
 - [`/DESIGN.md`](../DESIGN.md) — 1609SAT design system (full reference).
 - [`design/references/`](design/references/) — brand and console PDFs.

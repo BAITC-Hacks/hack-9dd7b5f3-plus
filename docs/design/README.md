@@ -11,6 +11,10 @@ Two screens (see `docs/SPEC.md` for the contract and `docs/PRD.md` for scope):
 
 The trace panel is scored by the jury, so it is a data-dense operator console, not a marketing page.
 
+## Architecture visual
+
+[architecture.html](architecture.html) — system pipeline, 1.5 s latency budget, real-time scenario + language choice, user/admin frontend, phone channel, two UI ideas, STT/TTS/LLM picks. Open it in a browser. Draft: numbers are targets until measured.
+
 ## References in this repo
 
 | Reference | File | What it is | Use it for |

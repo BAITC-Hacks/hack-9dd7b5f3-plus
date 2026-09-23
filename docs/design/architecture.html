@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bagyt Under the Hood</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0}
+:root{
+  color-scheme: dark;
+  --bg:#0a0d15;
+  --fg:#c7d3e0;
+  --fg-strong:#e6edf5;
+  --card:color-mix(in srgb,#c7d3e0 5%,#0a0d15);
+  --card-2:color-mix(in srgb,#c7d3e0 8%,#0a0d15);
+  --line:color-mix(in srgb,#c7d3e0 16%,#0a0d15);
+  --line-soft:color-mix(in srgb,#c7d3e0 10%,#0a0d15);
+  --muted:color-mix(in srgb,#c7d3e0 58%,#0a0d15);
+  --accent:#3755ed;
+  --accent-text:#8497ff;
+  --accent-soft:color-mix(in srgb,#3755ed 24%,#0a0d15);
+  --ok:#3fb27f;
+  --ok-soft:color-mix(in srgb,#3fb27f 22%,#0a0d15);
+  --warn:#d99a3b;
+  --bad:#e0584f;
+  --kz:#6f86ff;
+  --ru:#9aa8b8;
+  --sans:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme: light;
+    --bg:#ffffff; --fg:#1a1a1a; --fg-strong:#0d0d0d;
+    --card:#f8f7f5; --card-2:#f1efec;
+    --line:#e2dfda; --line-soft:#ecebe7;
+    --muted:#5d5b54;
+    --accent:#3755ed; --accent-text:#2c46cc;
+    --accent-soft:color-mix(in srgb,#3755ed 12%,#ffffff);
+    --ok:#1f8a5b; --ok-soft:color-mix(in srgb,#1f8a5b 14%,#ffffff);
+    --warn:#a8680f; --bad:#c23b32;
+    --kz:#3755ed; --ru:#7b7a73;
+  }
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg:#ffffff; --fg:#1a1a1a; --fg-strong:#0d0d0d;
+  --card:#f8f7f5; --card-2:#f1efec;
+  --line:#e2dfda; --line-soft:#ecebe7;
+  --muted:#5d5b54;
+  --accent:#3755ed; --accent-text:#2c46cc;
+  --accent-soft:color-mix(in srgb,#3755ed 12%,#ffffff);
+  --ok:#1f8a5b; --ok-soft:color-mix(in srgb,#1f8a5b 14%,#ffffff);
+  --warn:#a8680f; --bad:#c23b32;
+  --kz:#3755ed; --ru:#7b7a73;
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0a0d15; --fg:#c7d3e0; --fg-strong:#e6edf5;
+  --card:color-mix(in srgb,#c7d3e0 5%,#0a0d15);
+  --card-2:color-mix(in srgb,#c7d3e0 8%,#0a0d15);
+  --line:color-mix(in srgb,#c7d3e0 16%,#0a0d15);
+  --line-soft:color-mix(in srgb,#c7d3e0 10%,#0a0d15);
+  --muted:color-mix(in srgb,#c7d3e0 58%,#0a0d15);
+  --accent:#3755ed; --accent-text:#8497ff;
+  --accent-soft:color-mix(in srgb,#3755ed 24%,#0a0d15);
+  --ok:#3fb27f; --ok-soft:color-mix(in srgb,#3fb27f 22%,#0a0d15);
+  --warn:#d99a3b; --bad:#e0584f;
+  --kz:#6f86ff; --ru:#9aa8b8;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  letter-spacing:-0.01em; font-feature-settings:"ss08";
+  padding-inline:20px; padding-block:0 64px;
+}
+.wrap{max-width:1160px; margin:0 auto}
+a{color:var(--accent-text)}
+h1,h2,h3{color:var(--fg-strong); text-wrap:balance; letter-spacing:-0.025em; margin:0}
+h1{font-size:clamp(30px,5vw,46px); font-weight:500; line-height:1.08}
+h2{font-size:24px; font-weight:500}
+h3{font-size:16px; font-weight:600; letter-spacing:-0.015em}
+p{margin:0}
+.mono{font-family:var(--mono); font-feature-settings:normal; letter-spacing:0}
+.num{font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:.06em}
+.muted{color:var(--muted)}
+
+/* header */
+header.top{padding-block:40px 28px; display:grid; gap:18px; border-bottom:1px solid var(--line-soft)}
+.plus{display:inline-block; width:14px; height:14px; position:relative; vertical-align:-1px; margin-right:8px}
+.plus::before,.plus::after{content:""; position:absolute; background:var(--accent); border-radius:1px}
+.plus::before{left:5.5px; top:0; width:3px; height:14px}
+.plus::after{top:5.5px; left:0; width:14px; height:3px}
+.lede{max-width:68ch; color:var(--fg); font-size:16.5px}
+.stats{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:6px}
+.stat{border:1px solid var(--line); border-radius:14px; padding:14px 16px; background:var(--card)}
+.stat .v{font-size:28px; font-weight:450; letter-spacing:-0.03em; color:var(--fg-strong); font-variant-numeric:tabular-nums; line-height:1.1}
+.stat .v small{font-size:14px; color:var(--muted); margin-left:3px; letter-spacing:0}
+.stat .k{font-size:12.5px; color:var(--muted); margin-top:4px}
+.stat.goal{border-color:color-mix(in srgb,var(--accent) 60%,var(--line))}
+nav.toc{display:flex; flex-wrap:wrap; gap:8px; padding-block:18px; position:sticky; top:env(safe-area-inset-top,0px); background:var(--bg); z-index:5; border-bottom:1px solid var(--line-soft)}
+nav.toc a{font-size:13px; color:var(--fg); text-decoration:none; padding:5px 11px; border:1px solid var(--line); border-radius:999px; background:var(--card)}
+nav.toc a:hover{border-color:var(--accent)}
+nav.toc a:focus-visible,.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+section{padding-block:44px 8px; display:grid; gap:18px; scroll-margin-top:70px}
+.sec-head{display:grid; gap:8px; max-width:78ch}
+.sec-head p{color:var(--muted)}
+
+figure{margin:0; border:1px solid var(--line); border-radius:16px; background:var(--card); overflow:hidden}
+.scroll{overflow-x:auto}
+figure svg{display:block; width:100%; height:auto; min-width:760px}
+figure.small svg{min-width:0}
+figcaption{padding:12px 16px 14px; font-size:13.5px; color:var(--muted); border-top:1px solid var(--line-soft)}
+figcaption b{color:var(--fg); font-weight:500}
+
+/* svg classes */
+.box{fill:var(--card-2); stroke:var(--line); stroke-width:1}
+.box-hot{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.2}
+.box-group{fill:none; stroke:var(--line); stroke-dasharray:4 4}
+.pill{fill:var(--bg); stroke:var(--line)}
+.t{fill:var(--fg-strong); font-family:var(--sans); font-size:13.5px; font-weight:500}
+.s{fill:var(--muted); font-family:var(--sans); font-size:11px}
+.m{fill:var(--accent-text); font-family:var(--mono); font-size:11px}
+.mo{fill:var(--ok); font-family:var(--mono); font-size:11px}
+.mb{fill:var(--bad); font-family:var(--mono); font-size:11px}
+.g{fill:var(--muted); font-family:var(--sans); font-size:11px; font-weight:500; letter-spacing:.04em}
+.e{stroke:var(--muted); stroke-width:1.3; fill:none}
+.e-hot{stroke:var(--accent); stroke-width:1.6; fill:none}
+.e-ok{stroke:var(--ok); stroke-width:1.5; fill:none}
+.dash{stroke-dasharray:5 4}
+.ah{fill:var(--muted)}
+.ah-hot{fill:var(--accent)}
+.ah-ok{fill:var(--ok)}
+.grid-l{stroke:var(--line-soft); stroke-width:1}
+.bar{fill:var(--accent)}
+.bar-soft{fill:var(--accent-soft)}
+.bar-mute{fill:var(--line)}
+.bar-ok{fill:var(--ok)}
+.bar-spec{fill:none; stroke:var(--accent); stroke-dasharray:4 3; stroke-width:1.3}
+.bt{fill:var(--bg); font-family:var(--sans); font-size:11px; font-weight:500}
+.goal-l{stroke:var(--bad); stroke-width:1.4; stroke-dasharray:5 4}
+.mark-l{stroke:var(--muted); stroke-width:1; stroke-dasharray:2 3}
+.node{fill:var(--card-2); stroke:var(--line)}
+.node-active{fill:var(--accent); stroke:var(--accent)}
+.node-stack{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.4}
+.node-alt{fill:var(--card-2); stroke:var(--warn); stroke-dasharray:3 2; stroke-width:1.4}
+.nlabel{fill:var(--muted); font-family:var(--mono); font-size:9px}
+.nlabel-on{fill:#fff; font-weight:500}
+
+/* tables */
+.tbl{width:100%; border-collapse:collapse; font-size:13.5px; min-width:720px}
+.tbl th{text-align:left; font-weight:500; color:var(--muted); font-size:12px; padding:10px 12px; border-bottom:1px solid var(--line); background:var(--card-2); white-space:nowrap}
+.tbl td{padding:10px 12px; border-bottom:1px solid var(--line-soft); vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td:first-child{color:var(--fg-strong); font-weight:500}
+.tbl .num{font-family:var(--mono); font-size:12.5px; white-space:nowrap}
+.tbl-wrap{border:1px solid var(--line); border-radius:16px; overflow-x:auto; background:var(--card)}
+.tag{display:inline-block; font-size:11.5px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); white-space:nowrap; color:var(--fg)}
+.tag.pick{background:var(--accent); border-color:var(--accent); color:#fff}
+.tag.alt{border-color:color-mix(in srgb,var(--accent) 55%,var(--line)); color:var(--accent-text)}
+.tag.ok{background:var(--ok-soft); border-color:transparent; color:var(--ok)}
+.yes{color:var(--ok)} .no{color:var(--bad)} .maybe{color:var(--warn)}
+
+.two{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+.panel{border:1px solid var(--line); border-radius:16px; background:var(--card); padding:18px; display:grid; gap:12px; align-content:start}
+.panel ul,.panel ol{margin:0; padding-left:18px; display:grid; gap:6px}
+.callout{border-left:2px solid var(--accent); padding:4px 0 4px 14px; max-width:80ch}
+
+/* tricks */
+.tricks{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+.trick{border:1px solid var(--line); border-radius:14px; padding:14px; background:var(--card); display:grid; gap:6px; align-content:start}
+.trick .save{font-family:var(--mono); font-size:12px; color:var(--ok)}
+.trick h3{font-size:14.5px}
+.trick p{font-size:13px; color:var(--muted)}
+
+/* mockups */
+.mock{border:1px solid var(--line); border-radius:16px; background:var(--bg); overflow:hidden}
+.mock-bar{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 14px; border-bottom:1px solid var(--line-soft); font-size:12px; color:var(--muted)}
+.dotlive{display:inline-flex; align-items:center; gap:6px; color:var(--ok); font-family:var(--mono); font-size:11.5px}
+.dotlive::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){.dotlive::before{animation:none}}
+.wall{display:grid; grid-template-columns:170px 1fr; gap:0}
+.dial{padding:16px; border-right:1px solid var(--line-soft); display:grid; gap:10px; align-content:start; background:var(--card)}
+.qr{aspect-ratio:1; max-width:100%; border-radius:10px; background:
+  repeating-linear-gradient(0deg,transparent 0 9px,var(--line) 9px 11px),
+  repeating-linear-gradient(90deg,transparent 0 9px,var(--line) 9px 11px); position:relative}
+.qr::after{content:"+"; position:absolute; inset:0; display:grid; place-items:center; font-size:46px; font-weight:300; color:var(--accent)}
+.dial .n{font-family:var(--mono); font-size:15px; color:var(--fg-strong); letter-spacing:0}
+.call{padding:16px; display:grid; gap:12px; align-content:start}
+.call-head{display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; font-size:13px}
+.ribbon{font-size:16px; line-height:1.9; color:var(--fg-strong)}
+.w{padding-bottom:3px; border-bottom:3px solid var(--ru)}
+.w.kz{border-bottom-color:var(--kz); color:var(--kz)}
+.legend{display:flex; gap:14px; font-size:12px; color:var(--muted); flex-wrap:wrap}
+.legend span::before{content:""; display:inline-block; width:14px; height:3px; margin-right:6px; vertical-align:middle; background:var(--ru)}
+.legend span.kz::before{background:var(--kz)}
+.legend span.note::before{display:none}
+.box-ok{fill:var(--ok-soft); stroke:var(--ok)}
+.box-warn{fill:var(--card-2); stroke:var(--warn)}
+.box-bad{fill:var(--card-2); stroke:var(--bad)}
+.dia{fill:var(--bg); stroke:var(--accent); stroke-width:1.2}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+.chip{font-family:var(--mono); font-size:11.5px; padding:3px 8px; border-radius:7px; border:1px solid var(--line); background:var(--card)}
+.chip.on{background:var(--accent); border-color:var(--accent); color:#fff}
+.chip.st{border-color:var(--accent); color:var(--accent-text)}
+.chip.al{border-color:var(--warn); color:var(--warn); border-style:dashed}
+.ticker{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px}
+.ticker div{border:1px solid var(--line-soft); border-radius:10px; padding:8px 10px; background:var(--card)}
+.ticker b{display:block; font-family:var(--mono); font-weight:500; font-size:16px; color:var(--fg-strong)}
+.ticker span{font-size:11px; color:var(--muted)}
+.ticker .hit b{color:var(--ok)}
+.reply{font-size:14px; border:1px solid var(--line-soft); border-radius:12px; padding:10px 12px; background:var(--card)}
+.reply .who{font-size:11px; color:var(--muted); display:block; margin-bottom:2px}
+.example{font-size:11px; color:var(--muted); font-family:var(--mono)}
+.wh{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+.wh div{display:grid; gap:4px; align-content:start}
+.wh h3{font-size:13px; color:var(--muted); font-weight:500}
+.wh p{font-size:13.5px}
+
+.stack-line{font-family:var(--mono); font-size:13px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--card); line-height:1.8; overflow-x:auto; white-space:nowrap}
+.stack-line b{color:var(--accent-text); font-weight:500}
+footer{margin-top:48px; padding-top:18px; border-top:1px solid var(--line-soft); font-size:12.5px; color:var(--muted); display:grid; gap:6px}
+footer ul{margin:0; padding-left:18px}
+
+@media (max-width:900px){
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tricks{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .two{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  body{padding-inline:16px}
+  .tricks{grid-template-columns:1fr}
+  .wall{grid-template-columns:1fr}
+  .dial{border-right:0; border-bottom:1px solid var(--line-soft); grid-template-columns:90px 1fr; align-items:center}
+  .ticker{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wh{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow"><span class="plus" aria-hidden="true"></span>TEAM PLUS · HALYK BANK VOICE ROUTER · ARCHITECTURE DRAFT v0.1</div>
+  <h1>Bagyt, under the hood</h1>
+  <p class="lede">A web voice robot for the Saqta Insurance contact center. The client speaks Russian, Kazakh, or both in one phrase. An LLM routing layer picks one of 40 scenarios from the dialog context, and the robot answers by voice. The admin console shows every decision and every millisecond live.</p>
+  <div class="stats">
+    <div class="stat goal"><div class="v num">&lt;1.5<small>s</small></div><div class="k">end of speech → reply audio (goal)</div></div>
+    <div class="stat"><div class="v num">~0.65<small>s</small></div><div class="k">first sound, via cached scenario opening</div></div>
+    <div class="stat"><div class="v num">40<small>+3</small></div><div class="k">scenarios + system intents in <span class="mono">scenarios.json</span></div></div>
+    <div class="stat"><div class="v">RU·KZ<small>mixed</small></div><div class="k">language switches inside one phrase</div></div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#system">System</a>
+  <a href="#latency">1.5 s budget</a>
+  <a href="#decide">Scenario + language</a>
+  <a href="#frontend">Frontend roles</a>
+  <a href="#phone">Phone call</a>
+  <a href="#ideas">UI ideas</a>
+  <a href="#stack">STT · TTS · LLM picks</a>
+</nav>
+
+<!-- ============ SYSTEM ============ -->
+<section id="system">
+  <div class="sec-head">
+    <div class="eyebrow">OVERALL</div>
+    <h2>One pipeline, three channels</h2>
+    <p>The browser user, a phone caller, and the admin console all connect to one Go gateway. Every utterance runs through the same turn pipeline, and every stage emits a timed event. The same event stream drives the admin console and Postgres.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1100 560" role="img" aria-label="System diagram: user browser, phone caller and admin console connect to a Go gateway; each utterance goes through endpoint, streaming STT, shortlist, LLM router, policy, actions, reply LLM and streaming TTS; every stage emits events to the admin console and Postgres.">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a1h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-hot" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a1o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ok" d="M0 0L10 5L0 10z"/></marker>
+      </defs>
+
+      <!-- clients -->
+      <rect class="box" x="20" y="60" width="170" height="64" rx="10"/>
+      <text class="t" x="105" y="88" text-anchor="middle">User · /call</text>
+      <text class="s" x="105" y="106" text-anchor="middle">browser mic · PCM16</text>
+      <rect class="box" x="20" y="182" width="170" height="64" rx="10"/>
+      <text class="t" x="105" y="210" text-anchor="middle">Phone caller</text>
+      <text class="s" x="105" y="228" text-anchor="middle">PSTN → Twilio</text>
+      <rect class="box" x="20" y="470" width="170" height="64" rx="10"/>
+      <text class="t" x="105" y="498" text-anchor="middle">Admin · /admin</text>
+      <text class="s" x="105" y="516" text-anchor="middle">live console</text>
+
+      <!-- gateway -->
+      <rect class="box" x="250" y="30" width="170" height="510" rx="12"/>
+      <text class="t" x="335" y="54" text-anchor="middle">Go gateway</text>
+      <text class="s" x="335" y="70" text-anchor="middle">sessions · fan-out</text>
+      <line class="e dash" x1="276" y1="258" x2="276" y2="106"/>
+      <rect class="pill" x="262" y="78" width="146" height="28" rx="14"/>
+      <text class="m" x="335" y="96" text-anchor="middle">WS /ws/voice</text>
+      <rect class="pill" x="262" y="200" width="146" height="28" rx="14"/>
+      <text class="m" x="335" y="218" text-anchor="middle">WS /twilio/stream</text>
+      <rect class="pill" x="262" y="258" width="146" height="28" rx="14"/>
+      <text class="m" x="335" y="276" text-anchor="middle">audio out router</text>
+      <rect class="pill" x="262" y="488" width="146" height="28" rx="14"/>
+      <text class="m" x="335" y="506" text-anchor="middle">WS /ws/admin</text>
+
+      <!-- client edges -->
+      <line class="e" x1="190" y1="86" x2="260" y2="86" marker-end="url(#a1)"/>
+      <text class="s" x="225" y="80" text-anchor="middle">voice</text>
+      <line class="e" x1="262" y1="100" x2="192" y2="100" marker-end="url(#a1)"/>
+      <text class="s" x="225" y="116" text-anchor="middle">text + audio</text>
+      <line class="e" x1="190" y1="208" x2="260" y2="208" marker-end="url(#a1)"/>
+      <text class="s" x="225" y="202" text-anchor="middle">μ-law 8k</text>
+      <line class="e" x1="262" y1="222" x2="192" y2="222" marker-end="url(#a1)"/>
+      <text class="s" x="225" y="238" text-anchor="middle">reply audio</text>
+      <line class="e" x1="262" y1="502" x2="192" y2="502" marker-end="url(#a1)"/>
+      <text class="s" x="225" y="496" text-anchor="middle">live events</text>
+
+      <!-- pipeline group -->
+      <rect class="box-group" x="460" y="26" width="620" height="320" rx="14"/>
+      <text class="g" x="476" y="46">TURN PIPELINE · PER UTTERANCE</text>
+
+      <!-- speculative -->
+      <path class="e-hot dash" d="M693 59 V38 H997 V57" marker-end="url(#a1h)"/>
+      <text class="m" x="845" y="33" text-anchor="middle">stable partial → speculative route</text>
+
+      <!-- row 1 -->
+      <rect class="box" x="476" y="59" width="130" height="66" rx="10"/>
+      <text class="t" x="541" y="87" text-anchor="middle">Endpoint</text>
+      <text class="s" x="541" y="105" text-anchor="middle">PTT release · VAD</text>
+      <rect class="box" x="628" y="59" width="130" height="66" rx="10"/>
+      <text class="t" x="693" y="87" text-anchor="middle">Streaming STT</text>
+      <text class="s" x="693" y="105" text-anchor="middle">Soniox RT · geko</text>
+      <rect class="box" x="780" y="59" width="130" height="66" rx="10"/>
+      <text class="t" x="845" y="87" text-anchor="middle">Shortlist top-8</text>
+      <text class="s" x="845" y="105" text-anchor="middle">embeddings, not a pick</text>
+      <rect class="box-hot" x="932" y="59" width="130" height="66" rx="10"/>
+      <text class="t" x="997" y="87" text-anchor="middle">LLM router</text>
+      <text class="s" x="997" y="105" text-anchor="middle">JSON · gpt-4.1-nano</text>
+
+      <text class="m" x="541" y="143" text-anchor="middle">0 ms (PTT)</text>
+      <text class="m" x="693" y="143" text-anchor="middle">150–260 ms</text>
+      <text class="m" x="845" y="143" text-anchor="middle">~20 ms</text>
+      <text class="m" x="997" y="143" text-anchor="middle">250–450 ms</text>
+
+      <path class="e" d="M408 92 H474" marker-end="url(#a1)"/>
+      <path class="e" d="M408 214 H440 V112 H474" marker-end="url(#a1)"/>
+      <line class="e" x1="606" y1="92" x2="626" y2="92" marker-end="url(#a1)"/>
+      <line class="e" x1="758" y1="92" x2="778" y2="92" marker-end="url(#a1)"/>
+      <line class="e-hot" x1="910" y1="92" x2="930" y2="92" marker-end="url(#a1h)"/>
+
+      <!-- router to policy -->
+      <line class="e-hot" x1="997" y1="150" x2="997" y2="188" marker-end="url(#a1h)"/>
+      <text class="s" x="988" y="172" text-anchor="end">decision JSON</text>
+
+      <!-- row 2 -->
+      <rect class="box" x="932" y="190" width="130" height="66" rx="10"/>
+      <text class="t" x="997" y="218" text-anchor="middle">Policy · FSM</text>
+      <text class="s" x="997" y="236" text-anchor="middle">stack · slots · “yes?”</text>
+      <rect class="box" x="780" y="190" width="130" height="66" rx="10"/>
+      <text class="t" x="845" y="218" text-anchor="middle">Actions + KB</text>
+      <text class="s" x="845" y="236" text-anchor="middle">mock_backend · KB</text>
+      <rect class="box" x="628" y="190" width="130" height="66" rx="10"/>
+      <text class="t" x="693" y="218" text-anchor="middle">Reply LLM</text>
+      <text class="s" x="693" y="236" text-anchor="middle">streams sentences</text>
+      <rect class="box" x="476" y="190" width="130" height="66" rx="10"/>
+      <text class="t" x="541" y="218" text-anchor="middle">Streaming TTS</text>
+      <text class="s" x="541" y="236" text-anchor="middle">Tokay KZ · Flash RU</text>
+
+      <line class="e" x1="932" y1="223" x2="912" y2="223" marker-end="url(#a1)"/>
+      <line class="e" x1="780" y1="223" x2="760" y2="223" marker-end="url(#a1)"/>
+      <line class="e" x1="628" y1="223" x2="608" y2="223" marker-end="url(#a1)"/>
+
+      <text class="m" x="997" y="274" text-anchor="middle">&lt;5 ms</text>
+      <text class="m" x="845" y="274" text-anchor="middle">~10 ms</text>
+      <text class="m" x="693" y="274" text-anchor="middle">250–400 ms</text>
+      <text class="m" x="541" y="274" text-anchor="middle">100–200 ms</text>
+
+      <!-- cached opening -->
+      <path class="e-ok dash" d="M1050 256 V300 H490 V258" marker-end="url(#a1o)"/>
+      <text class="mo" x="770" y="318" text-anchor="middle">cached opening clip → plays right after routing (no TTS wait)</text>
+
+      <!-- tts to gateway -->
+      <path class="e" d="M476 240 H440 V272 H410" marker-end="url(#a1)"/>
+
+      <!-- event stream -->
+      <line class="e dash" x1="770" y1="346" x2="770" y2="378" marker-end="url(#a1)"/>
+      <text class="s" x="778" y="366">every stage emits {stage, ms, payload}</text>
+      <rect class="box" x="476" y="380" width="400" height="52" rx="10"/>
+      <text class="t" x="496" y="402">Event stream</text>
+      <text class="s" x="496" y="420">partial · final · route · timing · tts · call</text>
+      <path class="e" d="M476 418 H440 V502 H410" marker-end="url(#a1)"/>
+
+      <rect class="box" x="900" y="380" width="162" height="52" rx="10"/>
+      <text class="t" x="981" y="402" text-anchor="middle">Warm-up pinger</text>
+      <text class="s" x="981" y="420" text-anchor="middle">no cold starts</text>
+      <line class="e dash" x1="981" y1="380" x2="981" y2="348" marker-end="url(#a1)"/>
+      <text class="s" x="989" y="368">ping every 2 min</text>
+
+      <rect class="box" x="476" y="470" width="180" height="60" rx="10"/>
+      <text class="t" x="566" y="496" text-anchor="middle">Postgres</text>
+      <text class="s" x="566" y="514" text-anchor="middle">turns · decisions · timings</text>
+      <line class="e" x1="566" y1="432" x2="566" y2="468" marker-end="url(#a1)"/>
+      <text class="s" x="574" y="454">persist</text>
+
+      <rect class="box" x="700" y="470" width="176" height="60" rx="10"/>
+      <text class="t" x="788" y="496" text-anchor="middle">Eval runner</text>
+      <text class="s" x="788" y="514" text-anchor="middle">104 dev utterances → score</text>
+      <line class="e" x1="788" y1="470" x2="788" y2="434" marker-end="url(#a1)"/>
+      <text class="s" x="796" y="454">results</text>
+    </svg>
+    </div>
+    <figcaption><b>Why this isn't an intent classifier:</b> embeddings only narrow 43 scenarios to about 8 candidates. The <b>LLM</b> makes the final choice. It reads each scenario's description and its "NOT this if…" rules together with the dialog state, and returns JSON with the scenario, confidence, reasoning, alternatives and slots. The phone channel goes into the same pipeline after resampling from 8 to 16 kHz. Timings are per-stage targets; the real numbers come from measurement.</figcaption>
+  </figure>
+
+  <div class="stack-line" aria-label="Router output example">
+    route → { scenario_id: <b>"SC12"</b>, confidence: <b>0.88</b>, alternatives: [SC11 0.20], stack: [<b>SC26</b>], language: <b>"mixed"</b>, action: "proceed", slots: { accident_date: "2026-09-30" } }
+  </div>
+</section>
+
+<!-- ============ LATENCY ============ -->
+<section id="latency">
+  <div class="sec-head">
+    <div class="eyebrow">THE 1.5 SECOND BUDGET</div>
+    <h2>Where the milliseconds go</h2>
+    <p>The clock starts when the client stops speaking. STT streams during speech, so most of the transcript is already there at t = 0. The robot starts talking as soon as the router has picked a scenario.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1000 400" role="img" aria-label="Latency waterfall: streaming STT final at about 220 ms after end of speech, router done at about 600 ms, cached opening plays at about 620 ms, reply LLM and TTS deliver the full answer at about 1.2 s, under the 1.5 s goal.">
+      <!-- grid -->
+      <line class="grid-l" x1="200" y1="40" x2="200" y2="360"/>
+      <line class="grid-l" x1="551" y1="40" x2="551" y2="360"/>
+      <line class="grid-l" x1="746" y1="40" x2="746" y2="360"/>
+      <!-- markers -->
+      <line class="mark-l" x1="356" y1="34" x2="356" y2="360"/>
+      <text class="s" x="356" y="26" text-anchor="middle">end of speech · t=0</text>
+      <line class="mark-l" x1="597.8" y1="34" x2="597.8" y2="360"/>
+      <text class="mo" x="597.8" y="26" text-anchor="middle">first sound ≈ 0.62 s</text>
+      <line class="mark-l" x1="824" y1="34" x2="824" y2="360"/>
+      <text class="mo" x="810" y="26" text-anchor="middle">full reply ≈ 1.2 s</text>
+      <line class="goal-l" x1="941" y1="34" x2="941" y2="360"/>
+      <text class="mb" x="941" y="26" text-anchor="middle">goal 1.5 s</text>
+
+      <!-- rows: y = 50 + i*32 -->
+      <text class="s" x="190" y="62" text-anchor="end">Client speaking</text>
+      <rect class="bar-mute" x="200" y="50" width="156" height="16" rx="3"/>
+
+      <text class="s" x="190" y="94" text-anchor="end">Streaming STT</text>
+      <rect class="bar-soft" x="200" y="82" width="156" height="16" rx="3"/>
+      <text class="m" x="210" y="94">partials</text>
+      <rect class="bar" x="356" y="82" width="85.8" height="16" rx="3"/>
+      <text class="m" x="448" y="94">final ~220 ms</text>
+
+      <text class="s" x="190" y="126" text-anchor="end">Speculative route (opt.)</text>
+      <rect class="bar-spec" x="309.2" y="114" width="148.2" height="16" rx="3"/>
+      <text class="m" x="464" y="126">hides 200–400 ms</text>
+
+      <text class="s" x="190" y="158" text-anchor="end">Shortlist</text>
+      <rect class="bar" x="441.8" y="146" width="7.8" height="16" rx="2"/>
+      <text class="m" x="456" y="158">~20 ms</text>
+
+      <text class="s" x="190" y="190" text-anchor="end">LLM router</text>
+      <rect class="bar" x="449.6" y="178" width="140.4" height="16" rx="3"/>
+      <text class="m" x="597" y="190">250–450 ms</text>
+
+      <text class="s" x="190" y="222" text-anchor="end">Cached opening plays</text>
+      <rect class="bar-ok" x="597.8" y="210" width="382.2" height="16" rx="3"/>
+      <text class="bt" x="606" y="222">«Түсіндім, қазір көмектесемін…»</text>
+
+      <text class="s" x="190" y="254" text-anchor="end">Reply LLM · 1st sentence</text>
+      <rect class="bar" x="590" y="242" width="138.5" height="16" rx="3"/>
+      <text class="m" x="735" y="254">250–400 ms</text>
+
+      <text class="s" x="190" y="286" text-anchor="end">TTS first chunk</text>
+      <rect class="bar" x="728.5" y="274" width="66.3" height="16" rx="3"/>
+      <text class="m" x="801" y="286">100–200 ms</text>
+
+      <text class="s" x="190" y="318" text-anchor="end">Network + buffer</text>
+      <rect class="bar-mute" x="794.8" y="306" width="29.2" height="16" rx="3"/>
+      <text class="m" x="831" y="318">~80 ms</text>
+
+      <text class="s" x="190" y="350" text-anchor="end">Full answer audio</text>
+      <rect class="bar-ok" x="824" y="338" width="156" height="16" rx="3"/>
+      <text class="bt" x="832" y="350">streamed reply</text>
+
+      <!-- axis -->
+      <line class="e" x1="200" y1="370" x2="980" y2="370"/>
+      <text class="s" x="200" y="390" text-anchor="middle">−400 ms</text>
+      <text class="s" x="356" y="390" text-anchor="middle">0</text>
+      <text class="s" x="551" y="390" text-anchor="middle">500</text>
+      <text class="s" x="746" y="390" text-anchor="middle">1000</text>
+      <text class="s" x="941" y="390" text-anchor="middle">1500 ms</text>
+    </svg>
+    </div>
+    <figcaption><b>Critical path:</b> STT final → router → cached opening = sound at about 0.6 s. The reply LLM then streams the real answer behind it, sentence by sentence into TTS. These are targets built from vendor figures and research. The trace panel shows measured values per turn: the client marks <span class="mono">t0</span> on button release and <span class="mono">t_audio</span> on <span class="mono">audio.onplaying</span>.</figcaption>
+  </figure>
+
+  <div class="tricks">
+    <div class="trick"><span class="save">saves 300–800 ms</span><h3>Stream STT during speech</h3><p>WebSocket audio frames go out while the client is still talking. Only the last words remain at t = 0.</p></div>
+    <div class="trick"><span class="save">saves 200–500 ms</span><h3>Push-to-talk on web</h3><p>Releasing the button marks the end of speech exactly, with no VAD silence wait. VAD runs only on the phone and in hands-free mode.</p></div>
+    <div class="trick"><span class="save">hides 200–400 ms</span><h3>Speculative routing</h3><p>Route on a stable partial transcript. If the final text changes, cancel and re-run.</p></div>
+    <div class="trick"><span class="save">router 250–450 ms</span><h3>Cached prompt, tiny JSON</h3><p>Static prefix (rules + catalog) first so prompt caching applies; <span class="mono">temperature 0</span>, ~200 output tokens, strict schema.</p></div>
+    <div class="trick"><span class="save">first sound ≈ 0.6 s</span><h3>Pre-synthesized openings</h3><p>At boot: 40 scenarios × RU/KZ opening lines → audio cache. Play one the moment the router decides.</p></div>
+    <div class="trick"><span class="save">−1 LLM call</span><h3>Fast path from the dataset</h3><p><span class="mono">fast_path_eligible</span> scenarios (SC18, 23, 24, 26, 31, 33, 34, 36, 37) answer from a KB template.</p></div>
+    <div class="trick"><span class="save">overlaps 300+ ms</span><h3>Sentence-level streaming</h3><p>The reply LLM emits the first sentence → TTS starts while the LLM writes the second.</p></div>
+    <div class="trick"><span class="save">avoids 5–30 s spikes</span><h3>Keep providers warm</h3><p>geko GPUs scale to zero. Ping STT/TTS/LLM on page load and every 2 min during the demo.</p></div>
+  </div>
+</section>
+
+
+<!-- ============ DECIDE ============ -->
+<section id="decide">
+  <div class="sec-head">
+    <div class="eyebrow">TWO HARD PROBLEMS</div>
+    <h2>Picking the scenario and the language in real time</h2>
+    <p>The router must work out what the caller needs while they are still talking, without jumping to a wrong scenario. The robot must also answer in the right language even when the caller mixes Russian and Kazakh.</p>
+  </div>
+
+  <h3>1 · Real-time scenario choice</h3>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1100 360" role="img" aria-label="Scenario decision flow: stable partial transcripts trigger a speculative route that is cached; on the final transcript, answers to a pending question fill slots without routing, identical text reuses the cached decision, otherwise the router runs now; the decision policy then runs the scenario, clarifies, hands off, or stacks extra intents.">
+      <defs>
+        <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a6h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-hot" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a6o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ok" d="M0 0L10 5L0 10z"/></marker>
+      </defs>
+      <text class="g" x="20" y="28">WHILE SPEAKING</text>
+      <rect class="box" x="20" y="44" width="150" height="52" rx="10"/>
+      <text class="t" x="95" y="66" text-anchor="middle">Partial transcript</text>
+      <text class="s" x="95" y="84" text-anchor="middle">every 100–200 ms</text>
+      <polygon class="dia" points="260,38 320,70 260,102 200,70"/>
+      <text class="t" x="260" y="74" text-anchor="middle">stable?</text>
+      <text class="s" x="260" y="122" text-anchor="middle">no → wait for next partial</text>
+      <rect class="box-hot" x="360" y="44" width="180" height="52" rx="10"/>
+      <text class="t" x="450" y="66" text-anchor="middle">Speculative route</text>
+      <text class="s" x="450" y="84" text-anchor="middle">shortlist + LLM · cancellable</text>
+      <rect class="box" x="600" y="44" width="170" height="52" rx="10"/>
+      <text class="t" x="685" y="66" text-anchor="middle">Decision cache</text>
+      <text class="s" x="685" y="84" text-anchor="middle">keyed by transcript</text>
+      <line class="e" x1="170" y1="70" x2="198" y2="70" marker-end="url(#a6)"/>
+      <line class="e-hot" x1="320" y1="70" x2="358" y2="70" marker-end="url(#a6h)"/>
+      <text class="m" x="339" y="63" text-anchor="middle">yes</text>
+      <line class="e" x1="540" y1="70" x2="598" y2="70" marker-end="url(#a6)"/>
+      <text class="s" x="569" y="63" text-anchor="middle">store</text>
+
+      <text class="g" x="20" y="160">END OF SPEECH</text>
+      <rect class="box" x="20" y="174" width="150" height="52" rx="10"/>
+      <text class="t" x="95" y="196" text-anchor="middle">Final transcript</text>
+      <text class="s" x="95" y="214" text-anchor="middle">+ dialog state</text>
+      <polygon class="dia" points="270,164 340,200 270,236 200,200"/>
+      <text class="s" x="270" y="197" text-anchor="middle">answers pending</text>
+      <text class="s" x="270" y="211" text-anchor="middle">question?</text>
+      <polygon class="dia" points="470,164 540,200 470,236 400,200"/>
+      <text class="s" x="470" y="197" text-anchor="middle">same text as</text>
+      <text class="s" x="470" y="211" text-anchor="middle">speculative?</text>
+      <rect class="box" x="580" y="174" width="170" height="52" rx="10"/>
+      <text class="t" x="665" y="196" text-anchor="middle">Route now</text>
+      <text class="s" x="665" y="214" text-anchor="middle">shortlist + LLM</text>
+      <rect class="box-hot" x="800" y="174" width="150" height="52" rx="10"/>
+      <text class="t" x="875" y="196" text-anchor="middle">Decision policy</text>
+      <text class="s" x="875" y="214" text-anchor="middle">confidence + priority</text>
+      <line class="e" x1="170" y1="200" x2="198" y2="200" marker-end="url(#a6)"/>
+      <line class="e" x1="340" y1="200" x2="398" y2="200" marker-end="url(#a6)"/>
+      <text class="m" x="369" y="193" text-anchor="middle">no</text>
+      <line class="e" x1="540" y1="200" x2="578" y2="200" marker-end="url(#a6)"/>
+      <text class="m" x="559" y="193" text-anchor="middle">no</text>
+      <line class="e" x1="750" y1="200" x2="798" y2="200" marker-end="url(#a6)"/>
+      <path class="e-ok dash" d="M470 164 V132 H660 V98" marker-end="url(#a6o)"/>
+      <text class="mo" x="566" y="126" text-anchor="middle">yes → reuse, 0 ms</text>
+      <path class="e" d="M770 70 H875 V172" marker-end="url(#a6)"/>
+      <text class="s" x="883" y="120">cached decision</text>
+
+      <rect class="box-ok" x="195" y="290" width="150" height="56" rx="10"/>
+      <text class="t" x="270" y="313" text-anchor="middle">Slot fill · no LLM</text>
+      <text class="s" x="270" y="331" text-anchor="middle">phone · date · “да / иә”</text>
+      <line class="e-ok" x1="270" y1="236" x2="270" y2="288" marker-end="url(#a6o)"/>
+      <text class="mo" x="278" y="266">yes</text>
+
+      <path class="e" d="M875 226 V262 M475 262 H1015 M475 262 V288 M655 262 V288 M835 262 V288 M1015 262 V288"/>
+      <rect class="box-ok" x="400" y="290" width="150" height="56" rx="10"/>
+      <text class="t" x="475" y="313" text-anchor="middle">≥ 0.75 → run it</text>
+      <text class="s" x="475" y="331" text-anchor="middle">scenario FSM starts</text>
+      <rect class="box-warn" x="580" y="290" width="150" height="56" rx="10"/>
+      <text class="t" x="655" y="313" text-anchor="middle">0.45–0.75 → ask</text>
+      <text class="s" x="655" y="331" text-anchor="middle">clarify between top-2</text>
+      <rect class="box-bad" x="760" y="290" width="150" height="56" rx="10"/>
+      <text class="t" x="835" y="313" text-anchor="middle">&lt; 0.45 twice</text>
+      <text class="s" x="835" y="331" text-anchor="middle">operator + summary</text>
+      <rect class="box" x="940" y="290" width="150" height="56" rx="10"/>
+      <text class="t" x="1015" y="313" text-anchor="middle">2+ intents</text>
+      <text class="s" x="1015" y="331" text-anchor="middle">urgent first, rest → stack</text>
+    </svg>
+    </div>
+    <figcaption><b>How it understands what the caller needs:</b> the router sees the whole dialog state (active scenario, stack, filled slots, last 3 turns), not just the last sentence. Each scenario's <span class="mono">not_this_if</span> rules override surface keywords. Urgent scenarios (SC11 accident now, SC15 medical abroad, SC38 fraud) jump the queue. Answers to the robot's own question ("my number is 8 701…") never re-route. They fill the slot.</figcaption>
+  </figure>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Situation</th><th>Example</th><th>What the router does</th></tr></thead>
+      <tbody>
+        <tr><td>Topic switch mid-dialog</td><td>during SC17 claim status: “а, и ещё адрес поменять надо”</td><td>New primary scenario SC29 (update contact details); the unfinished SC17 goes onto the stack and resumes afterwards</td></tr>
+        <tr><td>Between two scenarios</td><td>“деньги списались, а полис не пришёл”</td><td>SC30 (charged, not issued) over SC26 (resend documents) because of the <span class="mono">not_this_if</span> rule; SC26 shown as the alternative</td></tr>
+        <tr><td>Too vague</td><td>“Алло, я по поводу страховки”</td><td>SYS_UNCLEAR → one short question instead of a guess</td></tr>
+        <tr><td>Out of scope</td><td>loans, weather, jobs</td><td>SYS_OUT_OF_SCOPE → polite redirect, no scenario started</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:10px">2 · Choosing the reply language</h3>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1100 250" role="img" aria-label="Language decision: a single multilingual STT model produces tokens, each word is tagged Kazakh or Russian, the utterance mix is computed, and the reply language is chosen by three rules in priority order: explicit request, dominant language, sticky session language; it selects the reply language and the TTS voice.">
+      <defs>
+        <marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a7h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-hot" d="M0 0L10 5L0 10z"/></marker>
+      </defs>
+      <rect class="box" x="20" y="40" width="180" height="56" rx="10"/>
+      <text class="t" x="110" y="63" text-anchor="middle">STT tokens</text>
+      <text class="s" x="110" y="81" text-anchor="middle">one RU+KZ model, no switch</text>
+      <rect class="box" x="240" y="40" width="200" height="56" rx="10"/>
+      <text class="t" x="340" y="63" text-anchor="middle">Per-word language</text>
+      <text class="s" x="340" y="81" text-anchor="middle">vendor tag, or ә ғ қ ң ө ұ ү һ і</text>
+      <rect class="box" x="480" y="40" width="170" height="56" rx="10"/>
+      <text class="t" x="565" y="63" text-anchor="middle">Utterance mix</text>
+      <text class="m" x="565" y="81" text-anchor="middle">kk 0.62 · ru 0.38</text>
+      <polygon class="dia" points="770,28 850,68 770,108 690,68"/>
+      <text class="t" x="770" y="65" text-anchor="middle">reply</text>
+      <text class="t" x="770" y="81" text-anchor="middle">language</text>
+      <rect class="box-hot" x="890" y="40" width="190" height="56" rx="10"/>
+      <text class="t" x="985" y="63" text-anchor="middle">Reply + voice</text>
+      <text class="s" x="985" y="81" text-anchor="middle">kk → Tokay · ru → Flash</text>
+      <line class="e" x1="200" y1="68" x2="238" y2="68" marker-end="url(#a7)"/>
+      <line class="e" x1="440" y1="68" x2="478" y2="68" marker-end="url(#a7)"/>
+      <line class="e" x1="650" y1="68" x2="688" y2="68" marker-end="url(#a7)"/>
+      <line class="e-hot" x1="850" y1="68" x2="888" y2="68" marker-end="url(#a7h)"/>
+
+      <path class="e" d="M565 170 V140 H975 V170 M770 170 V112"/>
+      <polygon class="ah" points="765,118 770,110 775,118"/>
+      <rect class="box" x="480" y="170" width="170" height="64" rx="10"/>
+      <text class="m" x="565" y="190" text-anchor="middle">rule 1 · wins</text>
+      <text class="t" x="565" y="207" text-anchor="middle">Explicit request</text>
+      <text class="s" x="565" y="224" text-anchor="middle">«қазақша сөйлеңіз» → kk now</text>
+      <rect class="box" x="685" y="170" width="170" height="64" rx="10"/>
+      <text class="m" x="770" y="190" text-anchor="middle">rule 2</text>
+      <text class="t" x="770" y="207" text-anchor="middle">Dominant language</text>
+      <text class="s" x="770" y="224" text-anchor="middle">&gt; 60% of words this turn</text>
+      <rect class="box" x="890" y="170" width="170" height="64" rx="10"/>
+      <text class="m" x="975" y="190" text-anchor="middle">rule 3 · tie-break</text>
+      <text class="t" x="975" y="207" text-anchor="middle">Sticky session lang</text>
+      <text class="s" x="975" y="224" text-anchor="middle">no flip-flopping mid-call</text>
+      <text class="s" x="20" y="160">Input needs no language switch:</text>
+      <text class="s" x="20" y="176">the STT model hears both at once.</text>
+      <text class="s" x="20" y="200">Only the output needs a decision.</text>
+    </svg>
+    </div>
+    <figcaption><b>Rules, in priority order:</b> (1) an explicit request switches immediately; (2) otherwise answer in the turn's dominant language (&gt; 60% of words); (3) in a near-even mix, keep the session language so the robot doesn't flip every turn. The router also returns <span class="mono">language: ru | kk | mixed</span> as a cross-check. Slot values (phones, dates, amounts) are normalized regardless of language. On the phone, the first greeting is bilingual («Сәлеметсіз бе! Здравствуйте!»), so the caller's first reply sets the language.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ FRONTEND ============ -->
+<section id="frontend">
+  <div class="sec-head">
+    <div class="eyebrow">FRONTEND · NEXT.JS</div>
+    <h2>Two roles, one event schema</h2>
+    <p><b>User</b> just talks: it feels instant and follows context. <b>Admin</b> watches everything live: speeds, decisions, evaluation, charts, and language switching in real time. Both screens are built from the same gateway events.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1100 560" role="img" aria-label="Frontend diagram: a role picker leads to the User call screen and the Admin console; each screen's components are fed by a hook, useVoiceSession over the voice WebSocket or useLiveEvents over the admin WebSocket, both served by the Go gateway.">
+      <defs>
+        <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a3h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-hot" d="M0 0L10 5L0 10z"/></marker>
+      </defs>
+      <rect class="box" x="440" y="20" width="220" height="56" rx="10"/>
+      <text class="t" x="550" y="44" text-anchor="middle">/ · role picker</text>
+      <text class="s" x="550" y="62" text-anchor="middle">demo login: user · admin</text>
+      <path class="e" d="M480 76 V98 H270 V118" marker-end="url(#a3)"/>
+      <text class="m" x="375" y="92" text-anchor="middle">role = user</text>
+      <path class="e-hot" d="M620 76 V98 H830 V118" marker-end="url(#a3h)"/>
+      <text class="m" x="725" y="92" text-anchor="middle">role = admin</text>
+
+      <!-- user group -->
+      <rect class="box-group" x="20" y="120" width="500" height="260" rx="14"/>
+      <text class="t" x="40" y="146">User · /call</text>
+      <text class="s" x="40" y="164">feels instant · adapts to context</text>
+      <rect class="box" x="40" y="180" width="220" height="52" rx="9"/>
+      <text class="t" x="56" y="202">Talk button</text><text class="s" x="56" y="219">push-to-talk · hands-free</text>
+      <rect class="box" x="280" y="180" width="220" height="52" rx="9"/>
+      <text class="t" x="296" y="202">Live transcript</text><text class="s" x="296" y="219">partials → final, word by word</text>
+      <rect class="box" x="40" y="244" width="220" height="52" rx="9"/>
+      <text class="t" x="56" y="266">Language ribbon</text><text class="s" x="56" y="283">RU / KZ tint per word</text>
+      <rect class="box" x="280" y="244" width="220" height="52" rx="9"/>
+      <text class="t" x="296" y="266">Reply bubble + audio</text><text class="s" x="296" y="283">plays from first chunk</text>
+      <rect class="box" x="40" y="308" width="220" height="52" rx="9"/>
+      <text class="t" x="56" y="330">Context chips</text><text class="s" x="56" y="347">topic stack · filled slots</text>
+      <rect class="box" x="280" y="308" width="220" height="52" rx="9"/>
+      <text class="t" x="296" y="330">Confirm sheet</text><text class="s" x="296" y="347">“yes?” before irreversible</text>
+
+      <!-- admin group -->
+      <rect class="box-group" x="580" y="120" width="500" height="260" rx="14"/>
+      <text class="t" x="600" y="146">Admin · /admin</text>
+      <text class="s" x="600" y="164">everything logged, updating live</text>
+      <rect class="box" x="600" y="180" width="220" height="52" rx="9"/>
+      <text class="t" x="616" y="202">Live turn feed</text><text class="s" x="616" y="219">web + phone sessions, streaming</text>
+      <rect class="box-hot" x="840" y="180" width="220" height="52" rx="9"/>
+      <text class="t" x="856" y="202">Trace panel</text><text class="s" x="856" y="219">scenario · why · alternatives</text>
+      <rect class="box" x="600" y="244" width="220" height="52" rx="9"/>
+      <text class="t" x="616" y="266">Latency waterfall</text><text class="s" x="616" y="283">per stage, per turn</text>
+      <rect class="box" x="840" y="244" width="220" height="52" rx="9"/>
+      <text class="t" x="856" y="266">Charts</text><text class="s" x="856" y="283">p50/p95 · accuracy · lang mix</text>
+      <rect class="box" x="600" y="308" width="220" height="52" rx="9"/>
+      <text class="t" x="616" y="330">Eval runner</text><text class="s" x="616" y="347">dev set → live score</text>
+      <rect class="box" x="840" y="308" width="220" height="52" rx="9"/>
+      <text class="t" x="856" y="330">Scenario map</text><text class="s" x="856" y="347">active + alternatives glow</text>
+
+      <!-- hooks -->
+      <line class="e" x1="270" y1="382" x2="270" y2="418" marker-start="url(#a3)" marker-end="url(#a3)"/>
+      <text class="s" x="280" y="404">mic frames ↑ · events ↓</text>
+      <rect class="box" x="140" y="420" width="260" height="52" rx="10"/>
+      <text class="t" x="160" y="442">useVoiceSession()</text>
+      <text class="m" x="160" y="460">WS /ws/voice</text>
+
+      <line class="e-hot" x1="830" y1="420" x2="830" y2="384" marker-end="url(#a3h)"/>
+      <text class="s" x="840" y="404">events + history</text>
+      <rect class="box" x="700" y="420" width="260" height="52" rx="10"/>
+      <text class="t" x="720" y="442">useLiveEvents()</text>
+      <text class="m" x="720" y="460">WS /ws/admin · GET /api/stats</text>
+
+      <!-- gateway -->
+      <rect class="box" x="400" y="500" width="300" height="48" rx="10"/>
+      <text class="t" x="550" y="521" text-anchor="middle">Go gateway</text>
+      <text class="s" x="550" y="538" text-anchor="middle">same events for both roles</text>
+      <path class="e" d="M270 474 V524 H398" marker-start="url(#a3)" marker-end="url(#a3)"/>
+      <text class="s" x="335" y="518" text-anchor="middle">audio · text</text>
+      <path class="e-hot" d="M702 524 H830 V476" marker-end="url(#a3h)"/>
+      <text class="s" x="765" y="518" text-anchor="middle">turn events</text>
+    </svg>
+    </div>
+    <figcaption><b>Adapting to context and language:</b> the user screen reacts to <span class="mono">route</span> events. When the scenario changes, a context chip appears. When the robot needs a slot, the input hint changes (for example, "say your phone number"). The reply language follows the client's dominant language. Admin charts append points as <span class="mono">timing</span> events arrive; nothing polls.</figcaption>
+  </figure>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Event (WS)</th><th>When</th><th>Payload</th><th>User screen</th><th>Admin screen</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">partial</td><td>every ~100–200 ms while speaking</td><td class="mono">text, tokens[{w, lang}]</td><td>transcript, ribbon</td><td>live feed</td></tr>
+        <tr><td class="mono">final</td><td>end of utterance</td><td class="mono">text, lang</td><td>transcript</td><td>trace</td></tr>
+        <tr><td class="mono">route</td><td>router done</td><td class="mono">scenario_id, confidence, reasoning, alternatives, stack, slots, action</td><td>context chips, confirm sheet</td><td>trace, scenario map, charts</td></tr>
+        <tr><td class="mono">timing</td><td>each stage end</td><td class="mono">stage, ms</td><td>(optional latency pill)</td><td>waterfall, p50/p95</td></tr>
+        <tr><td class="mono">tts</td><td>streaming</td><td class="mono">audio chunk, lang</td><td>audio player</td><td>—</td></tr>
+        <tr><td class="mono">call <span class="tag">new</span></td><td>session start / end</td><td class="mono">channel: web | phone, caller (masked)</td><td>—</td><td>live feed, call wall</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ PHONE ============ -->
+<section id="phone">
+  <div class="sec-head">
+    <div class="eyebrow">KILLER FEATURE</div>
+    <h2>Call it from a real phone</h2>
+    <p>A juror dials a number on their own phone and talks to the robot. At the same time, the call appears on the admin screen with its transcript, routing decisions and latency. The phone is only a new entry point: the turn pipeline and events are exactly the ones the web uses.</p>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1100 230" role="img" aria-label="Phone flow: juror's phone to carrier to Twilio number, which streams mu-law audio over WebSocket to the Go gateway, into the same turn pipeline; events go to the admin call wall; reply audio returns the same way.">
+      <defs>
+        <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a4h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-hot" d="M0 0L10 5L0 10z"/></marker>
+        <marker id="a4o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-ok" d="M0 0L10 5L0 10z"/></marker>
+      </defs>
+      <rect class="box" x="20" y="60" width="140" height="64" rx="10"/>
+      <text class="t" x="90" y="88" text-anchor="middle">Juror's phone</text>
+      <text class="s" x="90" y="106" text-anchor="middle">dials the number</text>
+      <rect class="box" x="200" y="60" width="140" height="64" rx="10"/>
+      <text class="t" x="270" y="88" text-anchor="middle">Carrier · PSTN</text>
+      <text class="s" x="270" y="106" text-anchor="middle">voice network</text>
+      <rect class="box" x="380" y="60" width="140" height="64" rx="10"/>
+      <text class="t" x="450" y="88" text-anchor="middle">Twilio number</text>
+      <text class="s" x="450" y="106" text-anchor="middle">&lt;Connect&gt;&lt;Stream&gt;</text>
+      <rect class="box" x="560" y="60" width="140" height="64" rx="10"/>
+      <text class="t" x="630" y="88" text-anchor="middle">Go gateway</text>
+      <text class="s" x="630" y="106" text-anchor="middle">/twilio/stream</text>
+      <rect class="box-hot" x="740" y="60" width="140" height="64" rx="10"/>
+      <text class="t" x="810" y="88" text-anchor="middle">Turn pipeline</text>
+      <text class="s" x="810" y="106" text-anchor="middle">same as web</text>
+      <rect class="box" x="920" y="60" width="160" height="64" rx="10"/>
+      <text class="t" x="1000" y="88" text-anchor="middle">Admin call wall</text>
+      <text class="s" x="1000" y="106" text-anchor="middle">call appears live</text>
+
+      <line class="e" x1="160" y1="92" x2="198" y2="92" marker-end="url(#a4)"/>
+      <line class="e" x1="340" y1="92" x2="378" y2="92" marker-end="url(#a4)"/>
+      <line class="e" x1="520" y1="92" x2="558" y2="92" marker-end="url(#a4)"/>
+      <line class="e" x1="700" y1="92" x2="738" y2="92" marker-end="url(#a4)"/>
+      <line class="e-hot" x1="880" y1="92" x2="918" y2="92" marker-end="url(#a4h)"/>
+
+      <text class="s" x="180" y="148" text-anchor="middle">voice</text>
+      <text class="m" x="180" y="164" text-anchor="middle">~50–150 ms*</text>
+      <text class="s" x="360" y="148" text-anchor="middle">SIP trunk</text>
+      <text class="m" x="360" y="164" text-anchor="middle">~50–100 ms*</text>
+      <text class="s" x="540" y="148" text-anchor="middle">WS · μ-law 8 kHz</text>
+      <text class="m" x="540" y="164" text-anchor="middle">20 ms frames</text>
+      <text class="s" x="720" y="148" text-anchor="middle">resample</text>
+      <text class="m" x="720" y="164" text-anchor="middle">8 → 16 kHz</text>
+      <text class="s" x="900" y="148" text-anchor="middle">turn events</text>
+      <text class="m" x="900" y="164" text-anchor="middle">live</text>
+
+      <path class="e-ok" d="M810 124 V196 H90 V126" marker-end="url(#a4o)"/>
+      <text class="mo" x="450" y="214" text-anchor="middle">reply audio back as μ-law · barge-in: VAD hears the caller → send "clear" → playback stops</text>
+    </svg>
+    </div>
+    <figcaption><b>Speed on the phone:</b> carrier legs add about 100–250 ms round trip (*our estimate, measure it), and 8 kHz audio lowers STT accuracy. The budget becomes about 1.5 s on web and about 1.7 s on the phone. Cached openings keep the first sound under 1 s. Getting a KZ <span class="mono">+7</span> number requires KYC and probably can't be done today, so for the demo we use a number from another country.</figcaption>
+  </figure>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Telephony option</th><th>How it plugs in</th><th>Setup</th><th>Trace &amp; timing control</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Twilio Media Streams</td><td>A TwiML <span class="mono">&lt;Connect&gt;&lt;Stream&gt;</span> opens a bidirectional WS to our gateway; base64 μ-law 8 kHz each way</td><td>~1 h: buy number, one TwiML webhook, one WS handler</td><td class="yes">full: our STT/router/TTS, our timings</td><td><span class="tag pick">pick</span></td></tr>
+        <tr><td>Vapi</td><td>Vapi runs STT/TTS; our <span class="mono">/api/route</span> is its custom LLM or tool</td><td>fastest (&lt;30 min)</td><td class="maybe">partial: their pipeline, their latencies</td><td><span class="tag alt">plan B</span></td></tr>
+        <tr><td>LiveKit SIP</td><td>SIP inbound → LiveKit room → our agent</td><td>more moving parts</td><td class="yes">full</td><td><span class="tag">after hackathon</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ UI IDEAS ============ -->
+<section id="ideas">
+  <div class="sec-head">
+    <div class="eyebrow">TWO UI IDEAS</div>
+    <h2>Make the speed and the switching visible</h2>
+    <p>Judges can't see "LLM layer" or "code-switching", but they can watch a number turn green and a word change color. Both screens below use example data.</p>
+  </div>
+
+  <div class="two">
+    <!-- idea A -->
+    <div class="panel">
+      <div class="eyebrow">IDEA A · ADMIN + PROJECTOR</div>
+      <h3>Live Call Wall</h3>
+      <div class="mock" aria-label="Mockup of the live call wall with example data">
+        <div class="mock-bar"><span>bagyt / admin / call wall</span><span class="dotlive">LIVE · phone</span></div>
+        <div class="wall">
+          <div class="dial">
+            <div class="qr" aria-hidden="true"></div>
+            <div><div class="example">call Bagyt</div><div class="n">+1 ••• ••• ••••</div><div class="example">number TBD</div></div>
+          </div>
+          <div class="call">
+            <div class="call-head"><span class="mono">+7 701 ••• 42 31</span><span class="mono muted">00:47 · turn 3</span></div>
+            <div class="ribbon">
+              <span class="w kz">Сәлеметсіз</span> <span class="w kz">бе,</span> <span class="w kz">кеше</span> <span class="w kz">аварияға</span> <span class="w kz">түстім,</span> <span class="w">но</span> <span class="w">я</span> <span class="w">не</span> <span class="w">виноват…</span> <span class="w">а,</span> <span class="w">и</span> <span class="w">ещё</span> <span class="w">полис</span> <span class="w">на</span> <span class="w">почту</span> <span class="w">не</span> <span class="w">пришёл</span>
+            </div>
+            <div class="legend"><span class="kz">Kazakh</span><span>Russian</span><span class="note">→ reply in KZ (dominant first)</span></div>
+            <div class="chips">
+              <span class="chip on">SC12 · 0.88</span>
+              <span class="chip st">stack → SC26 · 0.80</span>
+              <span class="chip al">alt SC11 · 0.20</span>
+            </div>
+            <div class="ticker">
+              <div><b class="num">212</b><span>STT final, ms</span></div>
+              <div><b class="num">388</b><span>router, ms</span></div>
+              <div class="hit"><b class="num">640</b><span>first sound, ms</span></div>
+              <div class="hit"><b class="num">1180</b><span>full reply, ms</span></div>
+            </div>
+            <div class="reply"><span class="who">Bagyt · kk</span>Түсіндім, сіз кінәлі емессіз. Кінәлінің ОГПО полисі бойынша өтініш рәсімдейік.</div>
+            <div class="example">example data</div>
+          </div>
+        </div>
+      </div>
+      <div class="wh">
+        <div><h3>What</h3><p>A projector view: dial number and QR on the left, the live call on the right. Words tinted by language, route chips, and a latency ticker that turns green under budget.</p></div>
+        <div><h3>How</h3><p>A <span class="mono">call</span> event opens the card. <span class="mono">partial</span> streams the words. Per-word language comes from STT tokens when the vendor provides it, otherwise from a letter check: <span class="mono">ә ғ қ ң ө ұ ү һ і</span> ⇒ Kazakh.</p></div>
+        <div><h3>Speed</h3><p>Pure client rendering of existing events, with no extra model calls. The ribbon updates with each partial (~100–200 ms) and the ticker fills as <span class="mono">timing</span> events land.</p></div>
+      </div>
+    </div>
+
+    <!-- idea B -->
+    <div class="panel">
+      <div class="eyebrow">IDEA B · ADMIN</div>
+      <h3>Scenario Constellation</h3>
+      <div class="mock" aria-label="Mockup of the scenario constellation with example data">
+        <div class="mock-bar"><span>bagyt / admin / scenario map</span><span class="dotlive">LIVE</span></div>
+        <figure class="small" style="border:0;border-radius:0;background:transparent">
+          <svg viewBox="0 0 520 225" role="img" aria-label="All 40 scenarios as dots grouped by category; SC12 is lit as the active scenario, SC26 is outlined as the next topic on the stack, SC11 is a dashed alternative.">
+            <defs>
+              <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-hot" d="M0 0L10 5L0 10z"/></marker>
+            </defs>
+            <path class="e-hot dash" d="M58 78 Q 145 215 223 139" marker-end="url(#a5)"/>
+            <text class="m" x="140" y="212" text-anchor="middle">topic switch → pushed to stack</text>
+            <text class="s" x="58" y="28" text-anchor="middle">claims</text>
+            <text class="s" x="158" y="28" text-anchor="middle">sales</text>
+            <text class="s" x="258" y="28" text-anchor="middle">servicing</text>
+            <text class="s" x="358" y="28" text-anchor="middle">info</text>
+            <text class="s" x="458" y="28" text-anchor="middle">contact · security</text>
+            <circle class="node node-alt" cx="32" cy="64" r="11"/><text class="nlabel" x="32" y="67.5" text-anchor="middle">11</text>
+            <circle class="node node-active" cx="58" cy="64" r="14"/><text class="nlabel nlabel-on" x="58" y="67.5" text-anchor="middle">12</text>
+            <circle class="node" cx="84" cy="64" r="11"/><text class="nlabel" x="84" y="67.5" text-anchor="middle">13</text>
+            <circle class="node" cx="32" cy="98" r="11"/><text class="nlabel" x="32" y="101.5" text-anchor="middle">14</text>
+            <circle class="node" cx="58" cy="98" r="11"/><text class="nlabel" x="58" y="101.5" text-anchor="middle">15</text>
+            <circle class="node" cx="84" cy="98" r="11"/><text class="nlabel" x="84" y="101.5" text-anchor="middle">16</text>
+            <circle class="node" cx="32" cy="132" r="11"/><text class="nlabel" x="32" y="135.5" text-anchor="middle">17</text>
+            <circle class="node" cx="58" cy="132" r="11"/><text class="nlabel" x="58" y="135.5" text-anchor="middle">18</text>
+            <circle class="node" cx="84" cy="132" r="11"/><text class="nlabel" x="84" y="135.5" text-anchor="middle">19</text>
+            <circle class="node" cx="32" cy="166" r="11"/><text class="nlabel" x="32" y="169.5" text-anchor="middle">20</text>
+            <circle class="node" cx="132" cy="64" r="11"/><text class="nlabel" x="132" y="67.5" text-anchor="middle">01</text>
+            <circle class="node" cx="158" cy="64" r="11"/><text class="nlabel" x="158" y="67.5" text-anchor="middle">02</text>
+            <circle class="node" cx="184" cy="64" r="11"/><text class="nlabel" x="184" y="67.5" text-anchor="middle">03</text>
+            <circle class="node" cx="132" cy="98" r="11"/><text class="nlabel" x="132" y="101.5" text-anchor="middle">06</text>
+            <circle class="node" cx="158" cy="98" r="11"/><text class="nlabel" x="158" y="101.5" text-anchor="middle">07</text>
+            <circle class="node" cx="184" cy="98" r="11"/><text class="nlabel" x="184" y="101.5" text-anchor="middle">08</text>
+            <circle class="node" cx="132" cy="132" r="11"/><text class="nlabel" x="132" y="135.5" text-anchor="middle">09</text>
+            <circle class="node" cx="158" cy="132" r="11"/><text class="nlabel" x="158" y="135.5" text-anchor="middle">10</text>
+            <circle class="node" cx="184" cy="132" r="11"/><text class="nlabel" x="184" y="135.5" text-anchor="middle">27</text>
+            <circle class="node" cx="232" cy="64" r="11"/><text class="nlabel" x="232" y="67.5" text-anchor="middle">04</text>
+            <circle class="node" cx="258" cy="64" r="11"/><text class="nlabel" x="258" y="67.5" text-anchor="middle">05</text>
+            <circle class="node" cx="284" cy="64" r="11"/><text class="nlabel" x="284" y="67.5" text-anchor="middle">21</text>
+            <circle class="node" cx="232" cy="98" r="11"/><text class="nlabel" x="232" y="101.5" text-anchor="middle">22</text>
+            <circle class="node" cx="258" cy="98" r="11"/><text class="nlabel" x="258" y="101.5" text-anchor="middle">24</text>
+            <circle class="node" cx="284" cy="98" r="11"/><text class="nlabel" x="284" y="101.5" text-anchor="middle">25</text>
+            <circle class="node node-stack" cx="232" cy="132" r="11"/><text class="nlabel" x="232" y="135.5" text-anchor="middle">26</text>
+            <circle class="node" cx="258" cy="132" r="11"/><text class="nlabel" x="258" y="135.5" text-anchor="middle">28</text>
+            <circle class="node" cx="284" cy="132" r="11"/><text class="nlabel" x="284" y="135.5" text-anchor="middle">29</text>
+            <circle class="node" cx="232" cy="166" r="11"/><text class="nlabel" x="232" y="169.5" text-anchor="middle">30</text>
+            <circle class="node" cx="258" cy="166" r="11"/><text class="nlabel" x="258" y="169.5" text-anchor="middle">39</text>
+            <circle class="node" cx="332" cy="64" r="11"/><text class="nlabel" x="332" y="67.5" text-anchor="middle">23</text>
+            <circle class="node" cx="358" cy="64" r="11"/><text class="nlabel" x="358" y="67.5" text-anchor="middle">31</text>
+            <circle class="node" cx="384" cy="64" r="11"/><text class="nlabel" x="384" y="67.5" text-anchor="middle">32</text>
+            <circle class="node" cx="332" cy="98" r="11"/><text class="nlabel" x="332" y="101.5" text-anchor="middle">33</text>
+            <circle class="node" cx="358" cy="98" r="11"/><text class="nlabel" x="358" y="101.5" text-anchor="middle">34</text>
+            <circle class="node" cx="384" cy="98" r="11"/><text class="nlabel" x="384" y="101.5" text-anchor="middle">40</text>
+            <circle class="node" cx="432" cy="64" r="11"/><text class="nlabel" x="432" y="67.5" text-anchor="middle">35</text>
+            <circle class="node" cx="458" cy="64" r="11"/><text class="nlabel" x="458" y="67.5" text-anchor="middle">36</text>
+            <circle class="node" cx="484" cy="64" r="11"/><text class="nlabel" x="484" y="67.5" text-anchor="middle">37</text>
+            <circle class="node" cx="432" cy="98" r="11"/><text class="nlabel" x="432" y="101.5" text-anchor="middle">38</text>
+          </svg>
+          <figcaption style="border-top:1px solid var(--line-soft)"><b>SC12</b> Claim as victim under culprit's OGPO · 0.88 &nbsp;·&nbsp; <b>SC26</b> Resend policy documents (stacked) &nbsp;·&nbsp; <span style="color:var(--warn)">SC11</span> Road accident just happened · 0.20</figcaption>
+        </figure>
+        <div style="padding:0 16px 14px" class="example">example data · dots = all 40 scenarios from scenarios.json</div>
+      </div>
+      <div class="wh">
+        <div><h3>What</h3><p>All 40 scenarios as a map grouped by category. The active scenario lights up, alternatives glow by confidence, and each topic switch draws an arc onto the stack.</p></div>
+        <div><h3>How</h3><p>Built from <span class="mono">scenarios.json</span> at load. Each <span class="mono">route</span> event sets the active node, dims or brightens the alternatives, and draws an arc for <span class="mono">stack</span>. Click a node to see its turns.</p></div>
+        <div><h3>Speed</h3><p>SVG only, updated on the <span class="mono">route</span> event (&lt;16 ms render). It shows at a glance that the choice comes from context, not keywords, because the alternatives stay visible.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STACK ============ -->
+<section id="stack">
+  <div class="sec-head">
+    <div class="eyebrow">PROVIDERS</div>
+    <h2>STT, TTS and LLM: what we pick and why</h2>
+    <p>Everything sits behind <span class="mono">STT</span>, <span class="mono">TTS</span> and <span class="mono">LLM</span> interfaces chosen by env var, so switching is a config change. Vendor latencies are their published figures; we run a 15-minute bake-off on our own phrases before we commit.</p>
+  </div>
+
+  <div class="callout"><b>Proposed default:</b> Soniox RT (STT) → gpt-4.1-nano router (JSON) → gpt-4.1-mini reply stream → geko Tokay for Kazakh / ElevenLabs Flash v2.5 for Russian. geko Seta is the Kazakh accuracy A/B. Browser STT/TTS plus the mock router serve as the keyless mode for reviewers.</div>
+
+
+  <h3 style="margin-top:6px">Speko vs ElevenLabs vs local, at a glance</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Family</th><th>What it gives us</th><th>RU / KZ</th><th>Latency</th><th>Keys &amp; cost</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Speko</td><td>One API over many STT/TTS/LLM vendors (<span class="mono">/v1/stt</span>, <span class="mono">/v1/tts</span>, <span class="mono">/v1/llm</span>); <span class="mono">optimizeFor=latency</span>; pin <span class="mono">provider:model</span>; failover; SDK <span class="mono">@spekoai/sdk</span></td><td class="maybe">KZ/RU not in its benchmarked set; we can still pin a KZ-capable model if one is listed</td><td class="num">+1 hop; picks the fastest provider</td><td>one key</td><td><span class="tag alt">optional: RU failover + console UI reference</span></td></tr>
+        <tr><td>ElevenLabs</td><td>Scribe v2 Realtime (STT) + Flash v2.5 (TTS) + v3 / Multilingual (a Kazakh page exists)</td><td class="yes">RU strong · KZ in Scribe and v3, not in Flash</td><td class="num">~150 ms partials · ~75 ms TTS inference</td><td>paid key</td><td><span class="tag pick">RU voice · STT alt</span></td></tr>
+        <tr><td>Local (laptop / NVIDIA Brev GPU)</td><td>faster-whisper (STT), Piper (TTS, has <span class="mono">kk_KZ</span> and <span class="mono">ru_RU</span> voices), ISSAI open Kazakh models, Ollama LLM via <span class="mono">openai_compatible</span></td><td class="maybe">RU good · KZ weak for Whisper (44.95% WER per geko); Piper / ISSAI better for KZ</td><td class="num">GPU: fast · CPU: 1–3 s+</td><td>no keys, no per-minute cost</td><td><span class="tag ok">keyless reviewer mode</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:6px">Speech-to-text</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Option</th><th>Latency</th><th>RU</th><th>KZ</th><th>RU↔KZ in one phrase</th><th>Notes</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>Soniox <span class="mono">stt-rt-v5</span></td><td class="num">260 ms median to final · P95 305</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes, one model</td><td>True streaming, mid-sentence language switching, also offers KZ/RU TTS. New to us, so verify Kazakh accuracy</td><td><span class="tag pick">primary</span></td></tr>
+        <tr><td>geko Seta <span class="mono">seta-kk-ru-v2</span></td><td class="num">40× realtime; cold start up to tens of s</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes, even inside a word</td><td>Claims 8.71% WER on Kazakh vs Whisper 44.95%. KZ specialist; keep it warm</td><td><span class="tag alt">A/B · KZ accuracy</span></td></tr>
+        <tr><td>ElevenLabs Scribe v2 Realtime</td><td class="num">~150 ms partials</td><td class="yes">yes</td><td class="yes">yes</td><td class="maybe">unverified</td><td>Fastest partials; code-switching quality unknown</td><td><span class="tag alt">alt primary</span></td></tr>
+        <tr><td>Deepgram Nova-3</td><td class="num">streaming, low</td><td class="yes">yes</td><td class="yes">yes (added 3 Sep 2026)</td><td class="no">KZ not in its code-switch set</td><td>Solid for pure Russian</td><td><span class="tag">backup</span></td></tr>
+        <tr><td>OpenAI <span class="mono">gpt-4o-transcribe</span></td><td class="num">not built for low latency</td><td class="yes">yes</td><td class="maybe">weaker</td><td class="maybe">—</td><td>We have credits</td><td><span class="tag">offline checks</span></td></tr>
+        <tr><td>Browser Web Speech</td><td class="num">streaming, free</td><td class="yes">yes</td><td class="maybe">kk-KZ in Chrome</td><td class="no">one language per session</td><td>No key needed</td><td><span class="tag ok">keyless mode</span></td></tr>
+        <tr><td>Speko STT route</td><td class="num">vendor latency + 1 hop</td><td class="yes">yes</td><td class="maybe">not benchmarked</td><td class="maybe">depends on pinned model</td><td>Failover across vendors under one key</td><td><span class="tag">optional</span></td></tr>
+        <tr><td>Local faster-whisper <span class="mono">large-v3-turbo</span></td><td class="num">GPU ≈ realtime · CPU slow</td><td class="yes">yes</td><td class="no">weak</td><td class="maybe">poor</td><td>Offline; runs on a Brev GPU with our credits</td><td><span class="tag">offline fallback</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:6px">Text-to-speech</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Option</th><th>Latency</th><th>RU</th><th>KZ</th><th>Notes</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>geko Tokay <span class="mono">tokay-kk-v1</span></td><td class="num">sentence streaming · 24 kHz WAV</td><td class="maybe">check</td><td class="yes">native</td><td>6 Kazakh voices, reads numbers as words (important for amounts in tenge); cold start</td><td><span class="tag pick">KZ voice</span></td></tr>
+        <tr><td>ElevenLabs Flash v2.5</td><td class="num">~75 ms model inference</td><td class="yes">yes</td><td class="no">not listed</td><td>Lowest-latency Russian</td><td><span class="tag pick">RU voice</span></td></tr>
+        <tr><td>Soniox TTS</td><td class="num">streams before the sentence ends</td><td class="yes">yes</td><td class="yes">yes</td><td>One vendor for STT and TTS; quality untested</td><td><span class="tag alt">candidate KZ+RU</span></td></tr>
+        <tr><td>OpenAI <span class="mono">gpt-4o-mini-tts</span></td><td class="num">—</td><td class="yes">good</td><td class="maybe">accented</td><td>We have credits</td><td><span class="tag">fallback</span></td></tr>
+        <tr><td>Browser speechSynthesis</td><td class="num">instant</td><td class="yes">device</td><td class="maybe">device</td><td>No key needed</td><td><span class="tag ok">keyless mode</span></td></tr>
+        <tr><td>ElevenLabs v3 / Multilingual</td><td class="num">slower than Flash</td><td class="yes">yes</td><td class="yes">yes (KZ page)</td><td>Most natural KZ from ElevenLabs; too slow for the live path, fine for pre-synthesized openings</td><td><span class="tag alt">cached openings</span></td></tr>
+        <tr><td>Local Piper <span class="mono">kk_KZ</span> / <span class="mono">ru_RU</span></td><td class="num">fast on CPU</td><td class="yes">yes</td><td class="yes">yes</td><td>Offline, no key; robotic but clear</td><td><span class="tag ok">keyless mode</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:6px">LLM (router + reply)</h3>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Option</th><th>Latency</th><th>Why</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>OpenAI <span class="mono">gpt-4.1-nano</span></td><td class="num">TTFT ~450 ms class</td><td>Strict JSON schema, prompt caching, cheap; in the research it produced 100% valid JSON</td><td><span class="tag pick">router</span></td></tr>
+        <tr><td>OpenAI <span class="mono">gpt-4.1-mini</span></td><td class="num">similar, better RU/KZ text</td><td>Reply generation (streamed); escalate the router here when confidence &lt; 0.6</td><td><span class="tag pick">reply · escalation</span></td></tr>
+        <tr><td>Groq / Cerebras (OpenAI-compatible)</td><td class="num">TTFT ~80–150 ms warm</td><td>Fast tier for obvious turns; check Kazakh quality and rate limits</td><td><span class="tag alt">fast tier</span></td></tr>
+        <tr><td>NVIDIA NIM</td><td class="num">usually slower free tier</td><td>$50 credits, OpenAI-compatible</td><td><span class="tag">spare</span></td></tr>
+        <tr><td>Local via Ollama (<span class="mono">openai_compatible</span>)</td><td class="num">GPU fast · CPU slow</td><td>Keyless; weaker Kazakh reasoning, so the mock router stays the default for reviewers</td><td><span class="tag">experiment</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="two">
+    <div class="panel">
+      <h3>15-minute bake-off, before we commit</h3>
+      <ol>
+        <li>Record 3 phrases on the venue laptop mic: simple RU, pure KZ, mixed RU+KZ (the accident + policy phrase above).</li>
+        <li>Run each through Soniox, geko Seta and Scribe v2. Log time to final and eyeball the words.</li>
+        <li>Synthesize one KZ and one RU reply with Tokay, Flash v2.5 and Soniox TTS. Log first-chunk ms.</li>
+        <li>Pick per language and put the numbers in the README; the jury rewards measured claims.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>Open questions</h3>
+      <ul>
+        <li>Does Soniox return a language tag per token? If so, the ribbon gets it for free.</li>
+        <li>Can Tokay speak Russian, or do we keep two TTS vendors?</li>
+        <li>Is geko's STT base URL different from the TTS one? (The site example is the TTS endpoint.)</li>
+        <li>Which non-KZ number can we get for the phone demo within the build window?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>Draft for team Plus · derived from <span class="mono">docs/SPEC.md</span>, <span class="mono">docs/CASE_ANALYSIS.md</span>, <span class="mono">docs/research/DEEP_RESEARCH_REPORT.md</span> and <span class="mono">data/scenarios.json</span>. Numbers are targets or vendor claims until we measure them.</div>
+  <div>Sources checked 23 Sep 2026:</div>
+  <ul>
+    <li><a href="https://soniox.com/speech-to-text/use-cases/voice-agents/kazakh">Soniox: Kazakh STT for voice agents</a> · <a href="https://soniox.com/benchmarks">Soniox benchmarks</a> · <a href="https://soniox.com/text-to-speech/kazakh">Soniox Kazakh TTS</a></li>
+    <li><a href="https://developers.deepgram.com/changelog">Deepgram changelog (Kazakh in Nova-3)</a> · <a href="https://elevenlabs.io/docs/overview/models">ElevenLabs models</a></li>
+    <li><a href="https://www.twilio.com/docs/voice/twiml/stream">Twilio &lt;Stream&gt;</a> · <a href="https://www.twilio.com/docs/voice/media-streams/websocket-messages">Media Streams messages</a> · <a href="https://geko.sh">geko.sh</a></li>
+  </ul>
+</footer>
+
+</div>
+
+</body>
+</html>
